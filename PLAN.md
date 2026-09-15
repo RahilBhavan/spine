@@ -56,8 +56,9 @@ debt, liquidations) is queryable. This project builds three things on top of it:
 | Aug 2024 | -30% | -11% | -20% | -38% | -23% | -28% |
 | Oct 2025 | -15% | -10% | -13% | -26% | -15% | -20% |
 | Feb 2026 | -34% | -9% | -18% | -43% | -12% | -20% |
-| Jun 2026 | -14% | -6% | -7% | -18% | -7% | -9% |
+| Jun 2026 (May 30-Jul 5) | -22% | -7% | -9% | -26% | -8% | -14% |
 
+Windows in `spine/fetch_prices.py` are wider than the research script's (they include the pre-crash run-up), so the Jun 2026 row differs from the first draft.
 Realized book history: Feb 5 2026 ~$90.7M liquidated in one day across ~2,000 users;
 Jun 2-5 2026 ~$57M / 3,784 users; Jun 25 ~$9.5M. Zero bad debt through all of it.
 Script: `research/crash_table.py` (stdlib, ~2 min).

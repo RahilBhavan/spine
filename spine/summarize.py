@@ -82,7 +82,9 @@ def depth_for(depth, name, product):
         if v:
             out[venue] = dict(mid=v['mid'], bid_depth_usd=v['bid_depth_usd'])
     if name in depth.get('dex', {}):
-        out['dex_capacity_usd'] = depth['dex'][name]['capacity_usd_at_slippage']
+        cap = depth['dex'][name]['capacity_usd_at_slippage']  # {pct: {usd, saturated}}; keep the flat shape site/app.js reads
+        out['dex_capacity_usd'] = {k: v['usd'] for k, v in cap.items()}
+        out['dex_capacity_saturated'] = {k: v['saturated'] for k, v in cap.items()}
     return out
 
 

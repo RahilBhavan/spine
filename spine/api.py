@@ -28,7 +28,7 @@ def lif(lltv):
     return min(1.15, 1 / (0.3 * lltv + 0.7))
 
 
-def _post(url, body, retries=5):
+def _post(url, body, retries=6):
     for i in range(retries):
         try:
             req = urllib.request.Request(url, data=json.dumps(body).encode(), headers=UA)
@@ -38,7 +38,7 @@ def _post(url, body, retries=5):
                 raise RuntimeError(e.read().decode()[:500])
             if i == retries - 1:
                 raise
-            time.sleep(1.5 ** i)
+            time.sleep(4 * 2 ** i if e.code == 429 else 1.5 ** i)  # public RPCs rate-limit hard; back off for real
         except Exception:  # ponytail: blanket retry with backoff; refine per status if it bites
             if i == retries - 1:
                 raise

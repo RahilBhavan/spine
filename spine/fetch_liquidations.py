@@ -51,6 +51,8 @@ def fetch_market(name):
     merged.update(fetch(m['id'], since))
     items = sorted(merged.values(), key=lambda r: (r['ts'], r['tx']))
     total, _ = page({'chainId_in': [CHAIN], 'marketUniqueKey_in': [m['id']], 'type_in': ['Liquidation']})
+    if len(items) != total:
+        raise RuntimeError('%s: merged %d liquidations, countTotal %d; not writing' % (name, len(items), total))
     out = dict(fetched_at=int(time.time()), market=name, count=len(items), items=items)
     os.makedirs(DATA, exist_ok=True)
     with open(path, 'w') as f:

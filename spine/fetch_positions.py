@@ -26,8 +26,13 @@ def row(it):
 def walk(where):
     """Dust positions (borrowShares>=1, borrowAssets 0) have a null healthFactor that the
     healthFactor_gte filter drops; they sort first under BorrowShares Asc."""
-    _, items = page(where, 'BorrowShares')
-    seen = {it['user']['address'].lower(): it for it in items if it['healthFactor'] is None}
+    seen, skip = {}, 0
+    while True:  # ponytail: skip caps at 10000; >10k dust positions in one market would need a cursor
+        _, items = page(where, 'BorrowShares', skip)
+        seen.update((it['user']['address'].lower(), it) for it in items if it['healthFactor'] is None)
+        if not items or any(it['healthFactor'] is not None for it in items):
+            break
+        skip += 1000
     lo = 0
     while True:
         _, items = page(dict(where, healthFactor_gte=lo))
@@ -41,14 +46,14 @@ def walk(where):
 
 def fetch(mid):
     """Returns (countTotal, positions). The book is live; a borrow landing mid-walk behind the cursor
-    makes count != countTotal, so re-walk (up to 3 times) until they agree."""
+    makes count != countTotal, so re-walk (up to 3 times) until they agree, else raise before anything is written."""
     where = {'chainId_in': [CHAIN], 'marketUniqueKey_in': [mid], 'borrowShares_gte': 1}
     for _ in range(3):
         seen = walk(where)
         total, _ = page(where)  # unbanded count, taken right after the walk
         if len(seen) == total:
-            break
-    return total, [row(it) for it in seen.values()]
+            return total, [row(it) for it in seen.values()]
+    raise RuntimeError('%s: walked %d positions, countTotal %d after 3 walks' % (mid, len(seen), total))
 
 
 def fetch_market(name):
