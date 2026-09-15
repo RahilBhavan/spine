@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spine: Coinbase's on-chain loan book on Base</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>Spine: Coinbase's on-chain loan book on Base</h1>
+  <p class="muted">Snapshot <span id="generated-at">loading</span></p>
+  <div id="totals" class="cards"></div>
+</header>
+
+<main>
+  <div class="controls">
+    <div id="market-buttons" class="buttons"></div>
+    <label class="toggle"><input type="checkbox" id="cb-only"> Coinbase wallets only</label>
+  </div>
+
+  <section>
+    <h2 id="market-title">Market</h2>
+    <div id="market-cards" class="cards"></div>
+  </section>
+
+  <section>
+    <h2>LTV distribution</h2>
+    <p class="muted">Borrow USD per 2% LTV bin. Dashed lines: LLTV (liquidation) and 1/LIF (bad debt).
+      <label class="toggle"><input type="checkbox" id="log-y"> log y</label></p>
+    <div id="chart-ltv" class="chart"></div>
+  </section>
+
+  <section>
+    <h2>Liquidatable borrow vs price drop</h2>
+    <p class="muted">Borrow that crosses LLTV at each instantaneous price drop, against what liquidators can sell today at 4.38% slippage (the liquidation bonus). Where the curve crosses the capacity lines, the book outruns its liquidators.</p>
+    <div id="chart-curve" class="chart"></div>
+  </section>
+
+  <section>
+    <h2>Liquidation history</h2>
+    <p class="muted">Daily repaid USD, all time. Top 5 days annotated.</p>
+    <div id="chart-liq" class="chart"></div>
+  </section>
+
+  <section>
+    <h2>Top 25 borrowers</h2>
+    <div class="table-wrap"><table id="table-borrowers"></table></div>
+  </section>
+
+  <section>
+    <h2>Top 10 liquidators (all time, by repaid USD)</h2>
+    <div class="table-wrap"><table id="table-liquidators"></table></div>
+  </section>
+</main>
+
+<footer class="muted">
+  Sources: Morpho API (positions, liquidations), Coinbase Exchange and Kraken order books, Base RPC (wallet tagging), Aerodrome/Uniswap quoters (DEX depth).
+  <a href="../PLAN.md">PLAN.md</a>
+</footer>
+<script src="app.js"></script>
+</body>
+</html>
