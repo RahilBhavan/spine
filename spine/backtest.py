@@ -229,9 +229,13 @@ def calibration(markets, depth):
             book, c = book_arrays(raw, m), candles_for(m, pw)
             end = oracle_end(cw, m) or c[-1][0] + 300
             realized = ((cal.get('windows', {}).get(cw, {}).get(m, {}).get('volume', {}) or {}).get('repaid_usd')) if cal else None
+            pmin = real_path(c, raw['as_of'], end).min()  # frozen-book upper bound: debt with LTV > lltv at the trough
+            at_risk = float(book[1][book[1] > MARKETS[m]['lltv'] * book[0] * pmin].sum())
+            print('%-8s %-5s book $%.0fM at %.0f; trough %.0f (%+.0f%%): $%.0fM of frozen-book debt crosses lltv' % (
+                cw, m, book[1].sum() / 1e6, book[2], pmin, 100 * (pmin / book[2] - 1), at_risk / 1e6))
             for sc in ('A', 'AB', 'ABC'):
                 r = dict(run(m, pw, book, depth, c, scenario=sc, reshape=False, start=raw['as_of'], end=end), book=date, calib_window=cw)
-                r['realized_repaid_usd'] = realized
+                r['realized_repaid_usd'], r['at_risk_usd_at_trough'] = realized, at_risk
                 rows.append(r)
                 print('%-8s %-5s %-3s simulated repaid $%.1fM (seized $%.1fM, n=%d, bad debt $%.2fM)%s' % (
                     cw, m, sc, r['repaid_usd'] / 1e6, r['liquidated_usd'] / 1e6, r['n_liquidated'], (r['realized_bad_debt_usd'] + r['unrealized_bad_debt_usd']) / 1e6,
