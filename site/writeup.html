@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spine: haircut writeup</title>
+<link rel="stylesheet" href="style.css">
+<style>
+  .prose { max-width: 860px; margin: 0 auto; }
+  .prose table { border-collapse: collapse; width: 100%; table-layout: fixed; margin: 1em 0; font-size: 0.92em; }
+  .prose td, .prose th { overflow-wrap: anywhere; white-space: normal; }
+  .prose th, .prose td { border-bottom: 1px solid var(--grid); padding: 6px 8px; text-align: left; vertical-align: top; }
+  .prose th { color: var(--muted); font-weight: 600; }
+  .prose h1 { font-size: 1.7em; } .prose h2 { margin-top: 2em; }
+  .prose code { background: var(--card); padding: 1px 4px; border-radius: 3px; }
+  .prose em { color: var(--muted); }
+  nav a { margin-right: 1em; }
+</style>
+</head>
+<body>
+<main class="prose">
+  <nav><a href="./">Dashboard</a><a href="writeup.html">Writeup</a><a href="../PLAN.md">Plan</a></nav>
+  <article id="doc">Loading…</article>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/marked@12.0.2/marked.min.js"></script>
+<script>
+fetch('../WRITEUP.md').then(r => r.text()).then(md => {
+  document.getElementById('doc').innerHTML = marked.parse(md);
+}).catch(e => { document.getElementById('doc').textContent = 'Could not load WRITEUP.md: ' + e; });
+</script>
+</body>
+</html>

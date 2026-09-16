@@ -214,6 +214,21 @@ repo.
 Total: ~6 working days. Each phase is one `runner` dispatch with the acceptance check
 above; `reviewer` verifies before the next phase starts.
 
+## 6b. What changed during the build (2026-09-15)
+
+- Phases 0-4 built and committed; Phase 5 writeup in `WRITEUP.md`, rendered at `site/writeup.html`.
+- The model gained a **borrower response** term. On the exact Feb 3 2026 book, $515M of debt crossed
+  86% at the trough but only $151M was liquidated: borrowers cured ~70%. Frozen-book replays
+  overstate liquidations 2-3x on every lived event. Final form: a responsive share of wallets
+  (deterministic hash) repays to LLTV-12pp after a reaction delay in the LLTV-6pp warning zone.
+  Fit (share 0.7, delay 120 min) reproduces Oct 2025 / Feb 2026 / Jun 2026 within 15%.
+- Phase 4 acceptance changed accordingly: "AB within 25% of realized" is checked on the rebuilt
+  historical books with borrower response, not on today's book.
+- Realized bad debt is $0.07 across nine markets (rounding dust), not exactly zero.
+- Depth quoting uses hand-encoded `eth_call` (no `cast` dependency); size grids extended and
+  capacity values carry a `saturated` flag when the largest quoted size still fits.
+- Runners die on commands over ~10 minutes; every long script takes `--max-seconds` and resumes.
+
 ## 7. Decisions I made (say so if you want them changed)
 
 - Static site + hourly cron, not a server. Both APIs are CORS-open; a backend adds
