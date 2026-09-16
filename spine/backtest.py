@@ -79,7 +79,7 @@ def simulate(book, path, params):
     inq, zone_steps = np.zeros(n, bool), np.zeros(n, int)
     avail, seized_total, realized, cured, max_q, peak_step, unrealized = base, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
     oracle = lagged(path, params['lag_bars'])
-    trough = int(np.argmin(oracle))
+    trough, trough_short = int(np.argmin(oracle)), np.zeros(n)
     for t, (p, pm) in enumerate(zip(oracle.tolist(), path.tolist())):
         avail = min(base, avail + params['r'] * base)
         kw = int(np.searchsorted(neg_p_liq, -p * (lltv - wg) / lltv))  # prefix that can be queued or warned
@@ -88,13 +88,14 @@ def simulate(book, path, params):
             ltv = debt[:kw] / np.where(coll[:kw] > 0, coll[:kw] * p, 1)
             m = alive[:kw] & (ltv > lltv)
             inq[:kw] = m
+            inq[kw:] = False  # a queued position can bounce out of the prefix in one bar; it must not be served while healthy
             e = entered[:kw]
             e[(e < 0) & m] = t
             warn = alive[:kw] & ~m & (ltv > lltv - wg)
             w = warned[:kw]
             w[(w < 0) & warn] = t
             z = zone_steps[:kw]
-            z[warn] += 1
+            z[warn] += 1  # not reset on queue entry: a partially liquidated position dipping back into the zone is cured the same bar
             act = warn & resp[:kw] & (z >= react_steps)
             if act.any():
                 d0 = debt[:kw][act]
@@ -107,6 +108,7 @@ def simulate(book, path, params):
                 debt[:kw][warn] *= 1 - cure
             k = int(m.sum())
         else:
+            inq[:] = False
             k = 0
         if k:
             q_total = float((np.minimum(debt[:kw] * L, coll[:kw] * p) * m).sum())
@@ -146,8 +148,9 @@ def simulate(book, path, params):
             avail -= step_seized * f
             peak_step = max(peak_step, step_seized)
         if t == trough:
-            unrealized = float(np.maximum(0, debt[alive] - coll[alive] * p / L).sum())
+            trough_short = np.maximum(0, debt - coll * p / L)  # per-position shortfall at the trough; counted only if never liquidated
     done = liq_step >= 0
+    unrealized = float(trough_short[~done].sum())
     q = (liq_step[done] - entered[done]) * BAR_MIN
     wt = np.where(warned[done] >= 0, entered[done] - warned[done], 0) * BAR_MIN  # 0 = jumped straight into the queue
     supply = book[1].sum() / 0.9
@@ -226,7 +229,7 @@ def grid(markets, depth, shares, react):
             c = candles_for(m, w)
             for sh in shares:
                 for lltv in (0.625, 0.70, 0.77, 0.80, 0.86):
-                    for cap in (0.50, 0.60, 0.70, 0.75):
+                    for cap in (c for c in (0.50, 0.60, 0.70, 0.75) if c < lltv):  # cap >= lltv clips most of the book: meaningless
                         for sc in ('A', 'AB', 'ABC'):
                             rows.append(dict(run(m, w, book, depth, c, lltv=lltv, cap=cap, scenario=sc, resp_share=sh, react_min=react), book='today'))
     return rows
