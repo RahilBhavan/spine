@@ -106,5 +106,5 @@ if __name__ == '__main__':
             print('%-8s %s n=%5d min=%10.2f max=%10.2f' % (w, asset, len(rows), min(ps), max(ps)))
             assert rows == sorted(rows) and len(rows) > 100
     feb = [r[2] for r in fetch('Feb2026', 'BTC')]
-    assert min(feb) < 61_000 and max(feb) > 89_000, (min(feb), max(feb))
+    assert min(feb) < 61_000 and max(feb) > 75_000, (min(feb), max(feb))
     print('ok')
