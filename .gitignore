@@ -1,5 +1,5 @@
 __pycache__/
-.venv/
-data/cache/
-*.pyc
 .DS_Store
+.venv/
+*.pyc
+data/cache/

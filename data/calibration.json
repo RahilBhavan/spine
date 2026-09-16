@@ -1,0 +1,1345 @@
+{
+ "generated_at": 1789525471,
+ "windows": {
+  "Oct2025": {
+   "cbBTC": {
+    "volume": {
+     "n": 410,
+     "borrowers": 399,
+     "repaid_usd": 17639090.425584998,
+     "seized_usd": 18412411.59566975,
+     "bad_debt_usd": 0.0
+    },
+    "daily": {
+     "2025-10-09": {
+      "n": 2,
+      "repaid_usd": 5008.962391,
+      "seized_usd": 5228.561337184352,
+      "bad_debt_usd": 0.0
+     },
+     "2025-10-10": {
+      "n": 401,
+      "repaid_usd": 17634053.812645014,
+      "seized_usd": 18407154.17156388,
+      "bad_debt_usd": 0.0
+     },
+     "2025-10-11": {
+      "n": 6,
+      "repaid_usd": 18.499214000000002,
+      "seized_usd": 19.31022956455536,
+      "bad_debt_usd": 0.0
+     },
+     "2025-10-12": {
+      "n": 1,
+      "repaid_usd": 9.151335,
+      "seized_usd": 9.55253915336704,
+      "bad_debt_usd": 0.0
+     }
+    },
+    "peaks": {
+     "peak_5m": {
+      "repaid_usd": 7722453.277982,
+      "start": "2025-10-10T21:15:00+00:00"
+     },
+     "peak_1h": {
+      "repaid_usd": 17611888.910561014,
+      "start": "2025-10-10T21:00:00+00:00"
+     }
+    },
+    "bonus": {
+     "n": 410,
+     "p10": 0.04384033008356503,
+     "p50": 0.04384132739109936,
+     "p90": 0.043841336079430304,
+     "expected": 0.04384133611691032
+    },
+    "latency": {
+     "sampled": 410,
+     "n": 407,
+     "excluded": {
+      "never_crossed": 2,
+      "crossed_before_window": 1
+     },
+     "full_share": 0.5036855036855037,
+     "p50": 4,
+     "p90": 70,
+     "p99": 310,
+     "within": {
+      "2": 0.4864864864864865,
+      "60": 0.8968058968058968,
+      "300": 0.9803439803439803,
+      "1800": 0.9975429975429976
+     }
+    },
+    "latency_first_eligible": {
+     "sampled": 410,
+     "n": 407,
+     "excluded": {
+      "never_crossed": 2,
+      "crossed_before_window": 1
+     },
+     "full_share": 0.5036855036855037,
+     "p50": 4,
+     "p90": 138,
+     "p99": 71468,
+     "within": {
+      "2": 0.47911547911547914,
+      "60": 0.8427518427518428,
+      "300": 0.9164619164619164,
+      "1800": 0.9754299754299754
+     }
+    },
+    "liquidators": {
+     "distinct": 21,
+     "top": [
+      {
+       "address": "0xE96870742b1f0E4e49C6ABd65A07c7f9b188C70b",
+       "repaid_usd": 4023821.018091001,
+       "count": 87,
+       "share": 0.22811953003282767,
+       "is_contract": true
+      },
+      {
+       "address": "0xbe3b7E4E4a69b4C8b66FD28EdDC9a5776B597Ed8",
+       "repaid_usd": 2407993.770169,
+       "count": 132,
+       "share": 0.13651462247034424,
+       "is_contract": true
+      },
+      {
+       "address": "0xF6F98d344D9d1D0e93c60aE694994b8Fb0790F25",
+       "repaid_usd": 2278686.2252450003,
+       "count": 29,
+       "share": 0.12918388478466158,
+       "is_contract": true
+      },
+      {
+       "address": "0x083CfA7FD187Be983ce5D519fE7ae78357779998",
+       "repaid_usd": 1887021.235659,
+       "count": 7,
+       "share": 0.10697950915439093,
+       "is_contract": true
+      },
+      {
+       "address": "0x95BC65Df882D16588853FaaE098225250809801b",
+       "repaid_usd": 1820543.190397,
+       "count": 4,
+       "share": 0.10321071815337789,
+       "is_contract": true
+      },
+      {
+       "address": "0x964AeE3e4E3BBc7245B33dA097030e95EE408170",
+       "repaid_usd": 1244110.8687,
+       "count": 19,
+       "share": 0.07053146385005502,
+       "is_contract": true
+      },
+      {
+       "address": "0x0d1ebEdA506b71f7373996e39567aBB39Ba98666",
+       "repaid_usd": 895239.210112,
+       "count": 1,
+       "share": 0.050753139108209396,
+       "is_contract": true
+      },
+      {
+       "address": "0x841997B44a19ADBECDB1F54cb131D7127E7Ed0Ed",
+       "repaid_usd": 784127.4007379999,
+       "count": 12,
+       "share": 0.04445395889578554,
+       "is_contract": true
+      },
+      {
+       "address": "0x888888887A487f209e31a692B227d8D1ff9070ba",
+       "repaid_usd": 689507.3987970004,
+       "count": 38,
+       "share": 0.03908973661118543,
+       "is_contract": true
+      },
+      {
+       "address": "0xf1a3686f4D394E52d9fdF60132e46EBdCD231B01",
+       "repaid_usd": 566207.528379,
+       "count": 7,
+       "share": 0.03209958760445675,
+       "is_contract": true
+      }
+     ]
+    }
+   },
+   "WETH": {
+    "volume": {
+     "n": 37,
+     "borrowers": 37,
+     "repaid_usd": 84226.397762,
+     "seized_usd": 87893.60996277968,
+     "bad_debt_usd": 0.0
+    },
+    "daily": {
+     "2025-10-09": {
+      "n": 3,
+      "repaid_usd": 18.711465,
+      "seized_usd": 19.527874225303496,
+      "bad_debt_usd": 0.0
+     },
+     "2025-10-10": {
+      "n": 32,
+      "repaid_usd": 84205.08589700001,
+      "seized_usd": 87871.36426203765,
+      "bad_debt_usd": 0.0
+     },
+     "2025-10-11": {
+      "n": 2,
+      "repaid_usd": 2.6004,
+      "seized_usd": 2.717826516707213,
+      "bad_debt_usd": 0.0
+     }
+    },
+    "peaks": {
+     "peak_5m": {
+      "repaid_usd": 42535.992847,
+      "start": "2025-10-10T20:50:00+00:00"
+     },
+     "peak_1h": {
+      "repaid_usd": 43036.786151,
+      "start": "2025-10-10T20:00:00+00:00"
+     }
+    },
+    "bonus": {
+     "n": 37,
+     "p10": 0.0435396612980421,
+     "p50": 0.04353978901684119,
+     "p90": 0.04362801400360694,
+     "expected": 0.04384133611691032
+    },
+    "latency": {
+     "sampled": 37,
+     "n": 37,
+     "excluded": {},
+     "full_share": 0.21621621621621623,
+     "p50": 2,
+     "p90": 8,
+     "p99": 43582,
+     "within": {
+      "2": 0.7297297297297297,
+      "60": 0.9459459459459459,
+      "300": 0.9459459459459459,
+      "1800": 0.9459459459459459
+     }
+    },
+    "latency_first_eligible": {
+     "sampled": 37,
+     "n": 37,
+     "excluded": {},
+     "full_share": 0.21621621621621623,
+     "p50": 2,
+     "p90": 122,
+     "p99": 81640,
+     "within": {
+      "2": 0.6756756756756757,
+      "60": 0.8648648648648649,
+      "300": 0.8918918918918919,
+      "1800": 0.918918918918919
+     }
+    },
+    "liquidators": {
+     "distinct": 10,
+     "top": [
+      {
+       "address": "0x730F9F991DCAEBe46B04DEd146C8D522B5ca7C78",
+       "repaid_usd": 41513.531032,
+       "count": 1,
+       "share": 0.4928802861699667,
+       "is_contract": true
+      },
+      {
+       "address": "0x964AeE3e4E3BBc7245B33dA097030e95EE408170",
+       "repaid_usd": 30047.680768,
+       "count": 7,
+       "share": 0.3567489714199372,
+       "is_contract": true
+      },
+      {
+       "address": "0xE96870742b1f0E4e49C6ABd65A07c7f9b188C70b",
+       "repaid_usd": 8452.058787,
+       "count": 9,
+       "share": 0.10034928492232484,
+       "is_contract": true
+      },
+      {
+       "address": "0xbe3b7E4E4a69b4C8b66FD28EdDC9a5776B597Ed8",
+       "repaid_usd": 1250.0385350000001,
+       "count": 2,
+       "share": 0.014841410391695202,
+       "is_contract": true
+      },
+      {
+       "address": "0x168e9dAFf7cF590e147BAd0aE2557C3823446753",
+       "repaid_usd": 1070.5753,
+       "count": 1,
+       "share": 0.012710686060979876,
+       "is_contract": true
+      },
+      {
+       "address": "0x88872bb2D506562D0Cd2E8aa010d10C544B0f2a3",
+       "repaid_usd": 1018.924105,
+       "count": 1,
+       "share": 0.012097443700242193,
+       "is_contract": true
+      },
+      {
+       "address": "0x7d2F52fd648dc9BB134e133fE4FF17E5d0FA3bC9",
+       "repaid_usd": 556.849339,
+       "count": 6,
+       "share": 0.006611339838770013,
+       "is_contract": true
+      },
+      {
+       "address": "0x888888887A487f209e31a692B227d8D1ff9070ba",
+       "repaid_usd": 310.173365,
+       "count": 6,
+       "share": 0.0036826146343865054,
+       "is_contract": true
+      },
+      {
+       "address": "0xf4Cd829526070C2C0af9E6Dce2C9255130f7ec68",
+       "repaid_usd": 3.756425,
+       "count": 1,
+       "share": 4.45991411221764e-05,
+       "is_contract": true
+      },
+      {
+       "address": "0xfEd6096F550864f8e1175f1e9DFa105AC911E5b4",
+       "repaid_usd": 2.810106,
+       "count": 3,
+       "share": 3.336372057535413e-05,
+       "is_contract": true
+      }
+     ]
+    }
+   }
+  },
+  "Feb2026": {
+   "cbBTC": {
+    "volume": {
+     "n": 4116,
+     "borrowers": 3914,
+     "repaid_usd": 150771605.342139,
+     "seized_usd": 157397958.91269344,
+     "bad_debt_usd": 0.000603
+    },
+    "daily": {
+     "2026-02-02": {
+      "n": 175,
+      "repaid_usd": 6298247.658729997,
+      "seized_usd": 6574371.229205234,
+      "bad_debt_usd": 0.0
+     },
+     "2026-02-03": {
+      "n": 241,
+      "repaid_usd": 13384020.755684003,
+      "seized_usd": 13970792.070216954,
+      "bad_debt_usd": 0.000603
+     },
+     "2026-02-04": {
+      "n": 244,
+      "repaid_usd": 9657764.342505999,
+      "seized_usd": 10081173.59456549,
+      "bad_debt_usd": 0.0
+     },
+     "2026-02-05": {
+      "n": 2878,
+      "repaid_usd": 96818007.55139944,
+      "seized_usd": 101077248.9060185,
+      "bad_debt_usd": 0.0
+     },
+     "2026-02-06": {
+      "n": 568,
+      "repaid_usd": 24613547.331990022,
+      "seized_usd": 25694354.634805538,
+      "bad_debt_usd": 0.0
+     },
+     "2026-02-07": {
+      "n": 4,
+      "repaid_usd": 7.375738999999999,
+      "seized_usd": 7.699093453560001,
+      "bad_debt_usd": 0.0
+     },
+     "2026-02-08": {
+      "n": 6,
+      "repaid_usd": 10.326091000000002,
+      "seized_usd": 10.778788067785436,
+      "bad_debt_usd": 0.0
+     }
+    },
+    "peaks": {
+     "peak_5m": {
+      "repaid_usd": 11206537.966014989,
+      "start": "2026-02-06T00:05:00+00:00"
+     },
+     "peak_1h": {
+      "repaid_usd": 32559579.032084994,
+      "start": "2026-02-05T20:00:00+00:00"
+     }
+    },
+    "bonus": {
+     "n": 4116,
+     "p10": 0.04383878939071928,
+     "p50": 0.04384132305064292,
+     "p90": 0.04384133608634544,
+     "expected": 0.04384133611691032
+    },
+    "latency": {
+     "sampled": 1500,
+     "n": 1492,
+     "excluded": {
+      "crossed_before_window": 3,
+      "never_crossed": 5
+     },
+     "full_share": 0.35924932975871315,
+     "p50": 2,
+     "p90": 88,
+     "p99": 3778,
+     "within": {
+      "2": 0.5046916890080428,
+      "60": 0.8719839142091153,
+      "300": 0.9376675603217158,
+      "1800": 0.9644772117962467
+     }
+    },
+    "latency_first_eligible": {
+     "sampled": 1500,
+     "n": 1492,
+     "excluded": {
+      "crossed_before_window": 3,
+      "never_crossed": 5
+     },
+     "full_share": 0.35924932975871315,
+     "p50": 4,
+     "p90": 2794,
+     "p99": 21618,
+     "within": {
+      "2": 0.4671581769436997,
+      "60": 0.7741286863270778,
+      "300": 0.8257372654155496,
+      "1800": 0.8760053619302949
+     }
+    },
+    "liquidators": {
+     "distinct": 46,
+     "top": [
+      {
+       "address": "0xD12810B19B596347a3AFAC206d3cA65d08594b3f",
+       "repaid_usd": 24612953.242416035,
+       "count": 827,
+       "share": 0.1632466085809924,
+       "is_contract": true
+      },
+      {
+       "address": "0x119F163ad76e320bf264631491fdb711fA793B85",
+       "repaid_usd": 15515802.913765995,
+       "count": 42,
+       "share": 0.10290931690059743,
+       "is_contract": true
+      },
+      {
+       "address": "0x9bE62980818c59fc654C5Ede5427EBAA32C7eb81",
+       "repaid_usd": 13460181.076419998,
+       "count": 70,
+       "share": 0.08927530516024838,
+       "is_contract": true
+      },
+      {
+       "address": "0x23605743F312DE70924F4153560E256736745Ed6",
+       "repaid_usd": 12449395.719584996,
+       "count": 221,
+       "share": 0.08257122215641438,
+       "is_contract": true
+      },
+      {
+       "address": "0xb05F53e20e61A20711cA2d654161f3787FcFb29A",
+       "repaid_usd": 10868319.740549002,
+       "count": 79,
+       "share": 0.07208465888444994,
+       "is_contract": true
+      },
+      {
+       "address": "0xFc92f12791C72b3eE0461A90D0410590513873C7",
+       "repaid_usd": 9462102.118051002,
+       "count": 42,
+       "share": 0.062757852160419,
+       "is_contract": true
+      },
+      {
+       "address": "0x312D2779E6a8E1701B134Ac3129a7f97Edf05a11",
+       "repaid_usd": 8975324.99326,
+       "count": 28,
+       "share": 0.059529279222654094,
+       "is_contract": true
+      },
+      {
+       "address": "0x3d7BEe81047D11FE2C85E6E9ecbf82E4Deb18F54",
+       "repaid_usd": 7541506.882587002,
+       "count": 55,
+       "share": 0.05001941091940627,
+       "is_contract": true
+      },
+      {
+       "address": "0x33d20c12b36DAE891f66123FF2bF83f127d75a84",
+       "repaid_usd": 6212043.098085999,
+       "count": 106,
+       "share": 0.04120167775616169,
+       "is_contract": true
+      },
+      {
+       "address": "0xaCb93D101D527975b4859Aa6851d42f9e0011156",
+       "repaid_usd": 5923063.166489001,
+       "count": 345,
+       "share": 0.039285004315289127,
+       "is_contract": true
+      }
+     ]
+    }
+   },
+   "WETH": {
+    "volume": {
+     "n": 612,
+     "borrowers": 602,
+     "repaid_usd": 4521039.695096,
+     "seized_usd": 4718025.814119923,
+     "bad_debt_usd": 0.00752
+    },
+    "daily": {
+     "2026-02-02": {
+      "n": 127,
+      "repaid_usd": 392072.50996300014,
+      "seized_usd": 409145.1787148905,
+      "bad_debt_usd": 0.007517999999999999
+     },
+     "2026-02-03": {
+      "n": 29,
+      "repaid_usd": 376189.77962100005,
+      "seized_usd": 392577.85902856383,
+      "bad_debt_usd": 0.0
+     },
+     "2026-02-04": {
+      "n": 26,
+      "repaid_usd": 68733.42929200002,
+      "seized_usd": 71718.53930562864,
+      "bad_debt_usd": 0.0
+     },
+     "2026-02-05": {
+      "n": 317,
+      "repaid_usd": 2415345.6962220003,
+      "seized_usd": 2520550.652205081,
+      "bad_debt_usd": 2e-06
+     },
+     "2026-02-06": {
+      "n": 112,
+      "repaid_usd": 1268696.6022040003,
+      "seized_usd": 1324031.8338424193,
+      "bad_debt_usd": 0.0
+     },
+     "2026-02-07": {
+      "n": 1,
+      "repaid_usd": 1.677794,
+      "seized_usd": 1.751023336653449,
+      "bad_debt_usd": 0.0
+     }
+    },
+    "peaks": {
+     "peak_5m": {
+      "repaid_usd": 812077.343313,
+      "start": "2026-02-06T00:10:00+00:00"
+     },
+     "peak_1h": {
+      "repaid_usd": 1268693.3480290002,
+      "start": "2026-02-06T00:00:00+00:00"
+     }
+    },
+    "bonus": {
+     "n": 612,
+     "p10": 0.04307112018898529,
+     "p50": 0.0435551314245588,
+     "p90": 0.04363555198232949,
+     "expected": 0.04384133611691032
+    },
+    "latency": {
+     "sampled": 612,
+     "n": 592,
+     "excluded": {
+      "crossed_before_window": 20
+     },
+     "full_share": 0.23310810810810811,
+     "p50": 2,
+     "p90": 29580,
+     "p99": 69702,
+     "within": {
+      "2": 0.5219594594594594,
+      "60": 0.7364864864864865,
+      "300": 0.8074324324324325,
+      "1800": 0.8614864864864865
+     }
+    },
+    "latency_first_eligible": {
+     "sampled": 612,
+     "n": 592,
+     "excluded": {
+      "crossed_before_window": 20
+     },
+     "full_share": 0.23310810810810811,
+     "p50": 8,
+     "p90": 77706,
+     "p99": 80388,
+     "within": {
+      "2": 0.4527027027027027,
+      "60": 0.6131756756756757,
+      "300": 0.6621621621621622,
+      "1800": 0.7347972972972973
+     }
+    },
+    "liquidators": {
+     "distinct": 35,
+     "top": [
+      {
+       "address": "0xD12810B19B596347a3AFAC206d3cA65d08594b3f",
+       "repaid_usd": 1263058.8312420007,
+       "count": 55,
+       "share": 0.27937353273231563,
+       "is_contract": true
+      },
+      {
+       "address": "0xb05F53e20e61A20711cA2d654161f3787FcFb29A",
+       "repaid_usd": 1051496.6990989998,
+       "count": 41,
+       "share": 0.23257851512331662,
+       "is_contract": true
+      },
+      {
+       "address": "0xB949a57AC64BE7a9dbe535E14f859E4C56a0Cf03",
+       "repaid_usd": 416335.7921119999,
+       "count": 34,
+       "share": 0.09208850622647749,
+       "is_contract": true
+      },
+      {
+       "address": "0x23605743F312DE70924F4153560E256736745Ed6",
+       "repaid_usd": 387762.9542980001,
+       "count": 28,
+       "share": 0.08576853565754111,
+       "is_contract": true
+      },
+      {
+       "address": "0x570d8FAF44b9AEaBCCE7c6B724D9078B5A266452",
+       "repaid_usd": 375697.28822,
+       "count": 4,
+       "share": 0.08309975438338248,
+       "is_contract": true
+      },
+      {
+       "address": "0x3d7BEe81047D11FE2C85E6E9ecbf82E4Deb18F54",
+       "repaid_usd": 374684.01242000004,
+       "count": 44,
+       "share": 0.0828756298747879,
+       "is_contract": true
+      },
+      {
+       "address": "0xFc92f12791C72b3eE0461A90D0410590513873C7",
+       "repaid_usd": 225439.48365500002,
+       "count": 2,
+       "share": 0.04986452206989813,
+       "is_contract": true
+      },
+      {
+       "address": "0x9708d715523D75CAb44b801998151707B32bE260",
+       "repaid_usd": 104393.781455,
+       "count": 1,
+       "share": 0.023090658011305804,
+       "is_contract": true
+      },
+      {
+       "address": "0x81f6574361769befa83044Cd44150F4fCD590fE4",
+       "repaid_usd": 103346.22889700001,
+       "count": 3,
+       "share": 0.022858951893101116,
+       "is_contract": true
+      },
+      {
+       "address": "0x426Cbb8fAC80EF7CB3b338B5B98412E3c59e08d8",
+       "repaid_usd": 39065.052653,
+       "count": 1,
+       "share": 0.008640723215806776,
+       "is_contract": true
+      }
+     ]
+    }
+   }
+  },
+  "Jun2026a": {
+   "cbBTC": {
+    "volume": {
+     "n": 3308,
+     "borrowers": 3256,
+     "repaid_usd": 72105620.248756,
+     "seized_usd": 75272253.0378725,
+     "bad_debt_usd": 1e-06
+    },
+    "daily": {
+     "2026-06-01": {
+      "n": 311,
+      "repaid_usd": 2746798.9762,
+      "seized_usd": 2867222.251195271,
+      "bad_debt_usd": 0.0
+     },
+     "2026-06-02": {
+      "n": 1083,
+      "repaid_usd": 15105845.89723001,
+      "seized_usd": 15768121.762140984,
+      "bad_debt_usd": 0.0
+     },
+     "2026-06-03": {
+      "n": 504,
+      "repaid_usd": 11476104.566179002,
+      "seized_usd": 11983375.702621827,
+      "bad_debt_usd": 0.0
+     },
+     "2026-06-04": {
+      "n": 638,
+      "repaid_usd": 26182513.830104977,
+      "seized_usd": 27331657.632632114,
+      "bad_debt_usd": 0.0
+     },
+     "2026-06-05": {
+      "n": 762,
+      "repaid_usd": 16594356.889916008,
+      "seized_usd": 17321875.59626758,
+      "bad_debt_usd": 0.0
+     },
+     "2026-06-06": {
+      "n": 10,
+      "repaid_usd": 0.08912600000000001,
+      "seized_usd": 0.0930147028512605,
+      "bad_debt_usd": 1e-06
+     }
+    },
+    "peaks": {
+     "peak_5m": {
+      "repaid_usd": 6809346.727220001,
+      "start": "2026-06-04T00:35:00+00:00"
+     },
+     "peak_1h": {
+      "repaid_usd": 12742172.670697996,
+      "start": "2026-06-04T00:00:00+00:00"
+     }
+    },
+    "bonus": {
+     "n": 3308,
+     "p10": 0.043793552855539986,
+     "p50": 0.04384129480686538,
+     "p90": 0.043841336041136936,
+     "expected": 0.04384133611691032
+    },
+    "latency": {
+     "sampled": 1500,
+     "n": 1499,
+     "excluded": {
+      "crossed_before_window": 1
+     },
+     "full_share": 0.2808539026017345,
+     "p50": 0,
+     "p90": 6,
+     "p99": 550,
+     "within": {
+      "2": 0.8699132755170114,
+      "60": 0.970647098065377,
+      "300": 0.9853235490326885,
+      "1800": 0.9966644429619747
+     }
+    },
+    "latency_first_eligible": {
+     "sampled": 1500,
+     "n": 1499,
+     "excluded": {
+      "crossed_before_window": 1
+     },
+     "full_share": 0.2808539026017345,
+     "p50": 0,
+     "p90": 10,
+     "p99": 26810,
+     "within": {
+      "2": 0.8432288192128086,
+      "60": 0.9352901934623082,
+      "300": 0.9399599733155437,
+      "1800": 0.9699799866577719
+     }
+    },
+    "liquidators": {
+     "distinct": 110,
+     "top": [
+      {
+       "address": "0xB949a57AC64BE7a9dbe535E14f859E4C56a0Cf03",
+       "repaid_usd": 8043282.246158,
+       "count": 163,
+       "share": 0.11154861740887342,
+       "is_contract": true
+      },
+      {
+       "address": "0x3d7BEe81047D11FE2C85E6E9ecbf82E4Deb18F54",
+       "repaid_usd": 6493899.585197001,
+       "count": 167,
+       "share": 0.09006093509484839,
+       "is_contract": true
+      },
+      {
+       "address": "0x312D2779E6a8E1701B134Ac3129a7f97Edf05a11",
+       "repaid_usd": 5339333.298958,
+       "count": 20,
+       "share": 0.07404878122590057,
+       "is_contract": true
+      },
+      {
+       "address": "0xA9F7694a55865988A8477eE616697D6914887C3c",
+       "repaid_usd": 5172932.508158,
+       "count": 38,
+       "share": 0.07174104446105567,
+       "is_contract": true
+      },
+      {
+       "address": "0x27668166F314bF41B04FBC58961FE9d530986024",
+       "repaid_usd": 4780991.657089,
+       "count": 17,
+       "share": 0.06630539534359645,
+       "is_contract": true
+      },
+      {
+       "address": "0x9bE62980818c59fc654C5Ede5427EBAA32C7eb81",
+       "repaid_usd": 3950135.045789999,
+       "count": 27,
+       "share": 0.05478262349262779,
+       "is_contract": true
+      },
+      {
+       "address": "0x23605743F312DE70924F4153560E256736745Ed6",
+       "repaid_usd": 3496448.297924002,
+       "count": 204,
+       "share": 0.04849064866041873,
+       "is_contract": true
+      },
+      {
+       "address": "0xBbedae5e104C6F3b4D5ED67fb10220075079fC07",
+       "repaid_usd": 3320494.772208,
+       "count": 4,
+       "share": 0.04605042936670788,
+       "is_contract": true
+      },
+      {
+       "address": "0xD4187E8680Ed8e5cf9C3DD973B3cB1106d95C6B5",
+       "repaid_usd": 2817019.4284650004,
+       "count": 35,
+       "share": 0.03906795917914042,
+       "is_contract": true
+      },
+      {
+       "address": "0x9E2e9cF25ea012F3219f94BaB3B998Cc1A07A9EF",
+       "repaid_usd": 2546661.002556,
+       "count": 4,
+       "share": 0.035318481330169765,
+       "is_contract": true
+      }
+     ]
+    }
+   },
+   "WETH": {
+    "volume": {
+     "n": 1179,
+     "borrowers": 1161,
+     "repaid_usd": 8389200.940658,
+     "seized_usd": 8754449.106907135,
+     "bad_debt_usd": 0.0
+    },
+    "daily": {
+     "2026-06-01": {
+      "n": 5,
+      "repaid_usd": 456.034507,
+      "seized_usd": 475.837156010929,
+      "bad_debt_usd": 0.0
+     },
+     "2026-06-02": {
+      "n": 219,
+      "repaid_usd": 1007521.2114550002,
+      "seized_usd": 1051324.1948726915,
+      "bad_debt_usd": 0.0
+     },
+     "2026-06-03": {
+      "n": 197,
+      "repaid_usd": 1322556.7619089999,
+      "seized_usd": 1380532.1414217772,
+      "bad_debt_usd": 0.0
+     },
+     "2026-06-04": {
+      "n": 157,
+      "repaid_usd": 432301.72161199973,
+      "seized_usd": 451087.44276412687,
+      "bad_debt_usd": 0.0
+     },
+     "2026-06-05": {
+      "n": 511,
+      "repaid_usd": 4814327.522796008,
+      "seized_usd": 5023638.919507587,
+      "bad_debt_usd": 0.0
+     },
+     "2026-06-06": {
+      "n": 90,
+      "repaid_usd": 812037.6883789997,
+      "seized_usd": 847390.5711849356,
+      "bad_debt_usd": 0.0
+     }
+    },
+    "peaks": {
+     "peak_5m": {
+      "repaid_usd": 1513950.845213999,
+      "start": "2026-06-05T06:20:00+00:00"
+     },
+     "peak_1h": {
+      "repaid_usd": 1724369.1381469993,
+      "start": "2026-06-05T06:00:00+00:00"
+     }
+    },
+    "bonus": {
+     "n": 1179,
+     "p10": 0.04340322782261996,
+     "p50": 0.0434759733334642,
+     "p90": 0.04347676400287015,
+     "expected": 0.04384133611691032
+    },
+    "latency": {
+     "sampled": 1179,
+     "n": 1178,
+     "excluded": {
+      "crossed_before_window": 1
+     },
+     "full_share": 0.2733446519524618,
+     "p50": 0,
+     "p90": 490,
+     "p99": 25948,
+     "within": {
+      "2": 0.7368421052631579,
+      "60": 0.8242784380305602,
+      "300": 0.8921901528013583,
+      "1800": 0.9252971137521222
+     }
+    },
+    "latency_first_eligible": {
+     "sampled": 1179,
+     "n": 1178,
+     "excluded": {
+      "crossed_before_window": 1
+     },
+     "full_share": 0.2733446519524618,
+     "p50": 0,
+     "p90": 24196,
+     "p99": 53042,
+     "within": {
+      "2": 0.6612903225806451,
+      "60": 0.732597623089983,
+      "300": 0.7945670628183361,
+      "1800": 0.8582342954159593
+     }
+    },
+    "liquidators": {
+     "distinct": 57,
+     "top": [
+      {
+       "address": "0xA9F7694a55865988A8477eE616697D6914887C3c",
+       "repaid_usd": 1918411.5669840006,
+       "count": 77,
+       "share": 0.2286763162015203,
+       "is_contract": true
+      },
+      {
+       "address": "0x23605743F312DE70924F4153560E256736745Ed6",
+       "repaid_usd": 1086866.006461,
+       "count": 52,
+       "share": 0.12955536697107084,
+       "is_contract": true
+      },
+      {
+       "address": "0xD4187E8680Ed8e5cf9C3DD973B3cB1106d95C6B5",
+       "repaid_usd": 797267.868825,
+       "count": 36,
+       "share": 0.09503501876574039,
+       "is_contract": true
+      },
+      {
+       "address": "0x51054264292619F06deaf6389e2E4348B416a351",
+       "repaid_usd": 666466.886152,
+       "count": 46,
+       "share": 0.07944342862524476,
+       "is_contract": true
+      },
+      {
+       "address": "0x854F07b6D8A86FCed15110250d963497c01f0ADA",
+       "repaid_usd": 586232.838753,
+       "count": 1,
+       "share": 0.06987946085685477,
+       "is_contract": true
+      },
+      {
+       "address": "0xB949a57AC64BE7a9dbe535E14f859E4C56a0Cf03",
+       "repaid_usd": 520680.49820999976,
+       "count": 67,
+       "share": 0.062065565230001576,
+       "is_contract": true
+      },
+      {
+       "address": "0x3d7BEe81047D11FE2C85E6E9ecbf82E4Deb18F54",
+       "repaid_usd": 492335.15651199984,
+       "count": 46,
+       "share": 0.058686776010562915,
+       "is_contract": true
+      },
+      {
+       "address": "0xD12810B19B596347a3AFAC206d3cA65d08594b3f",
+       "repaid_usd": 346127.7733250001,
+       "count": 46,
+       "share": 0.04125872961839579,
+       "is_contract": true
+      },
+      {
+       "address": "0xF2Cd2a6C0C4c6A4C6082F11d201Ead18f6c0187C",
+       "repaid_usd": 276273.39703600004,
+       "count": 19,
+       "share": 0.03293202761386363,
+       "is_contract": true
+      },
+      {
+       "address": "0xE1Be10F40AeF6be5f98e7750B152FeefF046b2A1",
+       "repaid_usd": 229870.707804,
+       "count": 4,
+       "share": 0.02740078696767636,
+       "is_contract": true
+      }
+     ]
+    }
+   }
+  },
+  "Jun2026b": {
+   "cbBTC": {
+    "volume": {
+     "n": 394,
+     "borrowers": 394,
+     "repaid_usd": 15360166.724367,
+     "seized_usd": 16033576.918253623,
+     "bad_debt_usd": 0.0
+    },
+    "daily": {
+     "2026-06-24": {
+      "n": 116,
+      "repaid_usd": 6027036.231309,
+      "seized_usd": 6291269.540702275,
+      "bad_debt_usd": 0.0
+     },
+     "2026-06-25": {
+      "n": 241,
+      "repaid_usd": 9332992.777994998,
+      "seized_usd": 9742163.628069686,
+      "bad_debt_usd": 0.0
+     },
+     "2026-06-26": {
+      "n": 37,
+      "repaid_usd": 137.71506300000001,
+      "seized_usd": 143.74948166856453,
+      "bad_debt_usd": 0.0
+     }
+    },
+    "peaks": {
+     "peak_5m": {
+      "repaid_usd": 8037947.872604996,
+      "start": "2026-06-25T13:55:00+00:00"
+     },
+     "peak_1h": {
+      "repaid_usd": 9332950.934282,
+      "start": "2026-06-25T13:00:00+00:00"
+     }
+    },
+    "bonus": {
+     "n": 394,
+     "p10": 0.04381141687674561,
+     "p50": 0.043841310861860716,
+     "p90": 0.04384133602170848,
+     "expected": 0.04384133611691032
+    },
+    "latency": {
+     "sampled": 394,
+     "n": 391,
+     "excluded": {
+      "never_crossed": 1,
+      "inconsistent_history": 2
+     },
+     "full_share": 0.30179028132992325,
+     "p50": 0,
+     "p90": 6,
+     "p99": 156,
+     "within": {
+      "2": 0.8618925831202046,
+      "60": 0.9820971867007673,
+      "300": 0.9923273657289002,
+      "1800": 0.9948849104859335
+     }
+    },
+    "latency_first_eligible": {
+     "sampled": 394,
+     "n": 391,
+     "excluded": {
+      "never_crossed": 1,
+      "inconsistent_history": 2
+     },
+     "full_share": 0.30179028132992325,
+     "p50": 0,
+     "p90": 44338,
+     "p99": 72254,
+     "within": {
+      "2": 0.7289002557544757,
+      "60": 0.8260869565217391,
+      "300": 0.8286445012787724,
+      "1800": 0.8439897698209718
+     }
+    },
+    "liquidators": {
+     "distinct": 43,
+     "top": [
+      {
+       "address": "0x29D0837Dd4704EC2f4aeb4F57b93E72BC62D8B26",
+       "repaid_usd": 3587333.095691,
+       "count": 13,
+       "share": 0.233547796717606,
+       "is_contract": true
+      },
+      {
+       "address": "0xE1Be10F40AeF6be5f98e7750B152FeefF046b2A1",
+       "repaid_usd": 2593942.209386,
+       "count": 1,
+       "share": 0.168874612882361,
+       "is_contract": true
+      },
+      {
+       "address": "0xA9F7694a55865988A8477eE616697D6914887C3c",
+       "repaid_usd": 2512097.800685,
+       "count": 13,
+       "share": 0.16354625869391565,
+       "is_contract": true
+      },
+      {
+       "address": "0x312D2779E6a8E1701B134Ac3129a7f97Edf05a11",
+       "repaid_usd": 1784112.028549,
+       "count": 1,
+       "share": 0.1161518660939225,
+       "is_contract": true
+      },
+      {
+       "address": "0x2DEc4C343a602C4D8e135Ee9D61e26818e984878",
+       "repaid_usd": 931046.279879,
+       "count": 16,
+       "share": 0.06061433424430287,
+       "is_contract": true
+      },
+      {
+       "address": "0xf595D7B90c7f0CA66aB36583303a85Fc90FEB0Db",
+       "repaid_usd": 895485.386415,
+       "count": 2,
+       "share": 0.058299197038950326,
+       "is_contract": true
+      },
+      {
+       "address": "0xeF5851187416Dac57B27E58fd1a4Dff21764b6Eb",
+       "repaid_usd": 810613.326987,
+       "count": 12,
+       "share": 0.05277373231249257,
+       "is_contract": true
+      },
+      {
+       "address": "0x2Af6351B3016e67476e4Cc9a12461AE22B6EbE42",
+       "repaid_usd": 744426.148372,
+       "count": 1,
+       "share": 0.04846471797673004,
+       "is_contract": true
+      },
+      {
+       "address": "0x7372825fd055D2ED613283419aF846a53CdCBFB6",
+       "repaid_usd": 313692.761452,
+       "count": 9,
+       "share": 0.020422484148844903,
+       "is_contract": true
+      },
+      {
+       "address": "0x30E91Ff0bb5220f9dF82a52841602de44f2eEab3",
+       "repaid_usd": 310014.34469699993,
+       "count": 87,
+       "share": 0.020183006490756418,
+       "is_contract": true
+      }
+     ]
+    }
+   },
+   "WETH": {
+    "volume": {
+     "n": 126,
+     "borrowers": 126,
+     "repaid_usd": 174018.064671,
+     "seized_usd": 181595.5871414935,
+     "bad_debt_usd": 0.0
+    },
+    "daily": {
+     "2026-06-23": {
+      "n": 5,
+      "repaid_usd": 7703.324315999999,
+      "seized_usd": 8038.716392191071,
+      "bad_debt_usd": 0.0
+     },
+     "2026-06-24": {
+      "n": 70,
+      "repaid_usd": 117240.06398299999,
+      "seized_usd": 122347.17144578043,
+      "bad_debt_usd": 0.0
+     },
+     "2026-06-25": {
+      "n": 24,
+      "repaid_usd": 21494.652091000004,
+      "seized_usd": 22431.031088788917,
+      "bad_debt_usd": 0.0
+     },
+     "2026-06-26": {
+      "n": 27,
+      "repaid_usd": 27580.024281,
+      "seized_usd": 28778.668214733112,
+      "bad_debt_usd": 0.0
+     }
+    },
+    "peaks": {
+     "peak_5m": {
+      "repaid_usd": 73547.069277,
+      "start": "2026-06-24T17:20:00+00:00"
+     },
+     "peak_1h": {
+      "repaid_usd": 96669.31475999998,
+      "start": "2026-06-24T17:00:00+00:00"
+     }
+    },
+    "bonus": {
+     "n": 126,
+     "p10": 0.043460311982772115,
+     "p50": 0.043560606714925676,
+     "p90": 0.0435606877099477,
+     "expected": 0.04384133611691032
+    },
+    "latency": {
+     "sampled": 126,
+     "n": 125,
+     "excluded": {
+      "crossed_before_window": 1
+     },
+     "full_share": 0.312,
+     "p50": 0,
+     "p90": 28,
+     "p99": 3844,
+     "within": {
+      "2": 0.84,
+      "60": 0.944,
+      "300": 0.968,
+      "1800": 0.976
+     }
+    },
+    "latency_first_eligible": {
+     "sampled": 126,
+     "n": 125,
+     "excluded": {
+      "crossed_before_window": 1
+     },
+     "full_share": 0.312,
+     "p50": 0,
+     "p90": 4846,
+     "p99": 72438,
+     "within": {
+      "2": 0.744,
+      "60": 0.816,
+      "300": 0.848,
+      "1800": 0.872
+     }
+    },
+    "liquidators": {
+     "distinct": 38,
+     "top": [
+      {
+       "address": "0x2Af6351B3016e67476e4Cc9a12461AE22B6EbE42",
+       "repaid_usd": 72535.159583,
+       "count": 1,
+       "share": 0.4168254584380971,
+       "is_contract": true
+      },
+      {
+       "address": "0xee5238Ef0A72bf228b71471D4a3540C739fed8D3",
+       "repaid_usd": 29166.44135,
+       "count": 5,
+       "share": 0.16760582532130971,
+       "is_contract": true
+      },
+      {
+       "address": "0xBC2E95134C56f64d33143a85929Ef14712B57334",
+       "repaid_usd": 15343.34577,
+       "count": 1,
+       "share": 0.08817099419539148,
+       "is_contract": true
+      },
+      {
+       "address": "0xD4187E8680Ed8e5cf9C3DD973B3cB1106d95C6B5",
+       "repaid_usd": 8873.406963000001,
+       "count": 5,
+       "share": 0.05099129782747635,
+       "is_contract": true
+      },
+      {
+       "address": "0xD12810B19B596347a3AFAC206d3cA65d08594b3f",
+       "repaid_usd": 7860.155596,
+       "count": 1,
+       "share": 0.045168618619339754,
+       "is_contract": true
+      },
+      {
+       "address": "0x218172C19435Ba4AdFE3D212f3fa9E4e329e782B",
+       "repaid_usd": 7115.765807,
+       "count": 6,
+       "share": 0.040890960489953304,
+       "is_contract": true
+      },
+      {
+       "address": "0x999070b1720f7594792741dAa04597485052145A",
+       "repaid_usd": 6949.811996,
+       "count": 1,
+       "share": 0.03993730196424936,
+       "is_contract": true
+      },
+      {
+       "address": "0xBc7dE03893e2dA1Af83FE43ad38Ab38e4B211E63",
+       "repaid_usd": 4608.469604999999,
+       "count": 8,
+       "share": 0.026482708066618316,
+       "is_contract": true
+      },
+      {
+       "address": "0xD4C1D6e59599da4D462C6f280032E3f0E564a2b5",
+       "repaid_usd": 3250.088683,
+       "count": 1,
+       "share": 0.01867673157464798,
+       "is_contract": true
+      },
+      {
+       "address": "0xf595D7B90c7f0CA66aB36583303a85Fc90FEB0Db",
+       "repaid_usd": 2977.839152,
+       "count": 1,
+       "share": 0.017112241522912738,
+       "is_contract": true
+      }
+     ]
+    }
+   }
+  }
+ }
+}
