@@ -1,20 +1,20 @@
 # What haircut should Coinbase take on BTC and ETH collateral?
 
-*Spine, 2026-09-15. Every number here is produced by a script in this repo from public data: the Morpho API, Base RPC, Coinbase Exchange, and Chainlink logs. The dashboard refreshes hourly. Backtest and calibration outputs are in `data/backtest.json` and `data/calibration.json`.*
+*Spine, 2026-09-17. Every number here is produced by a script in this repo from public data: the Morpho API, Base RPC, Coinbase Exchange, and Chainlink logs. Tables are printed by `spine/writeup_tables.py` from `data/backtest.json`, `data/calibration.json`, `data/summary.json` and `data/depth.json`. The dashboard refreshes hourly.*
 
 ## The short version
 
 Coinbase lends USDC against cbBTC and ETH on Morpho (Base) at an 86% liquidation LTV with a 4.38% liquidation bonus. The book is $1.41B of debt against $2.86B of cbBTC, 39,000 positions, 97.5% of it Coinbase Smart Wallets. It has been through three real stress events (Oct 2025, Feb 2026, Jun 2026), cleared $256M of liquidations in the four stress weeks alone, and taken zero bad debt.
 
-That record is real and it is also not the test. The three lived events gave borrowers 22 to 86 hours of warning before liquidation; March 2020 gave 20 minutes. Replaying today's book through the seven crash paths:
+That record is real and it is also not the test. The three lived events gave borrowers 23 hours to 4 days of warning before liquidation; March 2020 gave 80 minutes. Replaying today's book through seven crash paths:
 
 | Collateral | Today (LLTV / max draw) | Recommended | Why |
 |---|---|---|---|
-| cbBTC | 86% / 75% | **80% / 70%**, and a pre-liquidation band at 80-86% | March 2020 replay at 86%: $24M bad debt (1.5% of supply) if 30% of today's exchange depth survives, $62-76M (4-5%) if depth collapses 90% as it did on Oct 10 2025. At 80%: $7M (0.4%). At 77%: $3M. Every other path is clean at every setting |
+| cbBTC | 86% / 75% | **A committed backstop liquidator first; then 80% / 70% and a pre-liquidation band at 80-86%** | March 2020 replay at 86%: $34-72M bad debt (2.2-4.6% of supply) depending on how much capital liquidators can deploy in a day. Cutting to 80% gives $14-45M (0.9-2.8%); to 77%, $6-32M. A Coinbase backstop at 86% gives $18M (1.2%) and clears 77% entirely. May 2021 and the five later paths are clean from 80% down |
 | WETH | 86% / 75% | **77% / 70%** | ETH gaps more than the 4.38% bonus inside five minutes; at 86% three of seven paths leave bad debt even with unlimited depth. At 77% none do. cbETH already sits at 77% |
 | cbXRP, SOL, cbDOGE, cbADA, cbLTC, JitoSOL | 62.5% / 55% | **62.5%**, plus a per-asset book cap tied to Coinbase's own order-book depth | The 26-point buffer to the bad-debt line covers the worst observed 4-hour moves (-31% to -37%). The constraint is disposal: none of these have a venue on Base, so every liquidation routes through Coinbase redemption |
 
-Two things the replay makes clear. First, the lever is the liquidation LTV, not the origination cap: on Morpho a lower LLTV also raises the liquidation bonus, so it widens the gap to the bad-debt line twice. At 86% a liquidated position is underwater after a further 10.2% drop; at 80% after 14.5%; at 77% after 16.5%. March 2020's worst four hours were -35%. Second, the margin-call flow that protects borrowers in slow crashes makes cliff-shaped crashes worse for lenders, which is why the recommendation includes draining the queue during the slide rather than at the cliff.
+Three things the replay makes clear. First, on a Black Thursday path the binding constraint is liquidator capital, not exchange depth and not the LLTV: whether liquidators can deploy $100M or $1B in a day moves the loss more than any haircut change does. Second, the LLTV is still the right lever among the parameters Coinbase controls, because on Morpho a lower LLTV also raises the liquidation bonus: at 86% a liquidated position is underwater after a further 10.2% drop, at 80% after 14.9%, at 77% after 17.3%. Third, the margin-call flow that protects borrowers in slow crashes makes cliff-shaped crashes worse for lenders, which is why the recommendation includes draining the queue during the slide rather than at the cliff.
 
 ## 1. What the book looks like
 
@@ -34,26 +34,27 @@ From every liquidation in the three lived events, valued at the Chainlink price 
 | Jun 1-7 2026 | 3,308 | $72.1M | $75.3M | 4.38% | 0s / 6s | 97% | 110 | 11% |
 | Jun 23-27 2026 | 394 | $15.4M | $16.0M | 4.38% | 0s / 6s | 98% | 43 | 23% |
 
-Latency is measured from the oracle update that pushed the position over 86% to the liquidation transaction. Bots are not the bottleneck. Every top-10 liquidator is a contract; the field is competitive (no address above a quarter of volume). Most liquidations are partial (28-51% full), which is what you expect from bots sizing to available depth.
+Latency is measured from the oracle update that pushed the position over 86% to the liquidation transaction. Bots are not the bottleneck. Every top-10 liquidator is a contract; the field is competitive (no address above a quarter of volume). Most liquidations are partial (28-50% full), which is what you expect from bots sizing to available depth.
 
-Peak throughput on Feb 5 2026: $11.2M repaid in the busiest five minutes, $32.6M in the busiest hour. Today's Coinbase BTC-USD bid book holds $33M within 4.38% of mid; on-chain cbBTC-to-USDC capacity at 4.38% slippage on Base is $3.5M across every Aerodrome and Uniswap pool. The busiest hour of the book's life consumed roughly one full order book of depth. That is the number the stress tests have to respect.
+Peak throughput on Feb 5 2026: $11.2M repaid in the busiest five minutes, $32.6M in the busiest hour, $96.8M in the day. Today's Coinbase BTC-USD bid book holds $35M within 4.38% of mid; on-chain cbBTC-to-USDC capacity at 4.38% slippage on Base is $3.5M across every Aerodrome and Uniswap pool. The busiest hour of the book's life consumed roughly one full order book of depth, and the busiest day is the only measurement we have of how much capital liquidators bring. It was not a binding day (everything that became liquidatable was cleared within seconds), so it is a floor on their capacity, not an estimate of it.
 
 ## 3. Borrowers matter more than liquidators
 
-The largest correction to a naive model came from the data. Take the exact cbBTC book on Feb 3 2026 ($1,075M debt, rebuilt from every transaction) and mark it at the Feb 6 trough ($60,001): $515M of debt crosses 86%. Only $151M was liquidated. Borrowers cured about 70% of at-risk debt by topping up or repaying while Coinbase's margin warnings fired.
+The largest correction to a naive model came from the data. Take the exact cbBTC book on Feb 3 2026 ($1,075M debt, rebuilt from every transaction) and mark it at the Feb 6 trough ($60,001): $515M of debt crosses 86%. Only $151M was liquidated. Borrowers cured most of the at-risk debt by topping up or repaying while Coinbase's margin warnings fired.
 
-We model this as a responsive share of borrowers who repay to 74% LTV once they have spent a reaction time inside the warning zone (80-86% LTV). Fitting the share and the delay on the three cbBTC events gives 70% responsive and a two-hour reaction, and reproduces all three within 15% (Feb 1.03x, Jun 0.85x, Oct 0.95x). Held-out WETH comes in at 1.58x and 0.85x. Two parameters on three events deserves modest confidence, and the share absorbs whatever else the model lacks (depth assumptions, partial fills). The qualitative point is robust: without it, every replay of a lived event overstates liquidations two to three times.
+We model this as a responsive share of borrowers who repay to 74% LTV once they have spent a reaction time inside the warning zone (80-86% LTV). Fitting the share and the delay on the three cbBTC events gives 60% responsive and a one-hour reaction, and reproduces all three within 16% (Feb 1.03x, Jun 1.16x, Oct 1.14x). Held-out WETH comes in at 1.84x and 1.13x. Without the response term the same model overstates the three events by 1.8x, 2.9x and 1.9x. Two parameters on three events deserves modest confidence, and the share absorbs whatever else the model lacks (depth assumptions, partial fills); the qualitative point is robust.
 
-What the fit buys is time-dependence. Median warning time between entering the 80-86% zone and crossing 86%:
+What the fit buys is time-dependence. Median time between entering the 80-86% zone and crossing 86%, for positions that ended up liquidated:
 
 | Crash | Warning time for the median liquidated position |
 |---|---|
-| Oct 2025 | 86 hours |
-| Jun 2026 | 41 hours |
-| Feb 2026 | 22 hours |
-| Aug 2024 | 8 hours |
-| May 2021 | 8 hours |
-| **Mar 2020** | **20 minutes** |
+| Oct 2025 | 3.9 days |
+| Jun 2026 | 36 h |
+| Feb 2026 | 23 h |
+| FTX Nov 2022 | 20 h |
+| Aug 2024 | 10 h |
+| May 2021 | 8 h |
+| **Mar 2020** | **80 min** |
 
 Coinbase's borrower-warning flow works because crashes so far have been slow. It cannot work on a Black Thursday shape.
 
@@ -61,32 +62,32 @@ The uncomfortable result: on cliff-shaped paths, borrower response raises lender
 
 | Borrowers | Liquidated | Bad debt |
 |---|---|---|
-| None respond | $1,275M | $7.9M |
-| 70% respond within 2 h (fitted) | $1,042M | $23.7M |
-| 70% respond within 15 min | $752M | $47.4M |
-| 90% respond within 15 min | $605M | $57.4M |
+| None respond | $1,112M | $46.3M |
+| 60% respond within 60 min (fitted) | $764M | $71.7M |
+| 60% respond within 15 min | $699M | $68.1M |
+| 90% respond within 15 min | $441M | $85.9M |
 
-During the multi-day slide before March 12, responsive borrowers top up to 74% instead of being liquidated at 86% while liquidator capacity sits idle. On the 50% day they all cross at once into a $1B queue, and the ones served hours late realize shortfall. Faster and broader response makes it worse. On the slower May 2021 shape, a fast response helps ($1.0M vs $12.1M at two hours). The margin call protects borrowers and concentrates lender risk onto the cliff.
+During the multi-day slide before March 12, responsive borrowers top up to 74% instead of being liquidated at 86% while liquidator capacity sits idle. On the 50% day they all cross at once into a queue the liquidators cannot clear, and the ones served hours late realize shortfall. A broader response makes it worse. On the slower May 2021 shape the effect reverses: a fast response cuts bad debt from $13.3M to $1.2M, because the queue never outruns capacity. The margin call protects borrowers, and on the one path that matters most it concentrates lender risk onto the cliff.
 
 ## 4. The backtest
 
-Today's cbBTC book is dropped onto each historical path from its pre-crash peak at 5-minute resolution. Positions over LLTV enter a queue served largest-first. Liquidator capacity per step comes from measured depth times a stress multiplier (DEX 0.5, CEX 0.3) with 20% replenishment per step. Bad debt is the shortfall on positions whose LTV passes 1/LIF (95.8% at 86% LLTV): realized when they are eventually liquidated underwater, or the trough shortfall of positions never liquidated. Three capacity scenarios:
+Today's cbBTC book is dropped onto each historical path from its pre-crash peak at 5-minute resolution. Positions over LLTV enter a queue served largest-first. Liquidator capacity per step comes from measured depth read 1% inside the bonus (gas and oracle slack), times a stress multiplier (DEX 0.5, CEX 0.3), with 20% replenishment per step. Exchange-hedged liquidators are also limited by capital: a rolling 24-hour cap on what they can absorb, set by default to the most the book has ever seen cleared in a day ($96.8M) and varied below. Bad debt is the shortfall on positions whose LTV passes 1/LIF (95.8% at 86% LLTV): realized when they are eventually liquidated underwater, or the trough shortfall of positions never liquidated. Three capacity scenarios:
 
 - **A**: on-chain bots only (Base DEX depth).
 - **AB**: plus liquidators who seize cbBTC and sell BTC on Coinbase and Kraken. This matches observed behaviour.
-- **ABC**: plus Coinbase itself redeeming cbBTC 1:1, effectively unlimited depth at the exchange price. Whether Coinbase runs such a liquidator is not public.
+- **ABC**: plus Coinbase itself redeeming cbBTC 1:1, effectively unlimited depth and capital at the exchange price. Whether Coinbase runs such a liquidator is not public.
 
 cbBTC at today's terms (86% / 75%), fitted borrower response:
 
 | Path | Worst 4h / 24h | AB: liquidated | AB: bad debt | AB: queue p50 / p95 | ABC: bad debt |
 |---|---|---|---|---|---|
-| Mar 2020 | -35% / -50% | $1,042M | **$23.7M (1.5%)** | 12 h / 3.5 days | $19.6M (1.2%) |
-| May 2021 | -26% / -32% | $449M | **$12.1M (0.8%)** | 35 min / 4 days | $0.8M |
-| FTX Nov 2022 | -15% / -19% | $99M | 0 | 0 / 10 min | 0 |
-| Aug 2024 | -11% / -20% | $132M | 0 | 0 / 6 h | 0 |
-| Oct 2025 | -10% / -13% | $35M | 0 | 0 / 5 min | 0 |
-| Feb 2026 | -9% / -18% | $159M | 0 | 0 / 0 | 0 |
-| Jun 2026 | -7% / -9% | $44M | 0 | 0 / 0 | 0 |
+| Mar 2020 | -35% / -50% | $764M | **$71.7M (4.6%)** | 3.0 days / 3.4 days | $18.1M (1.2%) |
+| May 2021 | -26% / -32% | $474M | **$13.3M (0.8%)** | 10 h / 4.1 days | $0.44M |
+| FTX Nov 2022 | -15% / -19% | $109M | 0 | 0 / 0 | 0 |
+| Aug 2024 | -11% / -20% | $135M | 0 | 0 / 6 h | 0 |
+| Oct 2025 | -10% / -13% | $41M | 0 | 0 / 0 | 0 |
+| Feb 2026 | -9% / -18% | $178M | 0 | 0 / 0 | 0 |
+| Jun 2026 | -7% / -9% | $58M | 0 | 0 / 0 | 0 |
 
 Percentages are of the $1.57B USDC supplied to the market. Bad debt on Morpho is socialized to suppliers, which includes depositors in the Coinbase USDC lending product, not Coinbase's balance sheet.
 
@@ -94,23 +95,31 @@ Bad debt across the LLTV grid, cbBTC, fitted response. Max draw 75% (60% for the
 
 | LLTV | Bad-debt LTV (1/LIF) | AB: Mar 2020 | AB: May 2021 | ABC: Mar 2020 | ABC: May 2021 | Other five paths |
 |---|---|---|---|---|---|---|
-| 86% | 95.8% | $23.7M | $12.1M | $19.6M | $0.8M | 0 |
-| 80% | 93.6% | $6.6M | $0.04M | $4.0M | 0 | 0 |
-| 77% | 92.2% | $2.9M | 0 | 0 | 0 | 0 |
-| 70% | 89.6% | $0.2M | 0 | 0 | 0 | 0 |
-| 62.5% | 88.7% | 0 | 0 | 0 | 0 | 0 |
+| 86% | 95.8% | $71.7M | $13.3M | $18.1M | $0.44M | 0 |
+| 80% | 94.0% | $44.5M | $0.40M | $3.6M | 0 | 0 |
+| 77% | 93.1% | $31.5M | $0.24M | 0 | 0 | 0 |
+| 70% | 91.0% | $4.3M | 0 | 0 | 0 | 0 |
+| 62.5% | 88.8% | $3.6M | 0 | 0 | 0 | 0 |
 
-With a Coinbase backstop (ABC), 77% clears every path, and 86% still leaves $20M on March 2020 that no amount of depth removes: it is the gap between two 5-minute oracle updates exceeding the bonus.
+With liquidator capital held at the observed floor, no LLTV in the grid is clean on March 2020. With a Coinbase backstop (ABC), 77% clears every path, and 86% still leaves $18M on March 2020 that no amount of depth or capital removes: it is the gap between two 5-minute oracle updates exceeding the bonus.
 
-The sensitivity that matters is exchange depth in the crash. At 86% on March 2020 under AB: if 10% of today's Coinbase and Kraken depth survives, bad debt is $62-76M (4-5% of supply); at 30%, $24M; at 100%, $8M. Kaiko measured top-of-book BTC depth falling more than 90% intraday on Oct 10 2025. The 30% default is not conservative. DEX depth and oracle lag move results by 10-20% within a row.
+The sensitivity that matters is liquidator capital. March 2020, scenario AB, Tier B daily cap as a multiple of the observed $96.8M:
 
-WETH at 86% / 75%: March 2020 $0.9-1.3M, May 2021 $0.3M, Aug 2024 $0.3M of bad debt under every scenario, and slightly more with unlimited depth than without (about 1% of that market's supply at worst). WETH's problem is not depth (Base has $26M+ of WETH-to-USDC capacity at 4.38%), it is that ETH gaps more than 4.38% inside five minutes. At 80%, $0.1M; at 77%, every path is clean.
+| LLTV | 1x (observed floor) | 3x | 10x | depth-limited only |
+|---|---|---|---|---|
+| 86% | $71.7M (4.6%) | $54.7M (3.5%) | $34.5M (2.2%) | $34.5M (2.2%) |
+| 80% | $44.5M (2.8%) | $29.6M (1.9%) | $13.7M (0.9%) | $13.7M (0.9%) |
+| 77% | $31.5M (2.0%) | $18.4M (1.2%) | $6.2M (0.4%) | $5.8M (0.4%) |
+
+On May 2021 the same table is flat below 86% ($11-13M at 86%, under $0.5M at 80% and 77%), because the queue never outruns capital. Once capital binds, the exchange-depth multiplier stops mattering: at 86% on March 2020, k_cex of 0.1, 0.3 and 1.0 all give $72-74M. Kaiko measured top-of-book BTC depth falling more than 90% intraday on Oct 10 2025, so the depth assumption would matter again for a liquidator base ten times larger than today's.
+
+WETH at 86% / 75%: March 2020 $0.9-1.2M, May 2021 $0.4M, Aug 2024 $0.2M of bad debt under every scenario, and slightly more with unlimited depth than without (about 1.3% of that market's $92M supply at worst). WETH's problem is not depth (Base has $26M+ of WETH-to-USDC capacity at 4.38%), it is that ETH gaps more than 4.38% inside five minutes. At 80%, $0.2-0.3M on March 2020 only; at 77%, every path is clean under every scenario.
 
 ## 5. The argument, in one line per asset
 
 The rule: **1 - LLTV must cover the worst move over the time it takes to clear the queue, plus the liquidation bonus, plus one oracle interval.** Basel's SCO60.29 says the same thing in regulator language: assess the liquidation period and downturn liquidity depth before recognizing crypto collateral.
 
-**cbBTC.** On a March 2020 path the queue takes 12 hours to clear at the median under observed capacity, and BTC's worst 12 hours were -38%. No LLTV in the plausible range covers that fully; the question is how much loss is tolerable, and under what depth assumption. At 86% the worst path costs 1.5% of supply if depth holds at 30%, and 4-5% if it collapses the way it did in October 2025; that is four months to a year of supplier interest, borne by USDC depositors. At 80% the worst path costs 0.4% under the base assumption and every other path is clean. If Coinbase commits to redeem-and-sell as liquidator of last resort, 86% becomes defensible (1.2% worst case, oracle risk only) and that commitment should be published, because lenders are pricing it whether it exists or not. Comparators: Aave sets cbBTC on Base at a 78% liquidation threshold; Ledn liquidates at 80%; Unchained at 83% with a 24-hour cure period.
+**cbBTC.** On a March 2020 path the queue takes three days to clear at the median if liquidators bring the capital they brought on Feb 5 2026, and BTC fell 58% peak to trough over that week. No LLTV covers that: at the observed capital floor, cutting from 86% to 77% moves the worst-path loss from 4.6% to 2.0% of supply, a year of supplier interest down to five months. A backstop liquidator that can redeem cbBTC and sell BTC on Coinbase's own book moves 86% to 1.2% and 77% to zero. That is the largest single lever, it belongs to Coinbase alone, and lenders are pricing it whether it exists or not; it should be published. Given a backstop, 86% is defensible with the oracle-jump residual stated. Without one, 80% is the setting where every path other than Black Thursday is clean and Black Thursday costs 0.9-2.8% depending on liquidator capital. Comparators: Aave sets cbBTC on Base at a 78% liquidation threshold; Ledn liquidates at 80%; Unchained at 83% with a 24-hour cure period.
 
 **Pre-liquidation, whichever LLTV is chosen.** Section 3 shows the margin-call flow pushing marginal positions onto the cliff. Morpho supports pre-liquidation contracts: a band (say 80-86% LTV) where positions can be partially closed at a small bonus (1-2%) before the hard line. That drains the queue during the slide, when capacity is idle, instead of at the cliff. It converts Coinbase's warning cadence from a lender risk into a lender protection, and it costs borrowers less than a 4.38% full liquidation.
 
@@ -120,7 +129,8 @@ The rule: **1 - LLTV must cover the worst move over the time it takes to clear t
 
 ## 6. What this does not capture
 
-- Depth in a crash is a guess scaled from today. We do not buy historical order books. The sensitivity paragraph is the honest statement of that uncertainty, and it spans a factor of ten.
+- Liquidator capital in a crash is unobserved. The only measurement is a day when it did not bind. The capital table is the honest statement of that uncertainty, and it spans a factor of two at every LLTV.
+- Depth in a crash is a guess scaled from today. We do not buy historical order books.
 - The March 2020 replay drops a 2026-sized book onto 2020 prices. BTC's market is far deeper now; it is also true that Oct 10 2025 produced the thinnest books Kaiko has ever measured.
 - Borrower response is fit on three events with two parameters, absorbs other model error, and assumes Coinbase's warning cadence stays as it is. The model seizes in full; real liquidations are mostly partial.
 - Whether Coinbase liquidates its own book is unverified. It is the single largest swing factor in the results.

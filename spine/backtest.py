@@ -1,7 +1,8 @@
 """Liquidation-queue backtest (PLAN.md section 4) -> data/backtest.json. numpy; run with .venv/bin/python.
-Run: .venv/bin/python -m spine.backtest [grid|sens|calib|all] [--market cbBTC]
-Results append to data/backtest.json (deduped on parameters) so the grid can be split across invocations."""
-import json, os, sys, time, glob
+Run: .venv/bin/python -m spine.backtest [grid|sens|calib|all] [--market cbBTC] [--share 0.7] [--max-seconds N]
+Results append to data/backtest.json keyed on parameters; runs already there are skipped, so every mode is incremental.
+Past the budget (default 200 s) it saves, prints "partial, rerun to continue" and exits 0; "complete" when nothing is left."""
+import json, os, sys, time
 import numpy as np
 from spine.api import MARKETS, lif
 from spine.fetch_prices import WINDOWS
@@ -9,17 +10,28 @@ from spine.fetch_prices import WINDOWS
 DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
 OUT = os.path.join(DATA, 'backtest.json')
 BAR_MIN = 5
-DEFAULTS = dict(lltv=0.86, cap=0.75, scenario='AB', k_dex=0.5, k_cex=0.3, r=0.2, lag_bars=1, reshape=True,
-                warn_gap=0.06, resp_share=0.0, react_min=60, cure=0.0)
-SHARES, REACTS = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9], [15, 30, 60, 120, 240]
-# calibration books: (window in fetch_oracle/calibrate naming, price window, book date, markets)
-CALIB = [('Feb2026', 'Feb2026', '2026-02-03', ['cbBTC', 'WETH']), ('Jun2026a', 'Jun2026', '2026-06-01', ['cbBTC', 'WETH']),
-         ('Oct2025', 'Oct2025', '2025-10-09', ['cbBTC'])]
-ORACLE_ASSET = {'cbBTC': 'BTC', 'WETH': 'ETH'}
+DAY_STEPS = 24 * 60 // BAR_MIN
 
 
 def load(path):
     return json.load(open(path))
+
+
+def cex_cap_default():
+    """Max single-UTC-day repaid on cbBTC across the calibration windows (Feb 5 2026): the observed ceiling on Tier B inventory."""
+    f = os.path.join(DATA, 'calibration.json')
+    days = [d['repaid_usd'] for w in load(f)['windows'].values() for d in w.get('cbBTC', {}).get('daily', {}).values()] if os.path.exists(f) else []
+    return max(days) if days else 96.8e6
+
+
+DEFAULTS = dict(lltv=0.86, cap=0.75, scenario='AB', k_dex=0.5, k_cex=0.3, r=0.2, lag_bars=1, reshape=True,
+                warn_gap=0.06, resp_share=0.0, react_min=60, cure=0.0, margin=0.01, cex_cap_usd=cex_cap_default())
+SHARES, REACTS = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9], [15, 30, 60, 120, 240]
+CAP_MULTIPLES = (1, 3, 10, np.inf)
+# calibration books: (window in fetch_oracle/calibrate naming, price window, book date, markets)
+CALIB = [('Feb2026', 'Feb2026', '2026-02-03', ['cbBTC', 'WETH']), ('Jun2026a', 'Jun2026', '2026-06-01', ['cbBTC', 'WETH']),
+         ('Oct2025', 'Oct2025', '2025-10-09', ['cbBTC'])]
+ORACLE_ASSET = {'cbBTC': 'BTC', 'WETH': 'ETH'}
 
 
 def book_arrays(raw, market):
@@ -39,19 +51,21 @@ def reshape(coll, debt, p_book, p0, lltv, cap):
     return ltv * coll * p0
 
 
-def nearest_key(d, pct):
-    return d[min(d, key=lambda k: abs(float(k) - pct))]
+def interp(table, pct):
+    """Linear interpolation of a {slippage_pct: usd} table at pct, clamped to the measured range."""
+    xs = sorted((float(k), float(v)) for k, v in table.items())
+    return float(np.interp(pct, [x for x, _ in xs], [y for _, y in xs]))
 
 
 def capacity(depth, market, lltv, params):
-    """USD of collateral absorbable per step at slippage <= lif-1 (nearest measured entry)."""
-    pct, prod = 100 * (lif(lltv) - 1), MARKETS[market]['cb_product']
-    dex = nearest_key(depth['dex'][market]['capacity_usd_at_slippage'], pct)['usd']
-    cex = sum(nearest_key(v[prod]['bid_depth_usd'], pct) for v in depth['cex'].values() if prod in v)
+    """(Tier A, Tier B) USD of collateral absorbable per step at slippage <= lif-1-margin (gas and oracle slack)."""
+    pct, prod = 100 * (lif(lltv) - 1 - params['margin']), MARKETS[market]['cb_product']
+    dex = interp({k: v['usd'] for k, v in depth['dex'][market]['capacity_usd_at_slippage'].items()}, pct)
+    cex = sum(interp(v[prod]['bid_depth_usd'], pct) for v in depth['cex'].values() if prod in v)
     s = params['scenario']
     if s == 'ABC':
-        return np.inf
-    return dex * params['k_dex'] + (cex * params['k_cex'] if s == 'AB' else 0)
+        return np.inf, 0.0
+    return dex * params['k_dex'], cex * params['k_cex'] if s == 'AB' else 0.0
 
 
 def simulate(book, path, params):
@@ -64,9 +78,12 @@ def simulate(book, path, params):
     skipped when LIF * p_mkt / p_oracle <= 1 (no bonus left) and depth is consumed at market value.
     Borrower response: a position is responsive if hash < resp_share. A responsive, alive, un-queued position that has
     spent >= react_min cumulative minutes in the warning zone (lltv - warn_gap < LTV <= lltv) repays once to
-    LTV = lltv - 2*warn_gap and can re-trigger if it re-enters the zone. Legacy `cure` (uniform per-step fraction) kept, default 0."""
+    LTV = lltv - 2*warn_gap and can re-trigger if it re-enters the zone. Legacy `cure` (uniform per-step fraction) kept, default 0.
+    Capacity is two replenishing pools, Tier A (DEX) and Tier B (CEX-hedged); A is consumed first. Tier B is capital-limited:
+    its depth consumed over the trailing 24h (a ring of DAY_STEPS) cannot exceed cex_cap_usd, so it contributes zero at the cap."""
     coll, debt = book[0].astype(float).copy(), book[1].astype(float).copy()
-    lltv, L, base, cure, wg = params['lltv'], lif(params['lltv']), params['base_eff'], params['cure'], params['warn_gap']
+    lltv, L, (base_a, base_b), cure, wg = params['lltv'], lif(params['lltv']), params['base_eff'], params['cure'], params['warn_gap']
+    cap_b = params['cex_cap_usd']
     n = len(debt)
     order = np.argsort(-(debt / (coll * lltv)))  # highest liquidation price first
     coll, debt = coll[order], debt[order]
@@ -77,11 +94,14 @@ def simulate(book, path, params):
     # ponytail: by_debt stays static; a repaid or partially liquidated position keeps its old debt rank.
     alive, entered, warned, liq_step = np.ones(n, bool), np.full(n, -1), np.full(n, -1), np.full(n, -1)
     inq, zone_steps = np.zeros(n, bool), np.zeros(n, int)
-    avail, seized_total, realized, cured, max_q, peak_step, unrealized = base, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+    avail_a, avail_b, seized_total, realized, cured, max_q, peak_step, unrealized = base_a, base_b, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
+    ring, used_b = np.zeros(DAY_STEPS), 0.0  # Tier B depth consumed per step, trailing 24h
     oracle = lagged(path, params['lag_bars'])
     trough, trough_short = int(np.argmin(oracle)), np.zeros(n)
     for t, (p, pm) in enumerate(zip(oracle.tolist(), path.tolist())):
-        avail = min(base, avail + params['r'] * base)
+        avail_a = min(base_a, avail_a + params['r'] * base_a)
+        avail_b = min(base_b, avail_b + params['r'] * base_b, max(0.0, cap_b - used_b))
+        avail, ub = avail_a + avail_b, 0.0
         kw = int(np.searchsorted(neg_p_liq, -p * (lltv - wg) / lltv))  # prefix that can be queued or warned
         step_seized, f = 0.0, pm / p  # f converts oracle-valued seizure to market-valued depth consumed
         if kw:
@@ -145,8 +165,12 @@ def simulate(book, path, params):
                         step_seized = avail / f
                         break
             seized_total += step_seized
-            avail -= step_seized * f
+            ua = min(step_seized * f, avail_a)
+            ub = max(0.0, step_seized * f - ua)
+            avail_a, avail_b = avail_a - ua, avail_b - ub
             peak_step = max(peak_step, step_seized)
+        used_b += ub - ring[t % DAY_STEPS]
+        ring[t % DAY_STEPS] = ub
         if t == trough:
             trough_short = np.maximum(0, debt - coll * p / L)  # per-position shortfall at the trough; counted only if never liquidated
     done = liq_step >= 0
@@ -193,7 +217,8 @@ def run(market, window, book, depth, candles, **kw):
 
 
 def key(r):
-    d = {k: r[k] for k in ('market', 'window', 'lltv', 'cap', 'scenario', 'k_dex', 'k_cex', 'r', 'lag_bars', 'reshape', 'warn_gap', 'resp_share', 'react_min', 'book')}
+    d = {k: r[k] for k in ('market', 'window', 'lltv', 'cap', 'scenario', 'k_dex', 'k_cex', 'r', 'lag_bars', 'reshape', 'warn_gap', 'resp_share', 'react_min',
+                            'margin', 'cex_cap_usd', 'book')}
     d['resp_share'], d['react_min'] = float(d['resp_share']), int(d['react_min'])  # 0 and 0.0 are the same run
     return json.dumps(d, sort_keys=True)
 
@@ -221,8 +246,22 @@ def candles_for(market, window):
     return load(os.path.join(DATA, 'prices', '%s_%s.json' % (window, MARKETS[market]['cb_product'])))
 
 
-def grid(markets, depth, shares, react):
-    rows = []
+def runner(done, deadline, new):
+    """get(market, window, book, depth, candles, extra, **kw): the saved row if its key is in `done`, else run it, record it in
+    `done` and `new`. Raises TimeoutError past `deadline` instead of starting another run (checked between runs only)."""
+    def get(market, window, book, depth, candles, extra, **kw):
+        k = key(dict(DEFAULTS, market=market, window=window, **extra, **kw))
+        if k in done:
+            return done[k]
+        if time.time() > deadline:
+            raise TimeoutError
+        done[k] = r = dict(run(market, window, book, depth, candles, **kw), **extra)
+        new.append(r)
+        return r
+    return get
+
+
+def grid(markets, depth, shares, react, get):
     for m in markets:
         book = today_book(m)
         for w, _, _ in WINDOWS:
@@ -231,12 +270,10 @@ def grid(markets, depth, shares, react):
                 for lltv in (0.625, 0.70, 0.77, 0.80, 0.86):
                     for cap in (c for c in (0.50, 0.60, 0.70, 0.75) if c < lltv):  # cap >= lltv clips most of the book: meaningless
                         for sc in ('A', 'AB', 'ABC'):
-                            rows.append(dict(run(m, w, book, depth, c, lltv=lltv, cap=cap, scenario=sc, resp_share=sh, react_min=react), book='today'))
-    return rows
+                            get(m, w, book, depth, c, dict(book='today'), lltv=lltv, cap=cap, scenario=sc, resp_share=sh, react_min=react)
 
 
-def sensitivity(markets, depth, share, react):
-    rows = []
+def sensitivity(markets, depth, share, react, get):
     for m in markets:
         book = today_book(m)
         for w, _, _ in WINDOWS:
@@ -244,12 +281,14 @@ def sensitivity(markets, depth, share, react):
             for kd in (0.1, 0.5, 1.0):
                 for kc in (0.1, 0.3, 1.0):
                     for lag in (0, 1, 3):
-                        rows.append(dict(run(m, w, book, depth, c, k_dex=kd, k_cex=kc, lag_bars=lag, resp_share=share, react_min=react), book='today'))
+                        get(m, w, book, depth, c, dict(book='today'), k_dex=kd, k_cex=kc, lag_bars=lag, resp_share=share, react_min=react)
             if m == 'cbBTC' and w in ('Mar2020', 'May2021'):
                 for sh in sorted({0, share, 0.9}):
                     for d in sorted({15, react, 240}):
-                        rows.append(dict(run(m, w, book, depth, c, resp_share=sh, react_min=d), book='today'))
-    return rows
+                        get(m, w, book, depth, c, dict(book='today'), resp_share=sh, react_min=d)
+                for lltv in (0.86, 0.80, 0.77):  # liquidator capital: observed max day, multiples, and depth-limited only
+                    for mult in CAP_MULTIPLES:
+                        get(m, w, book, depth, c, dict(book='today'), lltv=lltv, resp_share=share, react_min=react, cex_cap_usd=DEFAULTS['cex_cap_usd'] * mult)
 
 
 def oracle_end(cw, market):
@@ -258,14 +297,14 @@ def oracle_end(cw, market):
     return load(f)[-1][0] if os.path.exists(f) else None
 
 
-def calibration(depth):
+def calibration(depth, get):
     """Sweep (resp_share, react_min) on the lived events (rebuilt books, real paths, AB); pick the pair minimizing the sum
-    of squared log(sim/realized) over the three cbBTC events. Returns (rows, calibrated dict or None)."""
+    of squared log(sim/realized) over the three cbBTC events. Returns the calibrated dict or None."""
     cal_path = os.path.join(DATA, 'calibration.json')
     cal = load(cal_path) if os.path.exists(cal_path) else None
     if cal is None:
         print('data/calibration.json missing: simulated only, (s*, d*) not fitted')
-    rows, sims, realized, books = [], {}, {}, {}
+    sims, realized, books = {}, {}, {}
     for cw, pw, date, mk in CALIB:
         for m in mk:
             path = os.path.join(DATA, 'book_%s_%s.json' % (m, date))
@@ -285,9 +324,8 @@ def calibration(depth):
             for sh in [0] + SHARES:
                 for d in (REACTS if sh else [DEFAULTS['react_min']]):
                     for sc in (('A', 'AB', 'ABC') if sh == 0 else ('AB',)):
-                        r = dict(run(m, pw, book, depth, c, scenario=sc, resp_share=sh, react_min=d, reshape=False, start=raw['as_of'], end=end),
-                                 book=date, calib_window=cw, realized_repaid_usd=realized[cw, m], at_risk_usd_at_trough=at_risk)
-                        rows.append(r)
+                        r = get(m, pw, book, depth, c, dict(book=date, calib_window=cw, realized_repaid_usd=realized[cw, m], at_risk_usd_at_trough=at_risk),
+                                scenario=sc, resp_share=sh, react_min=d, reshape=False, start=raw['as_of'], end=end)
                         if sc == 'AB':
                             sims[cw, m, sh, d] = r
     ratio = lambda cw, m, sh, d: sims[cw, m, sh, d]['repaid_usd'] / realized[cw, m] if realized.get(cw, m) else None
@@ -314,7 +352,7 @@ def calibration(depth):
                    resp_share_debt={'%s %s' % (cw, m): sims[cw, m, sh, d]['resp_share_debt'] for cw, m in btc + eth})
         print('(s*, d*) = (%.1f, %d min), sum sq log %.3f: ' % (sh, d, sq) + ', '.join('%s %.2fx' % kv for kv in ratios.items()))
         print('debt-weighted responsive share at s*: ' + ', '.join('%s %.2f' % kv for kv in out['resp_share_debt'].items()))
-    return rows, out
+    return out
 
 
 def table(rows, share, react):
@@ -344,36 +382,54 @@ if __name__ == '__main__':
     args = sys.argv[1:]
     markets = [args.pop(args.index('--market') + 1)] if '--market' in args else ['cbBTC', 'WETH']
     share_arg = float(args.pop(args.index('--share') + 1)) if '--share' in args else None  # grid at this share only (to split invocations)
-    args = [a for a in args if a not in ('--market', '--share')]
+    max_seconds = float(args.pop(args.index('--max-seconds') + 1)) if '--max-seconds' in args else 200
+    args = [a for a in args if a not in ('--market', '--share', '--max-seconds')]
     what = args[0] if args else 'all'
     depth = load(os.path.join(DATA, 'depth.json'))
-    t0, rows, cal = time.time(), [], None
-    if what in ('calib', 'all'):
-        cal_rows, cal = calibration(depth)
-        rows += cal_rows
-    star = (cal['resp_share'], cal['react_min']) if cal else calibrated()
-    if star is None:
-        print('no (s*, d*): run `calib` first; grid/sens run at resp_share 0')
-        star = (0.0, DEFAULTS['react_min'])
-    if what in ('grid', 'all'):
-        n = len(rows)
-        rows += grid(markets, depth, [share_arg] if share_arg is not None else sorted({0.0, star[0]}), star[1])
-        print('grid: %d runs, total %.0fs' % (len(rows) - n, time.time() - t0))
-    if what in ('sens', 'all'):
-        n = len(rows)
-        rows += sensitivity(markets, depth, *star)
-        print('sensitivity: %d runs, total %.0fs' % (len(rows) - n, time.time() - t0))
-    out = save(rows, cal)
-    print('saved %d runs to %s (%.0fs)' % (len(out['runs']), OUT, time.time() - t0))
+    t0, cal, star, partial = time.time(), None, None, False
+    done = {key(r): r for r in load(OUT).get('runs', [])} if os.path.exists(OUT) else {}
+    new = []
+    get = runner(done, t0 + max_seconds, new)
+    try:
+        if what in ('calib', 'all'):
+            cal = calibration(depth, get)
+        star = (cal['resp_share'], cal['react_min']) if cal else calibrated()
+        if star is None:
+            print('no (s*, d*): run `calib` first; grid/sens run at resp_share 0')
+            star = (0.0, DEFAULTS['react_min'])
+        if what in ('grid', 'all'):
+            n = len(new)
+            grid(markets, depth, [share_arg] if share_arg is not None else sorted({0.0, star[0]}), star[1], get)
+            print('grid: %d new runs, total %.0fs' % (len(new) - n, time.time() - t0))
+        if what in ('sens', 'all'):
+            n = len(new)
+            sensitivity(markets, depth, *star, get)
+            print('sensitivity: %d new runs, total %.0fs' % (len(new) - n, time.time() - t0))
+    except TimeoutError:
+        partial = True
+    out = save(new, cal)
+    print('saved %d new runs (%d total) to %s (%.0fs)' % (len(new), len(out['runs']), OUT, time.time() - t0))
+    if partial:
+        print('partial, rerun to continue')
+        sys.exit(0)
+    print('complete')
+    if cal:
+        print('calib ratios at (s*, d*): ' + ', '.join('%s %.2fx' % kv for kv in cal['ratios'].items()))
+        off = {k: v for k, v in cal['ratios'].items() if 'cbBTC' in k and abs(v - 1) > 0.25}
+        assert not off, 'cbBTC lived events off by more than 25%%: %s' % off
 
     book, c = today_book('cbBTC'), candles_for('cbBTC', 'Jun2026')
-    r = run('cbBTC', 'Jun2026', book, depth, c, lltv=0.86, cap=0.75, scenario='ABC')
-    assert r['realized_bad_debt_usd'] == 0, r
+    for sc in ('AB', 'ABC'):
+        r = run('cbBTC', 'Jun2026', book, depth, c, lltv=0.86, cap=0.75, scenario=sc)
+        assert r['realized_bad_debt_usd'] == 0, r
+        print('asserts ok (no borrower action): Jun2026 %s realized bad debt 0 (liquidated $%.1fM)' % (sc, r['liquidated_usd'] / 1e6))
     r2 = run('cbBTC', 'Mar2020', book, depth, candles_for('cbBTC', 'Mar2020'), lltv=0.86, cap=0.75, scenario='A')
     assert r2['unrealized_bad_debt_usd'] > 0, r2
-    print('asserts ok (no borrower action): Jun2026 ABC realized bad debt 0 (liquidated $%.1fM); Mar2020 A unrealized bad debt $%.1fM' % (r['liquidated_usd'] / 1e6, r2['unrealized_bad_debt_usd'] / 1e6))
+    print('asserts ok (no borrower action): Mar2020 A unrealized bad debt $%.1fM' % (r2['unrealized_bad_debt_usd'] / 1e6))
     if star[0]:
-        r = run('cbBTC', 'Jun2026', book, depth, c, lltv=0.86, cap=0.75, scenario='ABC', resp_share=star[0], react_min=star[1])
-        assert r['realized_bad_debt_usd'] == 0, r
-        print('asserts ok (s %.1f, d %d): Jun2026 ABC realized bad debt 0 (liquidated $%.1fM, repaid by borrowers $%.1fM)' % (star[0], star[1], r['liquidated_usd'] / 1e6, r['cured_usd'] / 1e6))
+        for sc in ('AB', 'ABC'):
+            r = run('cbBTC', 'Jun2026', book, depth, c, lltv=0.86, cap=0.75, scenario=sc, resp_share=star[0], react_min=star[1])
+            assert r['realized_bad_debt_usd'] == 0, r
+            print('asserts ok (s %.1f, d %d): Jun2026 %s realized bad debt 0 (liquidated $%.1fM, repaid by borrowers $%.1fM)' % (
+                star[0], star[1], sc, r['liquidated_usd'] / 1e6, r['cured_usd'] / 1e6))
     table(out['runs'], *star)
