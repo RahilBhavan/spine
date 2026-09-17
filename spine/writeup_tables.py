@@ -147,7 +147,7 @@ def weth_line():
 
 def capital_range():
     for w in ('Mar2020', 'May2021'):
-        print('## Section 4: liquidator capital (cbBTC, %s, AB, cap 75%%, fitted response; Tier B rolling-24h cap as a multiple of the observed max day, $%.1fM)\n' % (LABEL[w], D['cex_cap_usd'] / 1e6))
+        print('## Section 4: liquidator capital (cbBTC, %s, AB, cap 75%%, fitted response; Tier B rolling-24h cap as a multiple of the max collateral seized in one day on the market, $%.1fM from calibration.json via backtest.json defaults)\n' % (LABEL[w], D['cex_cap_usd'] / 1e6))
         mults = (1, 3, 10, float('inf'))
         rows = [('%g%%' % (100 * l), *(bad_pct(find(window=w, lltv=l, cex_cap_usd=D['cex_cap_usd'] * m)) for m in mults)) for l in (0.86, 0.80, 0.77)]
         table(['LLTV', '1x', '3x', '10x', 'depth-limited only'], rows)

@@ -13,9 +13,10 @@ DAY_STEPS = 24 * 60 // BAR_MIN
 
 
 def cex_cap_default():
-    """Max single-UTC-day repaid on cbBTC across the calibration windows (Feb 5 2026): the observed ceiling on Tier B inventory."""
-    days = [d['repaid_usd'] for w in (load('calibration') or {'windows': {}})['windows'].values() for d in w.get('cbBTC', {}).get('daily', {}).values()]
-    return max(days) if days else 96.8e6
+    """Max single-UTC-day collateral seized on cbBTC across the calibration windows (Feb 5 2026): the observed ceiling on Tier B
+    inventory. Seized (market value of collateral), not repaid, because that is what the ring charges against the cap."""
+    days = [d['seized_usd'] for w in (load('calibration') or {'windows': {}})['windows'].values() for d in w.get('cbBTC', {}).get('daily', {}).values()]
+    return max(days) if days else 101.1e6
 
 
 DEFAULTS = dict(lltv=0.86, cap=0.75, scenario='AB', k_dex=0.5, k_cex=0.3, r=0.2, lag_bars=1, reshape=True,
@@ -92,6 +93,8 @@ def simulate(book, path, params):
     oracle = lagged(path, params['lag_bars'])
     trough, trough_short = int(np.argmin(oracle)), np.zeros(n)
     for t, (p, pm) in enumerate(zip(oracle.tolist(), path.tolist())):
+        used_b -= ring[t % DAY_STEPS]  # step t - DAY_STEPS rolls off before this step's cap check: the window is exactly DAY_STEPS bars
+        ring[t % DAY_STEPS] = 0.0
         avail_a = min(base_a, avail_a + params['r'] * base_a)
         avail_b = min(base_b, avail_b + params['r'] * base_b, max(0.0, cap_b - used_b))
         avail, ub = avail_a + avail_b, 0.0
@@ -162,7 +165,7 @@ def simulate(book, path, params):
             ub = max(0.0, step_seized * f - ua)
             avail_a, avail_b = avail_a - ua, avail_b - ub
             peak_step = max(peak_step, step_seized)
-        used_b += ub - ring[t % DAY_STEPS]
+        used_b += ub
         ring[t % DAY_STEPS] = ub
         if t == trough:
             trough_short = np.maximum(0, debt - coll * p / L)  # per-position shortfall at the trough; counted only if never liquidated
@@ -226,9 +229,16 @@ def save(rows, calibrated=None):
 
 
 def calibrated():
-    """(resp_share, react_min) from a previous `calib` invocation, or None."""
+    """(resp_share, react_min) from a previous `calib` invocation, or None if there is none or it was fitted under other
+    defaults (margin, cex_cap_usd): a stale (s*, d*) must not be paired silently with a new capacity model."""
     c = (load('backtest') or {}).get('calibrated') or {}
-    return (c['resp_share'], c['react_min']) if 'resp_share' in c else None
+    if 'resp_share' not in c:
+        return None
+    if any(c.get(k) != DEFAULTS[k] for k in ('margin', 'cex_cap_usd')):
+        print('stored (s*, d*) was fitted at margin %s, cex_cap_usd %s; defaults are now %s, %s' % (
+            c.get('margin'), c.get('cex_cap_usd'), DEFAULTS['margin'], DEFAULTS['cex_cap_usd']))
+        return None
+    return c['resp_share'], c['react_min']
 
 
 def today_book(market):
@@ -339,7 +349,8 @@ def calibration(depth, get):
     if best:
         sq, sh, d = best
         ratios = {'%s %s' % (cw, m): ratio(cw, m, sh, d) for cw, m in btc + eth}
-        out = dict(resp_share=sh, react_min=d, warn_gap=DEFAULTS['warn_gap'], ratios=ratios, sum_sq_log_cbBTC=sq,
+        out = dict(resp_share=sh, react_min=d, warn_gap=DEFAULTS['warn_gap'], margin=DEFAULTS['margin'], cex_cap_usd=DEFAULTS['cex_cap_usd'],
+                   ratios=ratios, sum_sq_log_cbBTC=sq,
                    resp_share_debt={'%s %s' % (cw, m): sims[cw, m, sh, d]['resp_share_debt'] for cw, m in btc + eth})
         print('(s*, d*) = (%.1f, %d min), sum sq log %.3f: ' % (sh, d, sq) + ', '.join('%s %.2fx' % kv for kv in ratios.items()))
         print('debt-weighted responsive share at s*: ' + ', '.join('%s %.2f' % kv for kv in out['resp_share_debt'].items()))
@@ -416,6 +427,15 @@ if __name__ == '__main__':
     r2 = run('cbBTC', 'Mar2020', book, depth, candles_for('cbBTC', 'Mar2020'), lltv=0.86, cap=0.75, scenario='A')
     assert r2['unrealized_bad_debt_usd'] > 0, r2
     print('asserts ok (no borrower action): Mar2020 A unrealized bad debt $%.1fM' % (r2['unrealized_bad_debt_usd'] / 1e6))
+    # Tier B ring: no Tier A, cap = one step of Tier B, three positions each seizing exactly 1.0 at p=1 from step 1 on.
+    # One clears per rolling 24h: steps 1, 289, 577 (a 578-step path fits all three, a 577-step path only two).
+    syn = (np.ones(3), np.ones(3), np.full(3, 0.5))
+    ps = dict(DEFAULTS, base_eff=(0.0, 1.0), cex_cap_usd=1.0, r=1.0, lag_bars=0)
+    for steps, want in ((578, 3), (577, 2), (290, 2), (289, 1)):
+        s = simulate(syn, np.array([10.0] + [1.0] * (steps - 1)), ps)
+        assert s['n_liquidated'] == want, (steps, s['n_liquidated'])
+    assert s['queue_minutes_p50'] == 0 and simulate(syn, np.array([10.0] + [1.0] * 577), ps)['queue_minutes_p50'] == DAY_STEPS * BAR_MIN
+    print('asserts ok: Tier B cap window is exactly %d bars' % DAY_STEPS)
     if star[0]:
         for sc in ('AB', 'ABC'):
             r = run('cbBTC', 'Jun2026', book, depth, c, lltv=0.86, cap=0.75, scenario=sc, resp_share=star[0], react_min=star[1])
