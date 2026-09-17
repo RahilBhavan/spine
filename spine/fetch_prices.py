@@ -13,7 +13,7 @@ WINDOWS = [
     ('Jun2026', '2026-05-30', '2026-07-05'),
 ]
 PRODUCTS = ['BTC-USD', 'ETH-USD', 'SOL-USD', 'XRP-USD', 'DOGE-USD', 'ADA-USD', 'LTC-USD']
-DAILY_PRODUCTS = ['BTC-USD', 'ETH-USD']
+DAILY_PRODUCTS = PRODUCTS  # since 2020-01-01; alts start when Coinbase listed them, caps.py tolerates gaps
 H1, H4, H24 = 3600, 14400, 86400
 
 
@@ -89,7 +89,7 @@ if __name__ == '__main__':
     stats = {}
     print(f"{'window':8} {'asset':8} {'peak':>10} {'trough':>10} {'p2t':>7} {'1h':>7} {'4h':>7} {'24h':>7}")
     for name, _, _ in WINDOWS:
-        for p in DAILY_PRODUCTS:
+        for p in ('BTC-USD', 'ETH-USD'):  # the two with data in every window
             s = crash_stats(load(f'prices/{name}_{p}'))
             stats[name, p] = s
             print(f"{name:8} {p:8} {s['peak']:10.0f} {s['trough']:10.0f} {s['p2t']*100:6.1f}% {s['h1']*100:6.1f}% {s['h4']*100:6.1f}% {s['h24']*100:6.1f}%")
