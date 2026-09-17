@@ -1,8 +1,7 @@
 """Live liquidity snapshot: Coinbase L2 + Kraken books, Uniswap/Aerodrome quotes on Base -> data/depth.json."""
-import json, os, time, datetime as dt, urllib.request
-from spine.api import coinbase_get, rpc, UA
+import time, datetime as dt
+from spine.api import coinbase_get, get_json, rpc, save
 
-OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'depth.json')
 PRODUCTS = ['BTC-USD', 'ETH-USD', 'SOL-USD', 'XRP-USD', 'DOGE-USD', 'ADA-USD', 'LTC-USD']
 KRAKEN = {'BTC-USD': 'XBTUSD', 'ETH-USD': 'ETHUSD'}
 PCTS = [0.5, 1, 2, 3, 4.38, 5, 7.5, 10]
@@ -37,8 +36,7 @@ def coinbase_book(product):
 
 
 def kraken_book(pair):
-    req = urllib.request.Request(f'https://api.kraken.com/0/public/Depth?pair={pair}&count=500', headers={'User-Agent': UA['User-Agent']})
-    r = json.load(urllib.request.urlopen(req, timeout=60))
+    r = get_json(f'https://api.kraken.com/0/public/Depth?pair={pair}&count=500')
     if r.get('error'):
         raise RuntimeError(r['error'])
     b = next(iter(r['result'].values()))
@@ -93,9 +91,7 @@ def fetch_all():
            'kraken': {p: kraken_book(k) for p, k in KRAKEN.items()}}
     dex = {a: dex_asset(a, cex['coinbase'][DEX_ASSETS[a]['cb_product']]['mid']) for a in DEX_ASSETS}
     d = dict(fetched_at=dt.datetime.now(dt.timezone.utc).isoformat(), cex=cex, dex=dex)
-    os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    with open(OUT, 'w') as f:
-        json.dump(d, f, indent=1)
+    save('depth', d, indent=1)
     return d
 
 

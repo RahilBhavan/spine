@@ -3,11 +3,9 @@
 Window start is padded by 24h so calibrate.py can find the crossing for early liquidations.
 Run: python3.12 -m spine.fetch_oracle [--max-seconds N]. Partial log ranges checkpoint to data/cache/;
 when the time budget runs out it exits 0 and says so; rerun until it prints "complete"."""
-import json, os, sys, time, datetime
-from spine.api import rpc
+import os, sys, time
+from spine.api import rpc, load, save, data_path, day_ts, budget, argv_max_seconds, row_price
 
-DATA = os.path.join(os.path.dirname(__file__), '..', 'data', 'oracle')
-CACHE = os.path.join(os.path.dirname(__file__), '..', 'data', 'cache')
 PROXY = {'BTC': '0x64c911996D3c6aC71f9b455B1E8E7266BcbD848F', 'ETH': '0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70'}
 ANSWER_UPDATED = '0x0559884fd3a460db3073b7fc896cc77986f16e378210ded43186175bf646fc5f'
 # (first day, last day) inclusive, UTC
@@ -16,21 +14,6 @@ WINDOWS = {'Oct2025': ('2025-10-09', '2025-10-12'), 'Feb2026': ('2026-02-02', '2
 PAD = 86400
 CHUNK = 2000  # mainnet.base.org getLogs limit. base.drpc.org's free plan refused every range we tried, so it is not used.
 _blocks = {}
-T0 = time.time()
-MAX_SECONDS = float(sys.argv[sys.argv.index('--max-seconds') + 1]) if '--max-seconds' in sys.argv else 200
-
-
-class Budget(Exception):
-    pass
-
-
-def check_budget():
-    if time.time() - T0 > MAX_SECONDS:
-        raise Budget()
-
-
-def day_ts(d):
-    return int(datetime.datetime.fromisoformat(d).replace(tzinfo=datetime.timezone.utc).timestamp())
 
 
 def window_range(name):
@@ -91,49 +74,48 @@ def parse(log):
     return [int(log['data'], 16), int(log['blockNumber'], 16), price / 1e8]
 
 
-def fetch_logs(addrs, t0, t1, ck):
-    """Walks the block range for [t0, t1) in CHUNKs, checkpointing rows and the next block to ck after every call."""
-    if os.path.exists(ck):
-        st = json.load(open(ck))
-    else:
-        st = dict(b1=block_at(t1) - 1, next=block_at(t0), rows=[])
+def fetch_logs(addrs, t0, t1, ck, within_budget):
+    """Walks the block range for [t0, t1) in CHUNKs, checkpointing rows and the next block to data/<ck>.json after
+    every call. Returns the sorted rows, or None when the budget ran out first."""
+    st = load(ck) or dict(b1=block_at(t1) - 1, next=block_at(t0), rows=[])
     b1 = st['b1']
     for a in range(st['next'], b1 + 1, CHUNK):
-        check_budget()
+        if not within_budget():
+            return None
         logs = call('eth_getLogs', [{'address': addrs, 'fromBlock': hex(a), 'toBlock': hex(min(a + CHUNK - 1, b1)), 'topics': [ANSWER_UPDATED]}])
         st['rows'] += map(parse, logs)
         st['next'] = a + CHUNK
-        with open(ck, 'w') as f:
-            json.dump(st, f)
+        save(ck, st)
     return sorted(st['rows'])
 
 
-def fetch(window, asset):
-    path = os.path.join(DATA, '%s_%s.json' % (window, asset))
-    if os.path.exists(path):
-        return json.load(open(path))
-    os.makedirs(DATA, exist_ok=True)
-    os.makedirs(CACHE, exist_ok=True)
-    ck = os.path.join(CACHE, 'oracle_%s_%s.json' % (window, asset))
+def fetch(window, asset, within_budget=lambda: True):
+    """Rows for data/oracle/<window>_<asset>.json (fetched if missing), or None when the budget ran out first."""
+    name = 'oracle/%s_%s' % (window, asset)
+    rows = load(name)
+    if rows is not None:
+        return rows
+    ck = 'cache/oracle_%s_%s' % (window, asset)
     t0, t1 = window_range(window)
-    rows = fetch_logs(aggregators(PROXY[asset]), t0, t1, ck)
-    with open(path, 'w') as f:
-        json.dump(rows, f)
-    os.remove(ck)
+    rows = fetch_logs(aggregators(PROXY[asset]), t0, t1, ck, within_budget)
+    if rows is None:
+        return None
+    save(name, rows)
+    os.remove(data_path(ck))
     return rows
 
 
 if __name__ == '__main__':
+    within_budget = budget(argv_max_seconds()[0])
     for w in WINDOWS:
         for asset in PROXY:
-            try:
-                rows = fetch(w, asset)
-            except Budget:
+            rows = fetch(w, asset, within_budget)
+            if rows is None:
                 print('partial (%s %s), rerun to continue' % (w, asset))
                 sys.exit(0)
-            ps = [r[2] for r in rows]
+            ps = [row_price(r) for r in rows]
             print('%-8s %s n=%5d min=%10.2f max=%10.2f' % (w, asset, len(rows), min(ps), max(ps)))
             assert rows == sorted(rows) and len(rows) > 100
-    feb = [r[2] for r in fetch('Feb2026', 'BTC')]
+    feb = [row_price(r) for r in fetch('Feb2026', 'BTC')]
     assert min(feb) < 61_000 and max(feb) > 75_000, (min(feb), max(feb))
     print('complete')

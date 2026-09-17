@@ -2,25 +2,19 @@
 Run: .venv/bin/python -m spine.backtest [grid|sens|calib|all] [--market cbBTC] [--share 0.7] [--max-seconds N]
 Results append to data/backtest.json keyed on parameters; runs already there are skipped, so every mode is incremental.
 Past the budget (default 200 s) it saves, prints "partial, rerun to continue" and exits 0; "complete" when nothing is left."""
-import json, os, sys, time
+import json, sys, time
 import numpy as np
-from spine.api import MARKETS, lif
+from spine.api import MARKETS, lif, load, save as save_json, data_path, budget, argv_max_seconds, row_ts
 from spine.fetch_prices import WINDOWS
 
-DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
-OUT = os.path.join(DATA, 'backtest.json')
+OUT = data_path('backtest')
 BAR_MIN = 5
 DAY_STEPS = 24 * 60 // BAR_MIN
 
 
-def load(path):
-    return json.load(open(path))
-
-
 def cex_cap_default():
     """Max single-UTC-day repaid on cbBTC across the calibration windows (Feb 5 2026): the observed ceiling on Tier B inventory."""
-    f = os.path.join(DATA, 'calibration.json')
-    days = [d['repaid_usd'] for w in load(f)['windows'].values() for d in w.get('cbBTC', {}).get('daily', {}).values()] if os.path.exists(f) else []
+    days = [d['repaid_usd'] for w in (load('calibration') or {'windows': {}})['windows'].values() for d in w.get('cbBTC', {}).get('daily', {}).values()]
     return max(days) if days else 96.8e6
 
 
@@ -31,7 +25,6 @@ CAP_MULTIPLES = (1, 3, 10, np.inf)
 # calibration books: (window in fetch_oracle/calibrate naming, price window, book date, markets)
 CALIB = [('Feb2026', 'Feb2026', '2026-02-03', ['cbBTC', 'WETH']), ('Jun2026a', 'Jun2026', '2026-06-01', ['cbBTC', 'WETH']),
          ('Oct2025', 'Oct2025', '2025-10-09', ['cbBTC'])]
-ORACLE_ASSET = {'cbBTC': 'BTC', 'WETH': 'ETH'}
 
 
 def book_arrays(raw, market):
@@ -224,36 +217,36 @@ def key(r):
 
 
 def save(rows, calibrated=None):
-    old = load(OUT) if os.path.exists(OUT) else {}
+    old = load('backtest') or {}
     merged = {key(r): r for r in old.get('runs', [])}
     merged.update((key(r), r) for r in rows)
     out = dict(generated_at=int(time.time()), defaults=DEFAULTS, calibrated=calibrated or old.get('calibrated'), runs=list(merged.values()))
-    json.dump(out, open(OUT, 'w'))
+    save_json('backtest', out)
     return out
 
 
 def calibrated():
     """(resp_share, react_min) from a previous `calib` invocation, or None."""
-    c = (load(OUT).get('calibrated') or {}) if os.path.exists(OUT) else {}
+    c = (load('backtest') or {}).get('calibrated') or {}
     return (c['resp_share'], c['react_min']) if 'resp_share' in c else None
 
 
 def today_book(market):
-    return book_arrays(load(os.path.join(DATA, 'positions_%s.json' % market)), market)
+    return book_arrays(load('positions_%s' % market), market)
 
 
 def candles_for(market, window):
-    return load(os.path.join(DATA, 'prices', '%s_%s.json' % (window, MARKETS[market]['cb_product'])))
+    return load('prices/%s_%s' % (window, MARKETS[market]['cb_product']))
 
 
-def runner(done, deadline, new):
+def runner(done, within_budget, new):
     """get(market, window, book, depth, candles, extra, **kw): the saved row if its key is in `done`, else run it, record it in
-    `done` and `new`. Raises TimeoutError past `deadline` instead of starting another run (checked between runs only)."""
+    `done` and `new`. Raises TimeoutError past the budget instead of starting another run (checked between runs only)."""
     def get(market, window, book, depth, candles, extra, **kw):
         k = key(dict(DEFAULTS, market=market, window=window, **extra, **kw))
         if k in done:
             return done[k]
-        if time.time() > deadline:
+        if not within_budget():
             raise TimeoutError
         done[k] = r = dict(run(market, window, book, depth, candles, **kw), **extra)
         new.append(r)
@@ -293,25 +286,23 @@ def sensitivity(markets, depth, share, react, get):
 
 def oracle_end(cw, market):
     """Last Chainlink update in the calibration window's oracle file = end of the calibration horizon."""
-    f = os.path.join(DATA, 'oracle', '%s_%s.json' % (cw, ORACLE_ASSET[market]))
-    return load(f)[-1][0] if os.path.exists(f) else None
+    rows = load('oracle/%s_%s' % (cw, MARKETS[market]['feed']))
+    return row_ts(rows[-1]) if rows else None
 
 
 def calibration(depth, get):
     """Sweep (resp_share, react_min) on the lived events (rebuilt books, real paths, AB); pick the pair minimizing the sum
     of squared log(sim/realized) over the three cbBTC events. Returns the calibrated dict or None."""
-    cal_path = os.path.join(DATA, 'calibration.json')
-    cal = load(cal_path) if os.path.exists(cal_path) else None
+    cal = load('calibration')
     if cal is None:
         print('data/calibration.json missing: simulated only, (s*, d*) not fitted')
     sims, realized, books = {}, {}, {}
     for cw, pw, date, mk in CALIB:
         for m in mk:
-            path = os.path.join(DATA, 'book_%s_%s.json' % (m, date))
-            if not os.path.exists(path):
-                print('%s %s: no rebuilt book at %s, skipped' % (cw, m, path))
+            raw = load('book_%s_%s' % (m, date))
+            if raw is None:
+                print('%s %s: no rebuilt book at %s, skipped' % (cw, m, data_path('book_%s_%s' % (m, date))))
                 continue
-            raw = load(path)
             book, c = book_arrays(raw, m), candles_for(m, pw)
             end = oracle_end(cw, m) or c[-1][0] + 300
             books[cw, m] = (raw, book, c, end)
@@ -379,17 +370,16 @@ def table(rows, share, react):
 
 
 if __name__ == '__main__':
-    args = sys.argv[1:]
+    max_seconds, args = argv_max_seconds()
     markets = [args.pop(args.index('--market') + 1)] if '--market' in args else ['cbBTC', 'WETH']
     share_arg = float(args.pop(args.index('--share') + 1)) if '--share' in args else None  # grid at this share only (to split invocations)
-    max_seconds = float(args.pop(args.index('--max-seconds') + 1)) if '--max-seconds' in args else 200
-    args = [a for a in args if a not in ('--market', '--share', '--max-seconds')]
+    args = [a for a in args if a not in ('--market', '--share')]
     what = args[0] if args else 'all'
-    depth = load(os.path.join(DATA, 'depth.json'))
+    depth = load('depth')
     t0, cal, star, partial = time.time(), None, None, False
-    done = {key(r): r for r in load(OUT).get('runs', [])} if os.path.exists(OUT) else {}
+    done = {key(r): r for r in (load('backtest') or {}).get('runs', [])}
     new = []
-    get = runner(done, t0 + max_seconds, new)
+    get = runner(done, budget(max_seconds), new)
     try:
         if what in ('calib', 'all'):
             cal = calibration(depth, get)

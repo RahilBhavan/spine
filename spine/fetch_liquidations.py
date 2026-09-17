@@ -1,10 +1,9 @@
 """Every liquidation per market -> data/liquidations_<mkt>.json.
 marketTransactions has no orderBy but returns newest first, so we walk timestamp_lte backwards from
 now to the last saved timestamp minus a day, then merge. Run: python3.12 -m spine.fetch_liquidations"""
-import json, os, time
-from spine.api import graphql, MARKETS, CHAIN
+import time
+from spine.api import graphql, MARKETS, CHAIN, load, save
 
-DATA = os.path.join(os.path.dirname(__file__), '..', 'data')
 Q = '''query($w:MarketTransactionFilters){
   marketTransactions(first:1000, where:$w){
     pageInfo{countTotal} items{ txHash timestamp blockNumber user{address}
@@ -44,8 +43,7 @@ def fetch(mid, since=0):
 
 def fetch_market(name):
     m = MARKETS[name]
-    path = os.path.join(DATA, 'liquidations_%s.json' % name)
-    old = json.load(open(path))['items'] if os.path.exists(path) else []
+    old = (load('liquidations_%s' % name) or {'items': []})['items']
     merged = {key(r): r for r in old}
     since = max((r['ts'] for r in old), default=1) - 86400
     merged.update(fetch(m['id'], since))
@@ -54,9 +52,7 @@ def fetch_market(name):
     if len(items) != total:
         raise RuntimeError('%s: merged %d liquidations, countTotal %d; not writing' % (name, len(items), total))
     out = dict(fetched_at=int(time.time()), market=name, count=len(items), items=items)
-    os.makedirs(DATA, exist_ok=True)
-    with open(path, 'w') as f:
-        json.dump(out, f)
+    save('liquidations_%s' % name, out)
     return total, out
 
 

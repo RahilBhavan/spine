@@ -1,10 +1,9 @@
 """Every Morpho position with debt, per market -> data/positions_<mkt>.json.
 The API caps first=1000 and skip=10000, so we walk healthFactor ascending, moving healthFactor_gte
 to the last value seen. Run from repo root: python3.12 -m spine.fetch_positions"""
-import json, os, time
-from spine.api import graphql, MARKETS, CHAIN
+import time
+from spine.api import graphql, MARKETS, CHAIN, save
 
-DATA = os.path.join(os.path.dirname(__file__), '..', 'data')
 Q = '''query($s:Int,$o:MarketPositionOrderBy,$w:MarketPositionFilters){
   marketPositions(first:1000, skip:$s, orderBy:$o, orderDirection:Asc, where:$w){
     pageInfo{countTotal} items{ user{address} healthFactor state{collateral borrowAssets borrowAssetsUsd collateralUsd} } } }'''
@@ -63,9 +62,7 @@ def fetch_market(name):
     out = dict(fetched_at=int(time.time()), market=name, market_id=m['id'], lltv=m['lltv'], count=len(pos),
                borrow_usd_total=sum(p['borrow_usd'] for p in pos), collateral_usd_total=sum(p['collateral_usd'] for p in pos),
                market_state=state, positions=pos)
-    os.makedirs(DATA, exist_ok=True)
-    with open(os.path.join(DATA, 'positions_%s.json' % name), 'w') as f:
-        json.dump(out, f)
+    save('positions_%s' % name, out)
     return total, out
 
 

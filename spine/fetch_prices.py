@@ -1,6 +1,6 @@
 """Coinbase Exchange candles for the stress windows -> data/prices/. stdlib only."""
-import json, os, datetime as dt, urllib.error
-from spine.api import coinbase_get
+import os, datetime as dt, urllib.error
+from spine.api import coinbase_get, load, save, data_path, day_ts
 
 # (name, start, end) inclusive, UTC. backtest.py imports this.
 WINDOWS = [
@@ -14,12 +14,7 @@ WINDOWS = [
 ]
 PRODUCTS = ['BTC-USD', 'ETH-USD', 'SOL-USD', 'XRP-USD', 'DOGE-USD', 'ADA-USD', 'LTC-USD']
 DAILY_PRODUCTS = ['BTC-USD', 'ETH-USD']
-OUT = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data', 'prices')
 H1, H4, H24 = 3600, 14400, 86400
-
-
-def ts(day):
-    return int(dt.datetime.fromisoformat(day).replace(tzinfo=dt.timezone.utc).timestamp())
 
 
 def iso(t):
@@ -43,41 +38,30 @@ def candles(product, gran, start, end):
     return [out[t] for t in sorted(out)]
 
 
-def load(path):
-    with open(path) as f:
-        return json.load(f)
-
-
 def fetch_all():
-    os.makedirs(OUT, exist_ok=True)
-    idx_path = os.path.join(OUT, 'index.json')
-    index = load(idx_path) if os.path.exists(idx_path) else {'windows': {}, 'gaps': [], 'daily': {}}
-    today = ts(dt.date.today().isoformat())
+    index = load('prices/index') or {'windows': {}, 'gaps': [], 'daily': {}}
+    today = day_ts(dt.date.today().isoformat())
     for name, start, end in WINDOWS:
-        end_ts = ts(end) + 86400
+        end_ts = day_ts(end) + 86400
         for p in PRODUCTS:
-            path = os.path.join(OUT, f'{name}_{p}.json')
-            if (os.path.exists(path) or [name, p] in index['gaps']) and end_ts <= today:
+            if (os.path.exists(data_path(f'prices/{name}_{p}')) or [name, p] in index['gaps']) and end_ts <= today:
                 continue
-            rows = candles(p, 300, ts(start), end_ts)
+            rows = candles(p, 300, day_ts(start), end_ts)
             if not rows:
                 if [name, p] not in index['gaps']:
                     index['gaps'].append([name, p])
                 print(f'{name} {p}: no data, gap recorded')
                 continue
-            with open(path, 'w') as f:
-                json.dump(rows, f)
+            save(f'prices/{name}_{p}', rows)
             index['windows'].setdefault(name, {})[p] = dict(start=start, end=end, candles=len(rows))
             print(f'{name} {p}: {len(rows)} candles')
     for p in DAILY_PRODUCTS:
-        rows = candles(p, 86400, ts('2020-01-01'), today + 86400)
-        with open(os.path.join(OUT, f'daily_{p}.json'), 'w') as f:
-            json.dump(rows, f)
+        rows = candles(p, 86400, day_ts('2020-01-01'), today + 86400)
+        save(f'prices/daily_{p}', rows)
         index['daily'][p] = dict(start='2020-01-01', end=dt.date.today().isoformat(), candles=len(rows))
         print(f'daily {p}: {len(rows)} candles')
     index['fetched_at'] = dt.datetime.now(dt.timezone.utc).isoformat()
-    with open(idx_path, 'w') as f:
-        json.dump(index, f, indent=1)
+    save('prices/index', index, indent=1)
     return index
 
 
@@ -106,7 +90,7 @@ if __name__ == '__main__':
     print(f"{'window':8} {'asset':8} {'peak':>10} {'trough':>10} {'p2t':>7} {'1h':>7} {'4h':>7} {'24h':>7}")
     for name, _, _ in WINDOWS:
         for p in DAILY_PRODUCTS:
-            s = crash_stats(load(os.path.join(OUT, f'{name}_{p}.json')))
+            s = crash_stats(load(f'prices/{name}_{p}'))
             stats[name, p] = s
             print(f"{name:8} {p:8} {s['peak']:10.0f} {s['trough']:10.0f} {s['p2t']*100:6.1f}% {s['h1']*100:6.1f}% {s['h4']*100:6.1f}% {s['h24']*100:6.1f}%")
     assert 0.57 < stats['Mar2020', 'BTC-USD']['p2t'] < 0.59

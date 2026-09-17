@@ -1,16 +1,10 @@
 """Aggregate data/*.json into data/summary.json so the site never loads the raw positions files.
 Run: python3.12 -m spine.summarize"""
-import json, os, datetime, collections
-from spine.api import MARKETS, lif
+import datetime, collections
+from spine.api import MARKETS, lif, load, save
 
-DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
 BIN = 0.02
 DROPS = [round(d * 0.01, 2) for d in range(0, 71)]
-
-
-def load(name):
-    p = os.path.join(DATA, name)
-    return json.load(open(p)) if os.path.exists(p) else None
 
 
 def is_cb(wallets, user):
@@ -54,7 +48,7 @@ def liquidatable_curve(pos, lltv, bad_ltv):
 
 
 def liquidations(name, decimals):
-    raw = load(f'liquidations_{name}.json')
+    raw = load(f'liquidations_{name}')
     if not raw:
         return [], []
     daily, by_liq = collections.defaultdict(lambda: dict(n=0, repaid_usd=0.0, seized_units=0.0, bad_debt_usd=0.0)), collections.defaultdict(lambda: [0, 0.0])
@@ -89,7 +83,7 @@ def depth_for(depth, name, product):
 
 
 def summarize_market(name, m, wallets, depth):
-    raw = load(f'positions_{name}.json')
+    raw = load(f'positions_{name}')
     if not raw:
         return None
     pos = [dict(user=p['user'], borrow_usd=p['borrow_usd'], collateral_usd=p['collateral_usd'], health_factor=p['health_factor'],
@@ -111,7 +105,7 @@ def summarize_market(name, m, wallets, depth):
 
 
 def build():
-    wallets, depth = load('coinbase_wallets.json') or {}, load('depth.json')
+    wallets, depth = load('coinbase_wallets') or {}, load('depth')
     markets = {n: s for n, m in MARKETS.items() if (s := summarize_market(n, m, wallets, depth))}
     borrow = sum(s['state']['borrow_usd'] for s in markets.values())
     totals = dict(borrow_usd=borrow, collateral_usd=sum(s['state']['collateral_usd'] for s in markets.values()),
@@ -122,7 +116,7 @@ def build():
 
 if __name__ == '__main__':
     out = build()
-    json.dump(out, open(os.path.join(DATA, 'summary.json'), 'w'), separators=(',', ':'))
+    save('summary', out, separators=(',', ':'))
     m = out['markets']['cbBTC']
     st, curve = m['state'], {c['drop']: c for c in m['liquidatable_curve']}
     hist_sum = sum(b['borrow_usd'] for b in m['ltv_hist'])

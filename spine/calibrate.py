@@ -6,33 +6,20 @@ Run: python3.12 -m spine.calibrate <window> [--max-seconds N]   one window -> da
      python3.12 -m spine.calibrate                              assemble data/calibration.json, print tables
 The latency step fetches one Morpho history per borrower (cached in data/cache/history_*.json); when the
 time budget runs out it exits 0 with "partial", rerun until it prints "complete"."""
-import bisect, json, os, sys, time, datetime
-from spine.api import graphql, rpc, MARKETS, CHAIN
-from spine.fetch_oracle import WINDOWS, day_ts
+import bisect, json, time, datetime
+from spine.api import graphql, rpc, MARKETS, CHAIN, load, save, day_ts, budget, argv_max_seconds, row_ts, row_block, row_price
+from spine.fetch_oracle import WINDOWS
 
-DATA = os.path.join(os.path.dirname(__file__), '..', 'data')
-CACHE = os.path.join(DATA, 'cache')
-ORACLE = {'cbBTC': 'BTC', 'WETH': 'ETH'}  # market -> Chainlink feed in data/oracle/
+CALIB_MARKETS = ('cbBTC', 'WETH')  # markets with a Chainlink path in data/oracle/
 LLTV = 0.86
 CAP = 1500  # borrowers per window/market for the latency step
 LOOKBACK = 86400  # search for the crossing this long before the liquidation
-T0 = time.time()
-MAX_SECONDS = float(sys.argv[sys.argv.index('--max-seconds') + 1]) if '--max-seconds' in sys.argv else 200
 HIST_Q = '''query($w:MarketTransactionFilters){ marketTransactions(first:1000, where:$w){ items {
   type timestamp blockNumber txHash user { address } data {
     ... on MarketTransactionTransferData { assets shares }
     ... on MarketTransactionCollateralTransferData { assets }
     ... on MarketTransactionLiquidationData { repaidAssets repaidShares seizedAssets } } } } }'''
 HIST_TYPES = ['Borrow', 'Repay', 'SupplyCollateral', 'WithdrawCollateral', 'Liquidation']
-
-
-class Budget(Exception):
-    pass
-
-
-def check_budget():
-    if time.time() - T0 > MAX_SECONDS:
-        raise Budget()
 
 
 def pct(xs, p):
@@ -44,45 +31,40 @@ def day(ts):
     return datetime.datetime.fromtimestamp(ts, datetime.timezone.utc).strftime('%Y-%m-%d')
 
 
-class Oracle:
-    """Sorted [[ts, block, price]] with lookups by block (state at a block) and by time (crossing search)."""
-    def __init__(self, window, asset):
-        self.rows = json.load(open(os.path.join(DATA, 'oracle', '%s_%s.json' % (window, asset))))
-        self.blocks = [r[1] for r in self.rows]
-        self.ts = [r[0] for r in self.rows]
+def oracle_price_at_block(rows, block):
+    """Oracle price in force at block; rows are sorted [ts, block, price] lists."""
+    i = bisect.bisect_right(rows, block, key=row_block) - 1
+    assert i >= 0, block
+    return row_price(rows[i])
 
-    def price_at(self, block):
-        i = bisect.bisect_right(self.blocks, block) - 1
-        assert i >= 0, block
-        return self.rows[i][2]
 
-    def crossings(self, block, ts, p_star):
-        """(first update below p_star, last downward crossing below p_star) within [ts - LOOKBACK, block],
-        or a string saying why there is none. First = time since first eligible; last = bot reaction time."""
-        i0, i1 = bisect.bisect_left(self.ts, ts - LOOKBACK), bisect.bisect_right(self.blocks, block)
-        if i0 >= i1:
-            return 'no_updates'
-        if self.rows[i0][2] < p_star:
-            return 'crossed_before_window'
-        first = last = None
-        for j in range(i0, i1):
-            if self.rows[j][2] < p_star:
-                first = first or self.rows[j]
-                if self.rows[j - 1][2] >= p_star:
-                    last = self.rows[j]
-        return (first, last) if first else 'never_crossed'
+def oracle_crossings(rows, block, ts, p_star):
+    """(first update below p_star, last downward crossing below p_star) within [ts - LOOKBACK, block],
+    or a string saying why there is none. First = time since first eligible; last = bot reaction time."""
+    i0, i1 = bisect.bisect_left(rows, ts - LOOKBACK, key=row_ts), bisect.bisect_right(rows, block, key=row_block)
+    if i0 >= i1:
+        return 'no_updates'
+    if row_price(rows[i0]) < p_star:
+        return 'crossed_before_window'
+    first = last = None
+    for j in range(i0, i1):
+        if row_price(rows[j]) < p_star:
+            first = first or rows[j]
+            if row_price(rows[j - 1]) >= p_star:
+                last = rows[j]
+    return (first, last) if first else 'never_crossed'
 
 
 def liquidations(market, window):
     a, b = WINDOWS[window]
     t0, t1 = day_ts(a), day_ts(b) + 86400
-    rows = [r for r in json.load(open(os.path.join(DATA, 'liquidations_%s.json' % market)))['items'] if t0 <= r['ts'] < t1]
+    rows = [r for r in load('liquidations_%s' % market)['items'] if t0 <= r['ts'] < t1]
     return sorted(rows, key=lambda r: (r['ts'], r['tx']))
 
 
 def price_rows(rows, oracle, decimals):
     for r in rows:
-        p = oracle.price_at(r['block'])
+        p = oracle_price_at_block(oracle, r['block'])
         r['price'] = p
         r['repaid_usd'] = int(r['repaid_assets']) / 1e6
         r['seized_usd'] = int(r['seized_assets']) / 10 ** decimals * p
@@ -114,21 +96,19 @@ def bonus(rows):
     return dict(n=len(xs), p10=pct(xs, .1), p50=pct(xs, .5), p90=pct(xs, .9), expected=1 / (0.3 * LLTV + 0.7) - 1)
 
 
-def hist_path(market, addr):
-    return os.path.join(CACHE, 'history_%s_%s.json' % (market, addr.lower()))
+def hist_name(market, addr):
+    return 'cache/history_%s_%s' % (market, addr.lower())
 
 
 def cached(market, addr, upto):
     """Borrower's cached Morpho events in this market with timestamp <= upto, or None if not fetched that far."""
-    if os.path.exists(hist_path(market, addr)):
-        c = json.load(open(hist_path(market, addr)))
-        if c['upto'] >= upto:
-            return [x for x in c['items'] if x['timestamp'] <= upto]
+    c = load(hist_name(market, addr))
+    if c and c['upto'] >= upto:
+        return [x for x in c['items'] if x['timestamp'] <= upto]
 
 
-def save(market, addr, upto, items):
-    with open(hist_path(market, addr), 'w') as f:
-        json.dump(dict(upto=upto, items=sorted(items, key=lambda x: (x['blockNumber'], x['timestamp']))), f)
+def save_history(market, addr, upto, items):
+    save(hist_name(market, addr), dict(upto=upto, items=sorted(items, key=lambda x: (x['blockNumber'], x['timestamp']))))
 
 
 def fetch_page(market, addrs, upto):
@@ -138,12 +118,14 @@ def fetch_page(market, addrs, upto):
     return graphql(HIST_Q, {'w': where})['marketTransactions']['items']
 
 
-def fetch_histories(market, need, batch=10):
+def fetch_histories(market, need, within_budget, batch=10):
     """need: {addr: upto}. Queries `batch` users at once (newest first) and pages back on timestamp_lte
-    until a short page, like fetch_liquidations does; then splits the events per user and caches them."""
+    until a short page, like fetch_liquidations does; then splits the events per user and caches them.
+    Returns False when the budget runs out first."""
     need = sorted(need.items())
     for i in range(0, len(need), batch):
-        check_budget()
+        if not within_budget():
+            return False
         chunk = need[i:i + batch]
         addrs, upto = [a for a, _ in chunk], max(u for _, u in chunk)
         items, hi = {}, upto
@@ -158,7 +140,8 @@ def fetch_histories(market, need, batch=10):
         for x in items.values():
             by[x['user']['address'].lower()].append(x)
         for a in addrs:
-            save(market, a, upto, by[a.lower()])
+            save_history(market, a, upto, by[a.lower()])
+    return True
 
 
 def latency_one(r, h, oracle, decimals):
@@ -176,20 +159,22 @@ def latency_one(r, h, oracle, decimals):
     full = repaid_shares == shares
     debt = int(r['repaid_assets']) / 1e6 * (1 if full else shares / repaid_shares)
     p_star = debt / (coll / 10 ** decimals * LLTV)
-    c = oracle.crossings(r['block'], r['ts'], p_star)
+    c = oracle_crossings(oracle, r['block'], r['ts'], p_star)
     if isinstance(c, str):
         return c
-    return dict(first=r['ts'] - c[0][0], last=r['ts'] - c[1][0], full=full)
+    return dict(first=r['ts'] - row_ts(c[0]), last=r['ts'] - row_ts(c[1]), full=full)
 
 
-def latency(market, rows, oracle, decimals):
+def latency(market, rows, oracle, decimals, within_budget):
+    """(stats on last crossing, stats on first eligible), or None when the history fetch ran out of budget."""
     if len(rows) > CAP:
         rows = [rows[i * len(rows) // CAP] for i in range(CAP)]
     need = {}
     for r in rows:
         if cached(market, r['borrower'], r['ts']) is None:
             need[r['borrower']] = max(need.get(r['borrower'], 0), r['ts'])
-    fetch_histories(market, need)
+    if not fetch_histories(market, need, within_budget):
+        return None
     ok, excluded, full = [], {}, 0
     for r in rows:
         res = latency_one(r, cached(market, r['borrower'], r['ts']), oracle, decimals)
@@ -223,28 +208,31 @@ def liquidators(rows):
     return dict(distinct=len(by), top=top)
 
 
-def run_window(window):
-    os.makedirs(CACHE, exist_ok=True)
-    out = {}
-    for market, asset in ORACLE.items():
+def run_window(window, max_seconds):
+    """Replays one window into data/cache/calib_<window>.json. Returns False if the budget ran out first."""
+    within_budget, out = budget(max_seconds), {}
+    for market in CALIB_MARKETS:
         dec = MARKETS[market]['decimals']
-        oracle = Oracle(window, asset)
+        oracle = load('oracle/%s_%s' % (window, MARKETS[market]['feed']))
         rows = price_rows(liquidations(market, window), oracle, dec)
         if not rows:
             out[market] = None
             continue
         vol, daily, peaks = volume(rows)
-        lat, lat_first = latency(market, rows, oracle, dec)
+        lat = latency(market, rows, oracle, dec, within_budget)
+        if lat is None:
+            return False
+        lat, lat_first = lat
         out[market] = dict(volume=vol, daily=daily, peaks=peaks, bonus=bonus(rows), latency=lat,
                            latency_first_eligible=lat_first, liquidators=liquidators(rows))
         print('%s %-5s n=%d repaid=$%.1fM bonus_p50=%.4f latency n=%d p50=%s excluded=%s' % (
             window, market, vol['n'], vol['repaid_usd'] / 1e6, out[market]['bonus']['p50'], lat['n'], lat['p50'], lat['excluded']))
-    with open(os.path.join(CACHE, 'calib_%s.json' % window), 'w') as f:
-        json.dump(out, f)
+    save('cache/calib_%s' % window, out)
+    return True
 
 
 def assemble():
-    wins = {w: json.load(open(os.path.join(CACHE, 'calib_%s.json' % w))) for w in WINDOWS}
+    wins = {w: load('cache/calib_%s' % w) for w in WINDOWS}
     pc = lambda x: '%.2f%%' % (100 * x) if x is not None else '-'
     for w, ms in wins.items():
         print('\n%s  (%s..%s)' % (w, *WINDOWS[w]))
@@ -264,21 +252,13 @@ def assemble():
         assert abs(ms['cbBTC']['bonus']['p50'] - 0.0438) < 0.005, (w, ms['cbBTC']['bonus']['p50'])
     for w in ('Feb2026', 'Jun2026a'):
         assert wins[w]['cbBTC']['latency']['n'] >= 100, (w, wins[w]['cbBTC']['latency']['n'])
-    out = dict(generated_at=int(time.time()), windows=wins)
-    with open(os.path.join(DATA, 'calibration.json'), 'w') as f:
-        json.dump(out, f, indent=1)
+    save('calibration', dict(generated_at=int(time.time()), windows=wins), indent=1)
     print('\nok: data/calibration.json')
 
 
 if __name__ == '__main__':
-    args = sys.argv[1:]
-    if '--max-seconds' in args:
-        del args[args.index('--max-seconds'):args.index('--max-seconds') + 2]
+    max_seconds, args = argv_max_seconds()
     if args:
-        try:
-            run_window(args[0])
-            print('complete')
-        except Budget:
-            print('partial (%s), rerun to continue' % args[0])
+        print('complete' if run_window(args[0], max_seconds) else 'partial (%s), rerun to continue' % args[0])
     else:
         assemble()

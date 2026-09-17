@@ -1,13 +1,9 @@
 """Prints every numeric table in WRITEUP.md as Markdown, cut from data/ so the writeup cannot drift from the data. stdlib only.
 Run: python3.12 -m spine.writeup_tables   (reads data/backtest.json, calibration.json, summary.json, depth.json, prices/)"""
-import json, os
+from spine.api import load
 from spine.fetch_prices import WINDOWS, max_drop, H4, H24
 
-DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
-BT = json.load(open(os.path.join(DATA, 'backtest.json')))
-CAL = json.load(open(os.path.join(DATA, 'calibration.json')))
-SUMMARY = json.load(open(os.path.join(DATA, 'summary.json')))
-DEPTH = json.load(open(os.path.join(DATA, 'depth.json')))
+BT, CAL, SUMMARY, DEPTH = load('backtest'), load('calibration'), load('summary'), load('depth')
 STAR = BT['calibrated']
 D = BT['defaults']
 BASE = dict(book='today', k_dex=D['k_dex'], k_cex=D['k_cex'], r=D['r'], lag_bars=D['lag_bars'], margin=D['margin'], cex_cap_usd=D['cex_cap_usd'],
@@ -108,7 +104,7 @@ def seven_paths():
     print('## Section 4: seven paths (cbBTC 86/75, fitted response)\n')
     rows = []
     for w, _, _ in WINDOWS:
-        c = json.load(open(os.path.join(DATA, 'prices', '%s_BTC-USD.json' % w)))
+        c = load('prices/%s_BTC-USD' % w)
         ab, abc = find(window=w), find(window=w, scenario='ABC')
         rows.append((LABEL[w], '-%.0f%% / -%.0f%%' % (100 * max_drop(c, H4), 100 * max_drop(c, H24)), usd(ab['liquidated_usd']), bad_pct(ab),
                      '%s / %s' % (dur(ab['queue_minutes_p50']), dur(ab['queue_minutes_p95'])), bad_pct(abc)))

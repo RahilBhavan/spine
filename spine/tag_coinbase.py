@@ -4,10 +4,8 @@ v1.1 impl. We ask Multicall3 to call implementation() on 1000 addresses per eth_
 that fails falls back to eth_getStorageAt per address. Cache: data/coinbase_wallets.json
 {addr_lowercase: "v1.0"|"v1.1"|null}. Run: python3.12 -m spine.tag_coinbase"""
 import glob, json, os, time
-from spine.api import rpc, MARKETS
+from spine.api import rpc, MARKETS, DATA, load, save
 
-DATA = os.path.join(os.path.dirname(__file__), '..', 'data')
-CACHE = os.path.join(DATA, 'coinbase_wallets.json')
 SLOT = '0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc'
 IMPLS = {'000100abaad02f1cfc8bbe32bd5a564817339e72': 'v1.0', '00000110dcdedc9581cb5ecb8467282f2926534d': 'v1.1'}
 MULTICALL3 = '0xcA11bde05977b3631167028862bE2a173976CA11'
@@ -65,22 +63,16 @@ def tag(addrs, cache):
     todo = [a for a in addrs if a not in cache]
     for i in range(0, len(todo), CHUNK):
         cache.update(tag_chunk(todo[i:i + CHUNK]))
-        save(cache)
+        save('coinbase_wallets', cache)
     return cache
-
-
-def save(cache):
-    os.makedirs(DATA, exist_ok=True)
-    with open(CACHE, 'w') as f:
-        json.dump(cache, f)
 
 
 def report(cache):
     for name in MARKETS:
-        p = os.path.join(DATA, 'positions_%s.json' % name)
-        if not os.path.exists(p):
+        raw = load('positions_%s' % name)
+        if not raw:
             continue
-        pos = json.load(open(p))['positions']
+        pos = raw['positions']
         cb = [x for x in pos if cache.get(x['user'].lower())]
         usd, cb_usd = sum(x['borrow_usd'] for x in pos), sum(x['borrow_usd'] for x in cb)
         print('%-8s positions %6d  coinbase %6d (%5.1f%%)  borrow_usd %14.0f  coinbase %14.0f (%5.1f%%)' % (
@@ -89,7 +81,7 @@ def report(cache):
 
 if __name__ == '__main__':
     t = time.time()
-    cache = json.load(open(CACHE)) if os.path.exists(CACHE) else {}
+    cache = load('coinbase_wallets') or {}
     addrs = borrowers()
     known = ['0x74459ea7df673cfd90afbe39f635ace08ccb97c4', '0xd3d7900a30f4016bc9945f7f2bf3a028fe9307fc']
     print('%d borrowers, %d cached' % (len(addrs), sum(a in cache for a in addrs)))
