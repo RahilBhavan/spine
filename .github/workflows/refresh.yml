@@ -24,12 +24,14 @@ jobs:
           python -m spine.tag_coinbase
           python -m spine.fetch_depth
           python -m spine.summarize
+          python -m spine.history
+          python -m spine.render_writeup
           python -m spine.backtest --max-seconds 600
       - name: commit snapshot
         run: |
           git config user.name spine-bot
           git config user.email spine-bot@users.noreply.github.com
-          git add data/positions_*.json data/liquidations_*.json data/coinbase_wallets.json data/depth.json data/summary.json data/backtest.json
+          git add data/positions_*.json data/liquidations_*.json data/coinbase_wallets.json data/depth.json data/summary.json data/history.csv site/writeup.html data/backtest.json
           git diff --cached --quiet || git commit -qm "data: hourly snapshot $(date -u +%FT%H:%MZ)"
           git push
       - name: stage site

@@ -5,6 +5,8 @@ from spine.api import MARKETS, lif, load, save
 
 BIN = 0.02
 DROPS = [round(d * 0.01, 2) for d in range(0, 71)]
+CAPACITY_K = dict(dex=0.5, cex=0.3)  # stress multipliers on today's depth at 4.38%; same defaults as backtest k_dex / k_cex
+HF_STEPS = [round(1 + 2 * i / 39, 4) for i in range(40)]
 
 
 def is_cb(wallets, user):
@@ -45,6 +47,23 @@ def liquidatable_curve(pos, lltv, bad_ltv):
                     row[pre + 'bad_count'] += 1
         out.append(row)
     return out
+
+
+def capacity_ab(depth):
+    """Modeled AB liquidator capacity: stressed DEX capacity plus stressed Coinbase bids, both at the 4.38% bonus."""
+    dex = depth.get('dex_capacity_usd', {}).get('4.38', 0.0)
+    cex = depth.get('coinbase', {}).get('bid_depth_usd', {}).get('4.38', 0.0)
+    return CAPACITY_K['dex'] * dex + CAPACITY_K['cex'] * cex
+
+
+def distance_to_capacity(curve, cap):
+    """Smallest price drop at which liquidatable borrow exceeds cap; None if it never does within DROPS."""
+    return next((c['drop'] for c in curve if c['borrow_usd'] > cap), None) if cap else None
+
+
+def hf_cdf(pos):
+    total = sum(p['borrow_usd'] for p in pos) or 1
+    return [dict(hf=h, share=sum(p['borrow_usd'] for p in pos if p['health_factor'] is not None and p['health_factor'] < h) / total) for h in HF_STEPS]
 
 
 def liquidations(name, decimals):
@@ -100,8 +119,11 @@ def summarize_market(name, m, wallets, depth):
                  coinbase_share_borrow=cb_borrow / borrow if borrow else 0)
     top = sorted(pos, key=lambda p: -p['borrow_usd'])[:25]
     daily, liqs = liquidations(name, m['decimals'])
-    return dict(state=state, ltv_hist=ltv_hist(pos), liquidatable_curve=liquidatable_curve(pos, m['lltv'], 1 / L),
-                top_borrowers=top, liquidations_daily=daily, liquidators_top=liqs, depth=depth_for(depth, name, m['cb_product']))
+    curve, dep = liquidatable_curve(pos, m['lltv'], 1 / L), depth_for(depth, name, m['cb_product'])
+    state['capacity_ab_usd'] = capacity_ab(dep)
+    state['distance_to_capacity'] = distance_to_capacity(curve, state['capacity_ab_usd'])
+    return dict(state=state, ltv_hist=ltv_hist(pos), liquidatable_curve=curve, hf_cdf=hf_cdf(pos),
+                top_borrowers=top, liquidations_daily=daily, liquidators_top=liqs, depth=dep)
 
 
 def build():
@@ -130,3 +152,7 @@ if __name__ == '__main__':
     print('cbBTC liquidatable at 0/-10/-20/-30%%: $%.1fM / $%.1fM / $%.1fM / $%.1fM' % tuple(curve[d]['borrow_usd'] / 1e6 for d in (0.0, 0.1, 0.2, 0.3)))
     print('cbBTC bad-debt zone at -30%%: $%.1fM' % (curve[0.3]['bad_borrow_usd'] / 1e6))
     print('cbBTC capacity at 4.38%%: dex $%.1fM, coinbase $%.1fM' % (m['depth']['dex_capacity_usd']['4.38'] / 1e6, m['depth']['coinbase']['bid_depth_usd']['4.38'] / 1e6))
+    assert m['hf_cdf'][0]['share'] == 0 and 0 < m['hf_cdf'][-1]['share'] <= 1 and len(m['hf_cdf']) == 40
+    assert st['distance_to_capacity'] is None or curve[st['distance_to_capacity']]['borrow_usd'] > st['capacity_ab_usd'] >= curve[round(max(0.0, st['distance_to_capacity'] - 0.01), 2)]['borrow_usd']
+    print('distance to AB capacity: ' + ', '.join('%s %s (cap $%.1fM)' % (n, 'none' if s['state']['distance_to_capacity'] is None else '-%.0f%%' % (100 * s['state']['distance_to_capacity']), s['state']['capacity_ab_usd'] / 1e6)
+                                                for n, s in out['markets'].items()))

@@ -12,9 +12,18 @@
   <h1>Spine: Coinbase's on-chain loan book on Base</h1>
   <p class="muted">Snapshot <span id="generated-at">loading</span></p>
   <div id="totals" class="cards"></div>
+  <h2>Distance to capacity</h2>
+  <p class="muted">Instantaneous price drop at which liquidatable borrow exceeds what liquidators can sell today (stressed DEX capacity and Coinbase bids at 4.38%). Red under 10%, amber under 20%.</p>
+  <div id="gauges" class="cards gauges"></div>
 </header>
 
 <main>
+  <div id="tabs" class="buttons tabs">
+    <button data-tab="live" class="active">Live</button>
+    <button data-tab="backtest">Backtest</button>
+  </div>
+
+  <div id="tab-live">
   <div class="controls">
     <div id="market-buttons" class="buttons"></div>
     <label class="toggle"><input type="checkbox" id="cb-only"> Coinbase wallets only</label>
@@ -25,12 +34,19 @@
     <div id="market-cards" class="cards"></div>
   </section>
 
+  <div class="row2">
   <section>
     <h2>LTV distribution</h2>
     <p class="muted">Borrow USD per 2% LTV bin. Dashed lines: LLTV (liquidation) and 1/LIF (bad debt).
       <label class="toggle"><input type="checkbox" id="log-y"> log y</label></p>
     <div id="chart-ltv" class="chart"></div>
   </section>
+  <section>
+    <h2>Health factor</h2>
+    <p class="muted">Share of borrow USD whose health factor (LLTV / LTV) is below each threshold. Liquidation at 1.0.</p>
+    <div id="chart-hf" class="chart"></div>
+  </section>
+  </div>
 
   <section>
     <h2>Liquidatable borrow vs price drop</h2>
@@ -53,6 +69,33 @@
     <h2>Top 10 liquidators (all time, by repaid USD)</h2>
     <div class="table-wrap"><table id="table-liquidators"></table></div>
   </section>
+  </div>
+
+  <div id="tab-backtest" hidden>
+  <div class="controls">
+    <div id="bt-market-buttons" class="buttons"></div>
+    <div id="bt-scenario-buttons" class="buttons"></div>
+  </div>
+  <p id="bt-note" class="muted"></p>
+
+  <section>
+    <h2>Bad debt by LLTV and crash path</h2>
+    <p class="muted">Today's book replayed through each historical path (realized plus unrealized bad debt). Scenario A: on-chain bots only; AB: plus liquidators selling on Coinbase and Kraken; ABC: plus Coinbase redeeming cbBTC 1:1.</p>
+    <div id="chart-heat" class="chart"></div>
+  </section>
+
+  <section>
+    <h2>Liquidator capital, cbBTC on March 2020 (AB)</h2>
+    <p class="muted">Bad debt when the rolling 24-hour cap on exchange-hedged liquidators is raised from the largest day the book has seen.</p>
+    <div id="chart-capital" class="chart chart-short"></div>
+  </section>
+
+  <section>
+    <h2>Warning time</h2>
+    <p class="muted">Median time a liquidated position spends between 80% and 86% LTV before crossing, at 86% / 75%, scenario AB. The borrower-warning flow needs hours; March 2020 gave 80 minutes.</p>
+    <div id="chart-warn" class="chart chart-short"></div>
+  </section>
+  </div>
 </main>
 
 <footer class="muted">
