@@ -94,7 +94,11 @@ appended so the grid tracks the live book.
 
 ## Phase F: publication (half a day plus your decisions)
 
-1. Flip the repo public, enable Pages (Actions source), confirm the hourly deploy lands.
+1. Flip the repo public, enable Pages (Actions source), confirm the hourly deploy lands. As of
+   2026-09-17 the `refresh` job succeeds and has committed eight snapshots, and the `deploy` job
+   fails on `actions/deploy-pages` because Pages is not enabled on the private repo. Nothing to
+   fix in the workflow; it is the account step. Cron has been firing every 5-6 hours, not hourly
+   (GitHub schedules are best-effort); if hourly matters, trigger from an external ping instead.
 2. Writeup v2 with Phase A/E numbers and ranges, figures from JSON, a changelog section listing
    what each phase changed in the recommendation.
 3. Answer the three open questions from PLAN.md §8 (Coinbase self-liquidation, audience, hosting)
