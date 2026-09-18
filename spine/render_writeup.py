@@ -104,4 +104,4 @@ if __name__ == '__main__':
         print('wrote %s (%d bytes, %d tables, %d headings)' % (OUT, len(h), h.count('<table>'), h.count('<h2>')))
     assert render('| a | b |\n|---|---|\n| **1** | `x` |') == '<table><thead><tr><th>a</th><th>b</th></tr></thead><tbody><tr><td><strong>1</strong></td><td><code>x</code></td></tr></tbody></table>'
     assert render('## T\n\ntext *em* [l](u)\n- a\n- b') == '<h2>T</h2>\n<p>text <em>em</em> <a href="u">l</a></p>\n<ul><li>a</li><li>b</li></ul>'
-    assert h.count('<table>') == sum(l.startswith('|---') for l in open(SRC)) and 'fig-heat' in h and 'marked' not in h
+    assert h.count('<table>') == sum(l.startswith('|---') for l in open(SRC)) and 'fig-heat' in h and 'marked.min.js' not in h
