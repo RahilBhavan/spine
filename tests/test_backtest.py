@@ -42,7 +42,8 @@ def lows(c):
 
 
 def params(**kw):
-    return dict(dict(DEFAULTS, lltv=LLTV, base_eff=(np.inf, 0.0)), **kw)
+    """DEFAULTS with the reference model's fixed choices: whole seizures (close_target 1) and constant depth (beta 0)."""
+    return dict(dict(DEFAULTS, lltv=LLTV, base_eff=(np.inf, 0.0), close_target=1.0, beta=0.0), **kw)
 
 
 def reference(coll, debt, path, base_a=np.inf, r=DEFAULTS['r'], lag=DEFAULTS['lag_bars']):
@@ -140,3 +141,20 @@ def test_reshape():
     old = debt / (coll * p_book)
     new = reshape(coll, debt, p_book, p_book, 0.80, 0.60) / (coll * p_book)
     assert np.allclose(new, 0.8 * old, rtol=1e-12) and new.max() <= 0.80 * 0.99 + 1e-12
+
+
+def test_partial_liquidation_repays_to_target():
+    # One position at LTV 0.90 on a flat path under ABC. With close_target 0.74 the liquidator repays just enough to bring it to
+    # 0.74 (a partial event, position alive); at LTV 0.97 (> 1/LIF) the same rule closes it in full.
+    L = lif(LLTV)
+    syn = (np.ones(1), np.full(1, 90.0), np.full(1, 0.5))
+    flat = np.full(3, P0)
+    whole = simulate(syn, flat, params(scenario='ABC', lag_bars=0))
+    assert whole['n_events'] == whole['n_liquidated'] == 1 and whole['full_share'] == 1.0
+    part = simulate(syn, flat, params(scenario='ABC', lag_bars=0, close_target=0.74))
+    rep = (90.0 - 0.74 * P0) / (1 - 0.74 * L)
+    assert part['n_events'] == 1 and part['n_liquidated'] == 0 and part['full_share'] == 0.0
+    assert math.isclose(part['repaid_usd'], rep, rel_tol=1e-9)
+    assert math.isclose((90.0 - rep) / (P0 - rep * L), 0.74, rel_tol=1e-6)  # remaining position sits at the target
+    deep = simulate((np.ones(1), np.full(1, 97.0), np.full(1, 0.5)), flat, params(scenario='ABC', lag_bars=0, close_target=0.74))
+    assert deep['n_liquidated'] == 1 and deep['full_share'] == 1.0 and deep['realized_bad_debt_usd'] > 0

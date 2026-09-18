@@ -228,6 +228,12 @@ above; `reviewer` verifies before the next phase starts.
 - Depth quoting uses hand-encoded `eth_call` (no `cast` dependency); size grids extended and
   capacity values carry a `saturated` flag when the largest quoted size still fits.
 - Runners die on commands over ~10 minutes; every long script takes `--max-seconds` and resumes.
+- 2026-09-18, model v2: capacity margin, Tier B daily capital cap ($101M observed), vol-driven
+  depth collapse (one Kaiko anchor), partial liquidations (repay to 74%, full close under $2.5k,
+  calibrated on the observed 38% full-close share), responsive share refit to 40% / 4 h. The
+  Phase 4 check (AB within 25% of realized) is asserted in `backtest.py calib`. The Phase 3
+  "within 5% of Dune" check is 30% in code (actual +11% seized, +7% repaid; Dune prices
+  differently).
 
 ## 7. Decisions I made (say so if you want them changed)
 

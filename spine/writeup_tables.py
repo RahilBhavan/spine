@@ -7,7 +7,11 @@ BT, CAL, SUMMARY, DEPTH = load('backtest'), load('calibration'), load('summary')
 STAR = BT['calibrated']
 D = BT['defaults']
 BASE = dict(book='today', k_dex=D['k_dex'], k_cex=D['k_cex'], r=D['r'], lag_bars=D['lag_bars'], margin=D['margin'], cex_cap_usd=D['cex_cap_usd'],
-            resp_share=STAR['resp_share'], react_min=STAR['react_min'], lltv=0.86, cap=0.75, scenario='AB', market='cbBTC')
+            beta=D['beta'], seed=0, resp_share=STAR['resp_share'], react_min=STAR['react_min'], close_target=STAR['close_target'], full_below_usd=STAR['full_below_usd'],
+            lltv=0.86, cap=0.75, scenario='AB', market='cbBTC')
+FIT = 'fitted response s %.1f / d %d min, repay-to-%.0f%% with full close below $%.0fk, depth collapse beta %.2f' % (STAR['resp_share'], STAR['react_min'], 100 * STAR['close_target'], STAR['full_below_usd'] / 1e3, D['beta'])
+BETA_NOTE = ('Depth per step is k * exp(-beta * |trailing 1h return| / 0.05); beta %.2f is anchored on one Kaiko point (Oct 10 2025: '
+             'top-of-book depth down >90%% on a ~10%% hourly move), not fitted.' % D['beta'])
 SUPPLY = {m: SUMMARY['markets'][m]['state']['supply_usd'] for m in ('cbBTC', 'WETH')}
 LIVED = [('Oct2025', 'Oct 9-12 2025'), ('Feb2026', 'Feb 2-8 2026'), ('Jun2026a', 'Jun 1-7 2026'), ('Jun2026b', 'Jun 23-27 2026')]
 LABEL = dict(Mar2020='Mar 2020', May2021='May 2021', FTX2022='FTX Nov 2022', Aug2024='Aug 2024', Oct2025='Oct 2025', Feb2026='Feb 2026', Jun2026='Jun 2026')
@@ -55,7 +59,7 @@ def table(head, rows):
 
 
 def recommendation():
-    print('## Short version: recommendation row, cbBTC (Mar 2020, AB, fitted response, cap 75%)\n')
+    print('## Short version: recommendation row, cbBTC (Mar 2020, AB, %s, cap 75%%)\n' % FIT)
     rows = [('%g%%' % (100 * l), bad_pct(find(lltv=l, window='Mar2020'))) for l in (0.86, 0.80, 0.77)]
     for kc in (0.1, 1.0):
         rs = [find(window='Mar2020', k_cex=kc, k_dex=kd, lag_bars=lag) for kd in (0.1, 0.5, 1.0) for lag in (0, 1, 3)]
@@ -82,7 +86,7 @@ def lived_events():
 
 
 def warning_time():
-    print('## Section 3: warning time (AB 86/75, fitted response; median liquidated position)\n')
+    print('## Section 3: warning time (AB 86/75, %s; median liquidated position)\n' % FIT)
     rows = sorted(((LABEL[w], find(window=w)['warn_minutes_p50']) for w, _, _ in WINDOWS), key=lambda x: -(x[1] or 0))
     table(['Crash', 'Warning time for the median liquidated position'], [(w, dur(m)) for w, m in rows])
 
@@ -90,7 +94,7 @@ def warning_time():
 def borrower_response():
     s, d = STAR['resp_share'], STAR['react_min']
     for w in ('Mar2020', 'May2021'):
-        print('## Section 3: borrower response (%s, AB 86/75)\n' % LABEL[w])
+        print('## Section 3: borrower response (%s, AB 86/75, repay-to-%.0f%%, full below $%.0fk, beta %.2f)\n' % (LABEL[w], 100 * STAR['close_target'], STAR['full_below_usd'] / 1e3, D['beta']))
         cases = [('None respond', 0.0, d), ('%.0f%% respond within %s (fitted)' % (100 * s, dur(d)), s, d),
                  ('%.0f%% respond within 15 min' % (100 * s), s, 15), ('90% respond within 15 min', 0.9, 15)]
         rows = []
@@ -101,7 +105,7 @@ def borrower_response():
 
 
 def seven_paths():
-    print('## Section 4: seven paths (cbBTC 86/75, fitted response)\n')
+    print('## Section 4: seven paths (cbBTC 86/75, %s)\n' % FIT)
     rows = []
     for w, _, _ in WINDOWS:
         c = load('prices/%s_BTC-USD' % w)
@@ -109,11 +113,11 @@ def seven_paths():
         rows.append((LABEL[w], '-%.0f%% / -%.0f%%' % (100 * max_drop(c, H4), 100 * max_drop(c, H24)), usd(ab['liquidated_usd']), bad_pct(ab),
                      '%s / %s' % (dur(ab['queue_minutes_p50']), dur(ab['queue_minutes_p95'])), bad_pct(abc)))
     table(['Path', 'Worst 4h / 24h', 'AB: liquidated', 'AB: bad debt', 'AB: queue p50 / p95', 'ABC: bad debt'], rows)
-    print('Percentages are of the $%.2fB USDC supplied to the market.\n' % (SUPPLY['cbBTC'] / 1e9))
+    print('Percentages are of the $%.2fB USDC supplied to the market. %s\n' % (SUPPLY['cbBTC'] / 1e9, BETA_NOTE))
 
 
 def lltv_grid():
-    print('## Section 4: LLTV grid (cbBTC, fitted response; cap 75%, 60% where 75% would exceed the LLTV)\n')
+    print('## Section 4: LLTV grid (cbBTC, %s; cap 75%%, 60%% where 75%% would exceed the LLTV)\n' % FIT)
     rows = []
     others = [w for w, _, _ in WINDOWS if w not in ('Mar2020', 'May2021')]
     for l in (0.86, 0.80, 0.77, 0.70, 0.625):
@@ -126,7 +130,7 @@ def lltv_grid():
 
 
 def k_cex_line():
-    print('## Section 4: exchange-depth sensitivity (cbBTC 86/75, Mar 2020, AB)\n')
+    print('## Section 4: exchange-depth sensitivity (cbBTC 86/75, Mar 2020, AB; k_cex and k_dex are base values, beta %.2f)\n' % D['beta'])
     parts = []
     for kc in (0.1, 0.3, 1.0):
         rs = [bad(find(window='Mar2020', k_cex=kc, k_dex=kd, lag_bars=lag)) for kd in (0.1, 0.5, 1.0) for lag in (0, 1, 3)]
@@ -135,8 +139,28 @@ def k_cex_line():
     print('; '.join(parts) + '.\n')
 
 
+def beta_table():
+    print('## Section 4: depth collapse (cbBTC, AB, cap 75%%, %s). %s\n' % (FIT, BETA_NOTE))
+    rows = []
+    for w in ('Mar2020', 'May2021'):
+        for l in (0.86, 0.80, 0.77):
+            rows.append((LABEL[w], '%g%%' % (100 * l), *(bad_pct(find(window=w, lltv=l, beta=b)) for b in (0.0, D['beta'], 2 * D['beta']))))
+    table(['Path', 'LLTV', 'beta 0 (constant depth)', 'beta %.2f' % D['beta'], 'beta %.2f' % (2 * D['beta'])], rows)
+
+
+def seed_table():
+    seeds = sorted({r['seed'] for r in BT['runs']})
+    print('## Section 4 (j): responsive-wallet assignment (cbBTC, AB, cap 75%%, %s; bad debt over hash seeds %d-%d)\n' % (FIT, seeds[0], seeds[-1]))
+    rows = []
+    for w in ('Mar2020', 'May2021'):
+        for l in (0.86, 0.80, 0.77):
+            xs = sorted(bad(find(window=w, lltv=l, seed=s)) for s in seeds)
+            rows.append((LABEL[w], '%g%%' % (100 * l), usd(xs[0]), usd(xs[len(xs) // 2]), usd(xs[-1])))
+    table(['Path', 'LLTV', 'Bad debt min', 'median', 'max'], rows)
+
+
 def weth_line():
-    print('## Section 4: WETH (cap 75%%, fitted response; %% of WETH supply $%.0fM)\n' % (SUPPLY['WETH'] / 1e6))
+    print('## Section 4: WETH (cap 75%%, %s; %% of WETH supply $%.0fM)\n' % (FIT, SUPPLY['WETH'] / 1e6))
     rows = []
     for l in (0.86, 0.80, 0.77):
         for sc in ('AB', 'ABC'):
@@ -147,14 +171,24 @@ def weth_line():
 
 def capital_range():
     for w in ('Mar2020', 'May2021'):
-        print('## Section 4: liquidator capital (cbBTC, %s, AB, cap 75%%, fitted response; Tier B rolling-24h cap as a multiple of the max collateral seized in one day on the market, $%.1fM from calibration.json via backtest.json defaults)\n' % (LABEL[w], D['cex_cap_usd'] / 1e6))
+        print('## Section 4: liquidator capital (cbBTC, %s, AB, cap 75%%, %s; Tier B rolling-24h cap as a multiple of the max collateral seized in one day on the market, $%.1fM from calibration.json via backtest.json defaults)\n' % (LABEL[w], FIT, D['cex_cap_usd'] / 1e6))
         mults = (1, 3, 10, float('inf'))
         rows = [('%g%%' % (100 * l), *(bad_pct(find(window=w, lltv=l, cex_cap_usd=D['cex_cap_usd'] * m)) for m in mults)) for l in (0.86, 0.80, 0.77)]
         table(['LLTV', '1x', '3x', '10x', 'depth-limited only'], rows)
 
 
+def style_table():
+    print('## Section 4: liquidation style (cbBTC, AB, cap 75%%, %s). Repay-to-target is what bots did on calm days; full close is the alternative on a cliff\n' % FIT)
+    cols = [(0.74, D['cex_cap_usd']), (1.0, D['cex_cap_usd']), (0.74, float('inf')), (1.0, float('inf'))]
+    for w in ('Mar2020', 'May2021'):
+        rows = [('%s, %g%%' % (LABEL[w], 100 * l), *(bad_pct(find(window=w, lltv=l, close_target=ct, cex_cap_usd=cc)) for ct, cc in cols)) for l in (0.86, 0.80, 0.77)]
+        table(['Path, LLTV', 'repay to 74%, capital 1x', 'full close, capital 1x', 'repay to 74%, unlimited capital', 'full close, unlimited capital'], rows)
+
+
 if __name__ == '__main__':
-    print('Calibrated (s*, d*) = (%.1f, %d min); ratios: %s\n' % (STAR['resp_share'], STAR['react_min'], ', '.join('%s %.2fx' % kv for kv in STAR['ratios'].items())))
+    fs = STAR['full_share']
+    print('Calibrated (s*, d*, fb*) = (%.1f, %d min, $%.0fk); ratios: %s\n' % (STAR['resp_share'], STAR['react_min'], STAR['full_below_usd'] / 1e3, ', '.join('%s %.2fx' % kv for kv in STAR['ratios'].items())))
+    print('Full-close threshold sweep (simulated full-liquidation share vs observed %.2f): %s\n' % (fs['observed'], ', '.join('below $%s: %.2f' % kv for kv in fs['sweep'].items())))
     recommendation()
     lived_events()
     warning_time()
@@ -162,8 +196,11 @@ if __name__ == '__main__':
     seven_paths()
     lltv_grid()
     k_cex_line()
+    beta_table()
     weth_line()
     capital_range()
+    seed_table()
+    style_table()
     assert find(window='Mar2020') is find(lltv=0.86, cap=0.75, window='Mar2020', scenario='AB')  # seven-path row is the grid's 86% cell
     assert all(bad(find(window=w, scenario='ABC')) <= bad(find(window=w, scenario='A')) + 1 for w in ('Oct2025', 'Feb2026', 'Jun2026'))
     print('ok')

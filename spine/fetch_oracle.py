@@ -8,9 +8,7 @@ from spine.api import rpc, load, save, data_path, day_ts, budget, argv_max_secon
 
 PROXY = {'BTC': '0x64c911996D3c6aC71f9b455B1E8E7266BcbD848F', 'ETH': '0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70'}
 ANSWER_UPDATED = '0x0559884fd3a460db3073b7fc896cc77986f16e378210ded43186175bf646fc5f'
-# (first day, last day) inclusive, UTC
-WINDOWS = {'Oct2025': ('2025-10-09', '2025-10-12'), 'Feb2026': ('2026-02-02', '2026-02-08'),
-           'Jun2026a': ('2026-06-01', '2026-06-07'), 'Jun2026b': ('2026-06-23', '2026-06-27')}
+WINDOWS = {k: tuple(v) for k, v in load('windows').items()}  # (first day, last day) inclusive, UTC; calibrate.py --since --apply appends
 PAD = 86400
 CHUNK = 2000  # mainnet.base.org getLogs limit. base.drpc.org's free plan refused every range we tried, so it is not used.
 _blocks = {}

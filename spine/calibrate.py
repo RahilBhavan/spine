@@ -4,6 +4,8 @@ Per window/market: liquidated volume (USD at the oracle price of the liquidation
 event, and liquidator concentration.
 Run: python3.12 -m spine.calibrate <window> [--max-seconds N]   one window -> data/cache/calib_<window>.json
      python3.12 -m spine.calibrate                              assemble data/calibration.json, print tables
+     python3.12 -m spine.calibrate --since YYYY-MM-DD [--apply]  propose windows around later days with > $5M cbBTC repaid
+                                                                that no window covers; --apply appends them to data/windows.json
 The latency step fetches one Morpho history per borrower (cached in data/cache/history_*.json); when the
 time budget runs out it exits 0 with "partial", rerun until it prints "complete"."""
 import bisect, json, time, datetime
@@ -14,6 +16,7 @@ CALIB_MARKETS = ('cbBTC', 'WETH')  # markets with a Chainlink path in data/oracl
 LLTV = 0.86
 CAP = 1500  # borrowers per window/market for the latency step
 LOOKBACK = 86400  # search for the crossing this long before the liquidation
+HOT_USD, BEFORE, AFTER = 5e6, 3, 2  # --since: a day with more repaid than this gets a window (day - BEFORE .. day + AFTER)
 HIST_Q = '''query($w:MarketTransactionFilters){ marketTransactions(first:1000, where:$w){ items {
   type timestamp blockNumber txHash user { address } data {
     ... on MarketTransactionTransferData { assets shares }
@@ -231,6 +234,39 @@ def run_window(window, max_seconds):
     return True
 
 
+def hot_days(market, since):
+    by = {}
+    for r in load('liquidations_%s' % market)['items']:
+        d = day(r['ts'])
+        if d > since:
+            by[d] = by.get(d, 0) + int(r['repaid_assets']) / 1e6
+    return sorted(d for d, v in by.items() if v > HOT_USD)
+
+
+def propose(days, windows):
+    """{name: (first, last)} around each hot day outside every window; overlapping proposals merge, and a proposal touching an
+    existing window is clipped to end the day before it starts (or start the day after it ends)."""
+    shift = lambda d, n: day(day_ts(d) + n * 86400)
+    out = []
+    for d in days:
+        if any(a <= d <= b for a, b in windows.values()):
+            continue
+        a, b = shift(d, -BEFORE), shift(d, AFTER)
+        for wa, wb in windows.values():
+            a, b = (shift(wb, 1) if wa <= a <= wb else a), (shift(wa, -1) if wa <= b <= wb else b)
+        if out and a <= out[-1][1]:
+            out[-1][1] = max(out[-1][1], b)
+        else:
+            out.append([a, b, d])
+    names = dict(windows)
+    for a, b, d in out:
+        base = datetime.datetime.strptime(d, '%Y-%m-%d').strftime('%b%Y')
+        taken = [w for w in names if w.startswith(base)]
+        name = base if not taken else next(base + ch for ch in 'abcdefghijklmnop' if base + ch not in taken)
+        names[name] = (a, b)
+    return {k: v for k, v in names.items() if k not in windows}
+
+
 def assemble():
     wins = {w: load('cache/calib_%s' % w) for w in WINDOWS}
     pc = lambda x: '%.2f%%' % (100 * x) if x is not None else '-'
@@ -258,7 +294,17 @@ def assemble():
 
 if __name__ == '__main__':
     max_seconds, args = argv_max_seconds()
-    if args:
+    if '--since' in args:
+        since = args[args.index('--since') + 1]
+        new = propose(hot_days('cbBTC', since), WINDOWS)
+        for name, (a, b) in new.items():
+            print('%-10s %s..%s' % (name, a, b))
+        print('%d new window(s) since %s' % (len(new), since))
+        assert all(a < b and not (a <= wb and wa <= b) for a, b in new.values() for wa, wb in WINDOWS.values()), new
+        if new and '--apply' in args:
+            save('windows', {k: list(v) for k, v in dict(WINDOWS, **new).items()}, indent=1)
+            print('appended to data/windows.json; run fetch_oracle, fetch_prices and calibrate <window> for each')
+    elif args:
         print('complete' if run_window(args[0], max_seconds) else 'partial (%s), rerun to continue' % args[0])
     else:
         assemble()

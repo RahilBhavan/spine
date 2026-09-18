@@ -1,5 +1,10 @@
 # Roadmap: from prototype to a maintained project
 
+Status 2026-09-18: Phases A-E done (E1 item 3, alt-asset replays, deferred; item 6 lands as
+`calibrate --since` plus `data/windows.json`). The partial-liquidation model changed the
+headline: under calm-day liquidator behaviour (trim to 74%), LLTV barely moves March 2020
+losses; liquidator policy and capital do. See WRITEUP.md section 4. Phase F remains.
+
 Written 2026-09-17 after the two-axis review (see PLAN.md §6b for what the build changed). Each
 phase is one or two `runner` dispatches with a `reviewer` pass, in the order below. Nothing here
 adds a framework, a server, or a paid data source.
