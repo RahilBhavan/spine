@@ -9,7 +9,8 @@ D = BT['defaults']
 BASE = dict(book='today', k_dex=D['k_dex'], k_cex=D['k_cex'], r=D['r'], lag_bars=D['lag_bars'], margin=D['margin'], cex_cap_usd=D['cex_cap_usd'],
             beta=D['beta'], seed=0, resp_share=STAR['resp_share'], react_min=STAR['react_min'], close_target=STAR['close_target'], full_below_usd=STAR['full_below_usd'],
             lltv=0.86, cap=0.75, scenario='AB', market='cbBTC')
-FIT = 'fitted response s %.1f / d %d min, repay-to-%.0f%% with full close below $%.0fk, depth collapse beta %.2f' % (STAR['resp_share'], STAR['react_min'], 100 * STAR['close_target'], STAR['full_below_usd'] / 1e3, D['beta'])
+FIT = 'fitted response s %.1f / d %d min, %s, depth multipliers constant (beta %.2f)' % (STAR['resp_share'], STAR['react_min'], 'bots close in full' if STAR['close_target'] >= 1 else 'bots trim to %.0f%%' % (100 * STAR['close_target']), D['beta'])
+BETAS = (0.0, 0.5493061443340549, 1.0986122886681098)
 BETA_NOTE = ('Depth per step is k * exp(-beta * |trailing 1h return| / 0.05); beta %.2f is anchored on one Kaiko point (Oct 10 2025: '
              'top-of-book depth down >90%% on a ~10%% hourly move), not fitted.' % D['beta'])
 SUPPLY = {m: SUMMARY['markets'][m]['state']['supply_usd'] for m in ('cbBTC', 'WETH')}
@@ -40,6 +41,20 @@ def bad_pct(r):
     return '0' if bad(r) == 0 else '%s (%s)' % (usd(bad(r)), pct(bad(r), r['market']))
 
 
+def expo(r):
+    """Exposure marked at the trough: realized so far plus every alive position's shortfall at the lowest oracle print."""
+    return r['trough_exposure_usd']
+
+
+def expo_pct(r):
+    return '0' if expo(r) == 0 else '%s (%s)' % (usd(expo(r)), pct(expo(r), r['market']))
+
+
+def both(r):
+    """'loss by end of path / exposure at trough'."""
+    return '%s / %s' % (bad_pct(r), expo_pct(r))
+
+
 def dur(minutes):
     if minutes is None:
         return 'n/a'
@@ -60,12 +75,12 @@ def table(head, rows):
 
 def recommendation():
     print('## Short version: recommendation row, cbBTC (Mar 2020, AB, %s, cap 75%%)\n' % FIT)
-    rows = [('%g%%' % (100 * l), bad_pct(find(lltv=l, window='Mar2020'))) for l in (0.86, 0.80, 0.77)]
+    rows = [('%g%%' % (100 * l), both(find(lltv=l, window='Mar2020'))) for l in (0.86, 0.80, 0.77)]
     for kc in (0.1, 1.0):
         rs = [find(window='Mar2020', k_cex=kc, k_dex=kd, lag_bars=lag) for kd in (0.1, 0.5, 1.0) for lag in (0, 1, 3)]
         rows.append(('86%%, k_cex %.1f' % kc, '%s at k_dex 0.5 / lag 1; %s to %s across k_dex and lag' % (
             bad_pct(find(window='Mar2020', k_cex=kc)), usd(min(map(bad, rs))), usd(max(map(bad, rs))))))
-    table(['LLTV', 'Bad debt (% of supply)'], rows)
+    table(['LLTV', 'Loss by end of path / exposure at trough (% of supply)'], rows)
 
 
 def lived_events():
@@ -94,7 +109,7 @@ def warning_time():
 def borrower_response():
     s, d = STAR['resp_share'], STAR['react_min']
     for w in ('Mar2020', 'May2021'):
-        print('## Section 3: borrower response (%s, AB 86/75, repay-to-%.0f%%, full below $%.0fk, beta %.2f)\n' % (LABEL[w], 100 * STAR['close_target'], STAR['full_below_usd'] / 1e3, D['beta']))
+        print('## Section 3: borrower response (%s, AB 86/75, %s)\n' % (LABEL[w], FIT))
         cases = [('None respond', 0.0, d), ('%.0f%% respond within %s (fitted)' % (100 * s, dur(d)), s, d),
                  ('%.0f%% respond within 15 min' % (100 * s), s, 15), ('90% respond within 15 min', 0.9, 15)]
         rows = []
@@ -110,10 +125,10 @@ def seven_paths():
     for w, _, _ in WINDOWS:
         c = load('prices/%s_BTC-USD' % w)
         ab, abc = find(window=w), find(window=w, scenario='ABC')
-        rows.append((LABEL[w], '-%.0f%% / -%.0f%%' % (100 * max_drop(c, H4), 100 * max_drop(c, H24)), usd(ab['liquidated_usd']), bad_pct(ab),
-                     '%s / %s' % (dur(ab['queue_minutes_p50']), dur(ab['queue_minutes_p95'])), bad_pct(abc)))
-    table(['Path', 'Worst 4h / 24h', 'AB: liquidated', 'AB: bad debt', 'AB: queue p50 / p95', 'ABC: bad debt'], rows)
-    print('Percentages are of the $%.2fB USDC supplied to the market. %s\n' % (SUPPLY['cbBTC'] / 1e9, BETA_NOTE))
+        rows.append((LABEL[w], '-%.0f%% / -%.0f%%' % (100 * max_drop(c, H4), 100 * max_drop(c, H24)), usd(ab['liquidated_usd']), bad_pct(ab), expo_pct(ab),
+                     '%s / %s' % (dur(ab['queue_minutes_p50']), dur(ab['queue_minutes_p95'])), both(abc)))
+    table(['Path', 'Worst 4h / 24h', 'AB: liquidated', 'AB: loss by end of path', 'AB: exposure at trough', 'AB: queue p50 / p95', 'ABC: loss / exposure'], rows)
+    print('Percentages are of the $%.2fB USDC supplied to the market. Loss = shortfall realized on liquidations plus what is still underwater at the end of the path; exposure = the same marked at the lowest oracle print. %s\n' % (SUPPLY['cbBTC'] / 1e9, BETA_NOTE))
 
 
 def lltv_grid():
@@ -123,10 +138,11 @@ def lltv_grid():
     for l in (0.86, 0.80, 0.77, 0.70, 0.625):
         cap = 0.75 if l > 0.75 else 0.60
         lif = min(1.15, 1 / (0.3 * l + 0.7))
-        cells = [usd(bad(find(lltv=l, cap=cap, window=w, scenario=sc))) for sc in ('AB', 'ABC') for w in ('Mar2020', 'May2021')]
-        other = max(bad(find(lltv=l, cap=cap, window=w, scenario=sc)) for sc in ('AB', 'ABC') for w in others)
+        cells = ['%s / %s' % (usd(bad(r)), usd(expo(r))) for r in (find(lltv=l, cap=cap, window=w, scenario=sc) for sc in ('AB', 'ABC') for w in ('Mar2020', 'May2021'))]
+        other = max(max(bad(r), expo(r)) for r in (find(lltv=l, cap=cap, window=w, scenario=sc) for sc in ('AB', 'ABC') for w in others))
         rows.append(('%g%%' % (100 * l), '%.1f%%' % (100 / lif), *cells, usd(other)))
     table(['LLTV', 'Bad-debt LTV (1/LIF)', 'AB: Mar 2020', 'AB: May 2021', 'ABC: Mar 2020', 'ABC: May 2021', 'Other five paths (max)'], rows)
+    print('Cells are loss by end of path / exposure at trough.\n')
 
 
 def k_cex_line():
@@ -144,8 +160,9 @@ def beta_table():
     rows = []
     for w in ('Mar2020', 'May2021'):
         for l in (0.86, 0.80, 0.77):
-            rows.append((LABEL[w], '%g%%' % (100 * l), *(bad_pct(find(window=w, lltv=l, beta=b)) for b in (0.0, D['beta'], 2 * D['beta']))))
-    table(['Path', 'LLTV', 'beta 0 (constant depth)', 'beta %.2f' % D['beta'], 'beta %.2f' % (2 * D['beta'])], rows)
+            rows.append((LABEL[w], '%g%%' % (100 * l), *(both(find(window=w, lltv=l, beta=b)) for b in BETAS)))
+    table(['Path', 'LLTV'] + ['beta %.2f%s' % (b, ' (constant depth)' if b == 0 else '') for b in BETAS], rows)
+    print('Cells are loss by end of path / exposure at trough.\n')
 
 
 def seed_table():
@@ -173,16 +190,17 @@ def capital_range():
     for w in ('Mar2020', 'May2021'):
         print('## Section 4: liquidator capital (cbBTC, %s, AB, cap 75%%, %s; Tier B rolling-24h cap as a multiple of the max collateral seized in one day on the market, $%.1fM from calibration.json via backtest.json defaults)\n' % (LABEL[w], FIT, D['cex_cap_usd'] / 1e6))
         mults = (1, 3, 10, float('inf'))
-        rows = [('%g%%' % (100 * l), *(bad_pct(find(window=w, lltv=l, cex_cap_usd=D['cex_cap_usd'] * m)) for m in mults)) for l in (0.86, 0.80, 0.77)]
+        rows = [('%g%%' % (100 * l), *(both(find(window=w, lltv=l, cex_cap_usd=D['cex_cap_usd'] * m)) for m in mults)) for l in (0.86, 0.80, 0.77)]
         table(['LLTV', '1x', '3x', '10x', 'depth-limited only'], rows)
+        print('Cells are loss by end of path / exposure at trough.\n')
 
 
 def style_table():
-    print('## Section 4: liquidation style (cbBTC, AB, cap 75%%, %s). Repay-to-target is what bots did on calm days; full close is the alternative on a cliff\n' % FIT)
-    cols = [(0.74, D['cex_cap_usd']), (1.0, D['cex_cap_usd']), (0.74, float('inf')), (1.0, float('inf'))]
+    print('## Section 4: liquidation style (cbBTC, AB, cap 75%%, %s). Full close is what bots do (80-94%% of lived liquidations repaid the whole debt); trim-to-74%% is the alternative\n' % FIT)
+    cols = [(1.0, D['cex_cap_usd']), (0.74, D['cex_cap_usd']), (1.0, float('inf')), (0.74, float('inf'))]
     for w in ('Mar2020', 'May2021'):
-        rows = [('%s, %g%%' % (LABEL[w], 100 * l), *(bad_pct(find(window=w, lltv=l, close_target=ct, cex_cap_usd=cc)) for ct, cc in cols)) for l in (0.86, 0.80, 0.77)]
-        table(['Path, LLTV', 'repay to 74%, capital 1x', 'full close, capital 1x', 'repay to 74%, unlimited capital', 'full close, unlimited capital'], rows)
+        rows = [('%s, %g%%' % (LABEL[w], 100 * l), *(both(find(window=w, lltv=l, close_target=ct, cex_cap_usd=cc)) for ct, cc in cols)) for l in (0.86, 0.80, 0.77)]
+        table(['Path, LLTV', 'full close, capital 1x', 'trim to 74%, capital 1x', 'full close, unlimited capital', 'trim to 74%, unlimited capital'], rows)
 
 
 if __name__ == '__main__':

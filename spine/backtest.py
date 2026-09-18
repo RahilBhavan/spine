@@ -23,9 +23,9 @@ def cex_cap_default():
 # ponytail: one anchor point (Kaiko, Oct 10 2025: top-of-book depth down >90%); FTX ("about half") would pin the curve's shape.
 DEFAULTS = dict(lltv=0.86, cap=0.75, scenario='AB', k_dex=0.5, k_cex=0.3, r=0.2, lag_bars=1, reshape=True,
                 warn_gap=0.06, resp_share=0.0, react_min=60, cure=0.0, margin=0.01, cex_cap_usd=cex_cap_default(),
-                close_target=0.74, full_below_usd=0.0, beta=math.log(3) / 2, seed=0)
+                close_target=1.0, full_below_usd=0.0, beta=0.0, seed=0)
 SHARES, REACTS = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9], [15, 30, 60, 120, 240]
-FULL_BELOW, BETAS = (0.0, 1e3, 2.5e3, 5e3, 1e4, 2.5e4, 5e4), (0.0, DEFAULTS['beta'], 2 * DEFAULTS['beta'])
+FULL_BELOW, BETAS = (0.0, 1e3, 2.5e3, 5e3, 1e4, 2.5e4, 5e4), (0.0, math.log(3) / 2, math.log(3))  # beta: none, the Kaiko anchor, twice it
 HOUR_BARS, SEEDS = 60 // BAR_MIN, range(10)
 CAP_MULTIPLES = (1, 3, 10, np.inf)
 # calibration books: (window in fetch_oracle/calibrate naming, price window, book date, markets)
@@ -102,7 +102,7 @@ def simulate(book, path, params):
     avail_a, avail_b, seized_total, realized, cured, max_q, peak_step, unrealized = base_a, base_b, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0
     ring, used_b = np.zeros(DAY_STEPS), 0.0  # Tier B depth consumed per step, trailing 24h
     oracle = lagged(path, params['lag_bars'])
-    trough, trough_short = int(np.argmin(oracle)), np.zeros(n)
+    trough, trough_expo = int(np.argmin(oracle)), 0.0
     g = np.exp(-params['beta'] * np.abs(path / lagged(path, min(HOUR_BARS, len(path))) - 1) / 0.05)  # depth multiplier
     n_events = n_full = 0
     for t, (p, pm, gt) in enumerate(zip(oracle.tolist(), path.tolist(), g.tolist())):
@@ -207,16 +207,16 @@ def simulate(book, path, params):
             peak_step = max(peak_step, step_seized)
         used_b += ub
         ring[t % DAY_STEPS] = ub
-        if t == trough:
-            trough_short = np.maximum(0, debt - coll * p / L)  # per-position shortfall at the trough; counted only if never liquidated
+        if t == trough:  # exposure marked at the trough: everything alive and underwater, plus what was already realized
+            trough_expo = float(np.maximum(0, debt - coll * p / L).sum()) + realized
     done = liq_step >= 0
-    unrealized = float(trough_short[~done].sum())
+    unrealized = float(np.maximum(0, debt[alive] - coll[alive] * p / L).sum())  # still underwater at the end of the path
     q = (liq_step[done] - entered[done]) * BAR_MIN
     wt = np.where(warned[done] >= 0, entered[done] - warned[done], 0) * BAR_MIN  # 0 = jumped straight into the queue
     supply = book[1].sum() / 0.9
     return dict(liquidated_usd=float(seized_total), repaid_usd=float(seized_total / L), n_liquidated=int(done.sum()),
                 n_events=int(n_events), full_share=n_full / n_events if n_events else None, cured_usd=cured, resp_share_debt=float(book[1][book[2] < params['resp_share']].sum() / book[1].sum()),
-                realized_bad_debt_usd=realized, unrealized_bad_debt_usd=unrealized,
+                realized_bad_debt_usd=realized, unrealized_bad_debt_usd=unrealized, trough_exposure_usd=trough_expo,
                 bad_debt_pct_supply=float(100 * (realized + unrealized) / supply), max_queue_usd=float(max_q),
                 queue_minutes_p50=float(np.percentile(q, 50)) if len(q) else None, queue_minutes_p95=float(np.percentile(q, 95)) if len(q) else None,
                 warn_minutes_p50=float(np.percentile(wt, 50)) if len(wt) else None,
@@ -336,8 +336,8 @@ def sensitivity(markets, depth, share, react, cf, get):
                         get(m, w, book, depth, c, dict(book='today'), lltv=lltv, cex_cap_usd=DEFAULTS['cex_cap_usd'] * mult, **star)
                     for beta in BETAS:  # depth collapse: none, the Kaiko anchor, twice it
                         get(m, w, book, depth, c, dict(book='today'), lltv=lltv, beta=beta, **star)
-                    for mult in (1, np.inf):  # liquidation style: bots close in full instead of repaying to target
-                        get(m, w, book, depth, c, dict(book='today'), lltv=lltv, close_target=1.0, cex_cap_usd=DEFAULTS['cex_cap_usd'] * mult, **star)
+                    for mult in (1, np.inf):  # liquidation style: bots trim to 74% instead of closing in full
+                        get(m, w, book, depth, c, dict(book='today'), lltv=lltv, close_target=0.74, cex_cap_usd=DEFAULTS['cex_cap_usd'] * mult, **star)
                 for seed in SEEDS:  # which wallets are responsive: hash seed
                     bs = today_book(m, seed)
                     for lltv in (0.86, 0.80, 0.77):
@@ -378,8 +378,8 @@ def calibration(depth, get):
     btc = [(cw, m) for cw, _, _, mk in CALIB for m in mk if m == 'cbBTC' and realized.get(cw, m)]
     eth = [(cw, m) for cw, _, _, mk in CALIB for m in mk if m == 'WETH' and realized.get(cw, m)]
     obs = [cal['windows'][cw]['cbBTC']['latency']['full_share'] for cw, _ in btc] if cal else []
-    obs_full, cf_star, sim_full = (sum(obs) / len(obs), None, {}) if obs else (None, DEFAULTS['full_below_usd'], {})
-    if obs:
+    obs_full, cf_star, sim_full = (sum(obs) / len(obs), DEFAULTS['full_below_usd'], {}) if obs else (None, DEFAULTS['full_below_usd'], {})
+    if obs and DEFAULTS['close_target'] < 1:
         print('\nfull-liquidation share, AB, s 0.7, d 120, cbBTC (%s); observed mean %.2f:' % (' / '.join(cw for cw, _ in btc), obs_full))
         for cf in FULL_BELOW:
             fs = [books[cw, m](scenario='AB', resp_share=0.7, react_min=120, full_below_usd=cf)['full_share'] or 0.0 for cw, m in btc]
@@ -423,7 +423,7 @@ def calibration(depth, get):
 
 def table(rows, share, react, cf):
     dflt = lambda r: (r.get('book') == 'today' and all(r[k] == DEFAULTS[k] for k in ('k_dex', 'k_cex', 'lag_bars', 'beta', 'seed', 'cex_cap_usd'))
-                      and r['resp_share'] == share and r['react_min'] == react and r['close_target'] == cf)
+                      and r['resp_share'] == share and r['react_min'] == react and r['full_below_usd'] == cf)
     base = [r for r in rows if dflt(r) and r['lltv'] == 0.86 and r['cap'] == 0.75]
     ab = [r for r in rows if dflt(r) and r['scenario'] == 'AB']
     print('\nresp_share %.1f, react_min %d, full_below_usd %.0f. %-6s %-8s | %-22s | %-22s | %-22s | max lltv with 0 bad debt (AB): cap .75 / any cap' % (
@@ -461,7 +461,7 @@ if __name__ == '__main__':
         star = (cal['resp_share'], cal['react_min'], cal['full_below_usd']) if cal else calibrated()
         if star is None:
             print('no (s*, d*, fb*): run `calib` first; grid/sens run at resp_share 0, full_below_usd %.0f' % DEFAULTS['full_below_usd'])
-            star = (0.0, DEFAULTS['react_min'], DEFAULTS['close_target'])
+            star = (0.0, DEFAULTS['react_min'], DEFAULTS['full_below_usd'])
         if what in ('grid', 'all'):
             n = len(new)
             grid(markets, depth, [share_arg] if share_arg is not None else sorted({0.0, star[0]}), star[1], star[2], get)

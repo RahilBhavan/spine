@@ -159,13 +159,21 @@ def latency_one(r, h, oracle, decimals):
     repaid_shares = int(this[0]['data']['repaidShares'])
     if coll <= 0 or shares <= 0 or repaid_shares <= 0:
         return 'inconsistent_history'
-    full = repaid_shares == shares
-    debt = int(r['repaid_assets']) / 1e6 * (1 if full else shares / repaid_shares)
+    debt = int(r['repaid_assets']) / 1e6 * shares / repaid_shares
+    full = int(r['repaid_assets']) / 1e6 >= 0.99 * debt  # by debt, not share equality: dust shares survive full closes
     p_star = debt / (coll / 10 ** decimals * LLTV)
     c = oracle_crossings(oracle, r['block'], r['ts'], p_star)
     if isinstance(c, str):
         return c
-    return dict(first=r['ts'] - row_ts(c[0]), last=r['ts'] - row_ts(c[1]), full=full)
+    out = dict(first=r['ts'] - row_ts(c[0]), last=r['ts'] - row_ts(c[1]), full=full)
+    if not full:  # where a partial liquidation left the borrower: post-event LTV at the block's oracle price
+        price = oracle_price_at_block(oracle, r['block'])
+        coll_after = (coll - int(r['seized_assets'])) / 10 ** decimals
+        debt_after = debt - int(r['repaid_assets']) / 1e6
+        if coll_after > 0 and price:
+            out['post_ltv'] = debt_after / (coll_after * price)
+            out['repaid_frac'] = int(r['repaid_assets']) / 1e6 / debt
+    return out
 
 
 def latency(market, rows, oracle, decimals, within_budget):
@@ -188,9 +196,14 @@ def latency(market, rows, oracle, decimals, within_budget):
         full += res['full']
     n = len(ok)
 
+    post = [x['post_ltv'] for x in ok if 'post_ltv' in x]
+    frac = [x['repaid_frac'] for x in ok if 'repaid_frac' in x]
+
     def stats(k):
         xs = [x[k] for x in ok]
         return dict(sampled=len(rows), n=n, excluded=excluded, full_share=full / n if n else None,
+                    partial=dict(n=len(post), post_ltv_p25=pct(post, .25), post_ltv_p50=pct(post, .5), post_ltv_p75=pct(post, .75),
+                                 repaid_frac_p50=pct(frac, .5)),
                     p50=pct(xs, .5), p90=pct(xs, .9), p99=pct(xs, .99),
                     within={str(s): sum(x <= s for x in xs) / n if n else None for s in (2, 60, 300, 1800)})
     return stats('last'), stats('first')
