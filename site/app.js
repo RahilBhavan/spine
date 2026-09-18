@@ -276,7 +276,8 @@ async function loadBacktest() {
   grid.forEach(r => counts[r.cex_cap_usd] = (counts[r.cex_cap_usd] || 0) + 1);
   BT.cexCap = +Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
   BT.base = r => r.book === 'today' && r.k_dex === d.k_dex && r.k_cex === d.k_cex && r.lag_bars === d.lag_bars && r.margin === d.margin &&
-    r.resp_share === c.resp_share && r.react_min === c.react_min;
+    r.resp_share === c.resp_share && r.react_min === c.react_min &&
+    ['beta', 'seed', 'close_target', 'full_below_usd'].every(k => !(k in d) || r[k] === d[k]);  // sensitivity sweeps stay out of the grid view
   return BT;
 }
 
@@ -284,8 +285,13 @@ function btRows(bt, f) {
   return bt.runs.filter(r => bt.base(r) && Object.keys(f).every(k => r[k] === f[k]));
 }
 
+let btMetric = 'Loss by end of path';
+const METRICS = {
+  'Loss by end of path': r => r.realized_bad_debt_usd + r.unrealized_bad_debt_usd,  // realized on liquidations plus still underwater at the end
+  'Exposure at trough': r => r.trough_exposure_usd || 0,                              // the same, marked at the lowest oracle print
+};
 function badDebt(r) {
-  return r.realized_bad_debt_usd + r.unrealized_bad_debt_usd;
+  return METRICS[btMetric](r);
 }
 
 // Row at max draw 0.75, or 0.60 for the LLTVs below 0.75 where the grid has no 0.75 column.
@@ -343,6 +349,7 @@ async function renderBacktest() {
     bt.defaults.k_dex + ' / CEX ' + bt.defaults.k_cex + ', liquidator daily capital ' + usd(bt.cexCap) + '. Max draw 75%, or 60% where the LLTV is below 75%.';
   buttons('bt-market-buttons', markets, btMarket, k => { btMarket = k; renderBacktest(); });
   buttons('bt-scenario-buttons', ['A', 'AB', 'ABC'], btScenario, k => { btScenario = k; renderBacktest(); });
+  buttons('bt-metric-buttons', Object.keys(METRICS), btMetric, k => { btMetric = k; renderBacktest(); });
   renderHeatmap('chart-heat', bt, btMarket, btScenario);
   renderCapital('chart-capital', bt);
   renderWarn('chart-warn', bt, btMarket);
