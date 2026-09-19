@@ -249,13 +249,15 @@ above; `reviewer` verifies before the next phase starts.
 - Coinbase-only filter via implementation-slot check, batched through multicall,
   cached; not a Dune dependency.
 
-## 8. Open questions worth your answer before Phase 4
+## 8. Open questions (answered 2026-09-19)
 
-1. Does Coinbase liquidate its own book? If you know, or can find out, it changes the
-   headline. Otherwise the writeup carries both scenarios.
-2. Audience for the writeup: Coinbase/Morpho risk people, or a public "here is what
-   the data says" post? Changes tone and how hard the recommendation is worded.
-3. Hosting: GitHub Pages (default) or Vercel.
+1. Does Coinbase liquidate its own book? Researched from public statements and the top
+   liquidator addresses on the market; findings in `research/self_liquidation.md`. The
+   writeup carries the AB and ABC scenarios either way.
+2. Audience: a public post, written for Coinbase and Morpho risk staff and for the USDC
+   suppliers who carry the bad debt. Recommendations are worded as recommendations.
+3. Hosting: GitHub Pages at https://rahilbhavan.github.io/spine/ (repo public, Actions
+   deploy, hourly refresh).
 
 ## 9. Brainstorm: extensions worth doing later, not now
 

@@ -64,7 +64,7 @@ Today's cbBTC book is dropped onto each historical path from its pre-crash peak 
 
 - **A**: on-chain bots only (Base DEX depth).
 - **AB**: plus liquidators who seize cbBTC and sell BTC on Coinbase and Kraken. This matches observed behaviour.
-- **ABC**: plus Coinbase itself redeeming cbBTC 1:1, effectively unlimited depth and capital at the exchange price. Whether Coinbase runs such a liquidator is not public.
+- **ABC**: plus Coinbase itself redeeming cbBTC 1:1, effectively unlimited depth and capital at the exchange price. Nothing public says this exists: Morpho's launch post says liquidation works "without requiring Coinbase's direct involvement", Coinbase's help center says it cannot prevent liquidation, and the top liquidators on the market are independent bots that sell seized cbBTC on Uniswap in the same transaction (`research/self_liquidation.md`). ABC is what a commitment would buy.
 
 cbBTC at today's terms (86% / 75%), fitted behaviour:
 
@@ -116,7 +116,7 @@ RiskDAO's SmartLTV formula (LTV = exp(−c·σ/√(l/d)) − β, with l the liqu
 
 The rule: **1 − LLTV must cover the worst move over the time it takes to clear the queue, plus the liquidation bonus, plus one oracle interval.** Basel's SCO60.29 says the same thing in regulator language: assess the liquidation period and downturn liquidity depth before recognizing crypto collateral.
 
-**cbBTC.** On a March 2020 path the queue takes two days to clear at the median with the capital liquidators brought on Feb 5 2026, and BTC fell 58% peak to trough over that week. No LLTV covers that: 77% still leaves 9.1% of supply underwater at the low. What does: a backstop liquidator that can redeem cbBTC and sell BTC on Coinbase's own book (the ABC column: 0.9% realized at 86%, zero at 77%, nothing left unserved), which belongs to Coinbase alone and should be published, because lenders are pricing it whether it exists or not; then the LLTV, where 80% costs 0.3% realized and 9.6% exposed on the worst path and is clean everywhere else. The origination cap follows from section 5: 66% at 80% LLTV on the full history, 70% if only the post-2022 regime counts. Comparators: Aave sets cbBTC on Base at a 78% liquidation threshold; Ledn liquidates at 80%; Unchained at 83% with a 24-hour cure period.
+**cbBTC.** On a March 2020 path the queue takes two days to clear at the median with the capital liquidators brought on Feb 5 2026, and BTC fell 58% peak to trough over that week. No LLTV covers that: 77% still leaves 9.1% of supply underwater at the low. What does: a backstop liquidator that can redeem cbBTC and sell BTC on Coinbase's own book (the ABC column: 0.9% realized at 86%, zero at 77%, nothing left unserved). Only Coinbase can be that liquidator, nothing public says it is, and USDC suppliers are lending as if the answer were known; then the LLTV, where 80% costs 0.3% realized and 9.6% exposed on the worst path and is clean everywhere else. The origination cap follows from section 5: 66% at 80% LLTV on the full history, 70% if only the post-2022 regime counts. Comparators: Aave sets cbBTC on Base at a 78% liquidation threshold; Ledn liquidates at 80%; Unchained at 83% with a 24-hour cure period.
 
 **Pre-liquidation, whichever LLTV is chosen.** Morpho supports pre-liquidation contracts: a band (say 80-86% LTV) where positions can be partially closed at a small bonus (1-2%) before the hard line. On a slow slide it drains the queue while capacity is idle. It costs borrowers less than a 4.38% liquidation and it is the on-chain form of the margin call Coinbase already sends.
 
@@ -131,7 +131,7 @@ The rule: **1 − LLTV must cover the worst move over the time it takes to clear
 - Depth in a crash is scaled from today. We do not buy historical order books. Kaiko's Oct 10 2025 depth collapse, applied literally, contradicts the liquidations that happened that day.
 - The March 2020 replay drops a 2026-sized book onto 2020 prices. BTC's market is far deeper now; it is also true that Oct 10 2025 produced the thinnest books Kaiko has ever measured.
 - Borrower response is fit on three events with two parameters and assumes Coinbase's warning cadence stays as it is.
-- Whether Coinbase liquidates its own book is unverified. It is the ABC column.
+- Coinbase does not, on the public record, liquidate its own book, and the top liquidators trace to independent operators. The ABC column is a hypothetical commitment, not a description.
 - Oracle behaviour is modeled as a one-bar lag on Coinbase's candle low. The Chainlink path on Base tracked the exchange low within 0.1% on the lived events.
 
 ## Sources
