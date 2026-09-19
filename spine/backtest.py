@@ -337,6 +337,7 @@ def sensitivity(markets, depth, share, react, cf, get):
     star = dict(resp_share=share, react_min=react, full_below_usd=cf)
     for m in markets:
         book, label = today_book(m)
+        own = dict(lltv=MARKETS[m]['lltv'], cap=0.75 if MARKETS[m]['lltv'] > 0.75 else 0.55)  # the market's live terms, not cbBTC's
         for w, _, _ in WINDOWS:
             c = candles_for(m, w)
             if c is None:
@@ -344,7 +345,7 @@ def sensitivity(markets, depth, share, react, cf, get):
             for kd in (0.1, 0.5, 1.0):
                 for kc in (0.1, 0.3, 1.0):
                     for lag in (0, 1, 3):
-                        get(m, w, book, depth, c, dict(book=label), k_dex=kd, k_cex=kc, lag_bars=lag, **star)
+                        get(m, w, book, depth, c, dict(book=label), k_dex=kd, k_cex=kc, lag_bars=lag, **own, **star)
             if m == 'cbBTC' and w in ('Mar2020', 'May2021'):
                 for sh in sorted({0, 0.6, share, 0.9}):
                     for d in sorted({15, 60, react, 240}):
