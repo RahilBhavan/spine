@@ -216,3 +216,5 @@ Acceptance: `pytest -q tests` green; `backtest.py calib` ratios and every `data/
 
 G1 (0.5 d) -> G2 (1 d) -> G3 (0.25 d). G1.1 before G1.2 so the grid is regenerated once. G2.3 depends on G1.2's
 `latest_book`. G3 last so the regenerated grid is its reference.
+
+Follow-up 2026-09-19: alt cap number in writeup_tables (no replay), scenario A skipped for CEX-only markets, writeup_tables reads via saved_runs().

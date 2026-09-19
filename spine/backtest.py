@@ -332,6 +332,8 @@ def grid(markets, depth, shares, react, cf, get):
                 for lltv in ((0.625, 0.70) if MARKETS[m]['lltv'] < 0.7 else (0.625, 0.70, 0.77, 0.80, 0.86)):
                     for cap in (c for c in (0.50, 0.55, 0.60, 0.70, 0.75) if c < lltv):  # cap >= lltv clips most of the book: meaningless
                         for sc in ('A', 'AB', 'ABC'):
+                            if sc == 'A' and m not in depth['dex']:  # no venue on Base: Tier A capacity is (0, 0), the row is junk
+                                continue
                             get(m, w, book, depth, c, dict(book=label), lltv=lltv, cap=cap, scenario=sc, resp_share=sh, react_min=react, full_below_usd=cf)
 
 
