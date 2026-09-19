@@ -1,9 +1,11 @@
-"""Prints every numeric table in WRITEUP.md as Markdown, cut from data/ so the writeup cannot drift from the data. stdlib only.
+"""Prints every numeric table in WRITEUP.md as Markdown, cut from data/ so the writeup cannot drift from the data. stdlib plus spine.backtest (numpy).
 Run: .venv/bin/python -m spine.writeup_tables   (reads data/backtest.json, calibration.json, summary.json, depth.json, prices/)"""
-from spine.api import load
+from spine.api import load, lif
 from spine.fetch_prices import WINDOWS, max_drop, H4, H24
+from spine.backtest import DEFAULTS, capacity, saved_runs
 
 BT, CAL, SUMMARY, DEPTH = load('backtest'), load('calibration'), load('summary'), load('depth')
+RUNS = saved_runs()
 STAR = BT['calibrated']
 D = BT['defaults']
 BASE = dict(book=BT['latest_book'], k_dex=D['k_dex'], k_cex=D['k_cex'], r=D['r'], lag_bars=D['lag_bars'], margin=D['margin'], cex_cap_usd=D['cex_cap_usd'],
@@ -20,7 +22,7 @@ LABEL = dict(Mar2020='Mar 2020', May2021='May 2021', FTX2022='FTX Nov 2022', Aug
 
 def find(**kw):
     f = dict(BASE, **kw)
-    hits = [r for r in BT['runs'] if all(r.get(k) == v for k, v in f.items())]
+    hits = [r for r in RUNS if all(r.get(k) == v for k, v in f.items())]
     assert len(hits) == 1, (len(hits), kw)
     return hits[0]
 
@@ -44,7 +46,7 @@ def bad_pct(r):
 def seed_range(**kw):
     """' (min-max)' of bad debt over the hash seeds; '' where only seed 0 was run or the seeds agree."""
     f = dict(BASE, **kw)
-    xs = [bad(r) for r in BT['runs'] if all(r.get(k) == v for k, v in f.items() if k != 'seed')]
+    xs = [bad(r) for r in RUNS if all(r.get(k) == v for k, v in f.items() if k != 'seed')]
     return ' (%s-%s)' % (usd(min(xs)), usd(max(xs))) if len(xs) > 1 and min(xs) < max(xs) else ''
 
 
@@ -175,7 +177,7 @@ def beta_table():
 
 
 def seed_table():
-    seeds = sorted({r['seed'] for r in BT['runs']})
+    seeds = sorted({r['seed'] for r in RUNS})
     print('## Section 4 (j): responsive-wallet assignment (cbBTC, AB, cap 75%%, %s; bad debt over hash seeds %d-%d)\n' % (FIT, seeds[0], seeds[-1]))
     rows = []
     for w in ('Mar2020', 'May2021'):
@@ -198,7 +200,7 @@ def weth_line():
 def alt_table():
     print('## Section 6: alts (AB, LLTV 62.5%%, cap 55%%, %s; CEX depth only, no venue on Base)\n' % FIT)
     for m in ('cbXRP', 'SOL'):
-        ws = [w for w, _, _ in WINDOWS if any(r['market'] == m and r['window'] == w for r in BT['runs'])]
+        ws = [w for w, _, _ in WINDOWS if any(r['market'] == m and r['window'] == w for r in RUNS)]
         rows = []
         for w in ws:
             r = find(market=m, window=w, lltv=0.625, cap=0.55)
@@ -207,8 +209,15 @@ def alt_table():
         rs = [(k, find(market=m, window='Oct2025', lltv=0.625, cap=0.55, book_multiple=float(k))) for k in (1, 2, 4, 8, 16, 32)]
         hit = next(((k, r) for k, r in rs if bad(r) > 0), None)
         q = lambda r: dur(r['queue_minutes_p95'])
-        print("%s: Oct 2025 first shows loss at %dx today's book (%s)." % (m, hit[0], both(hit[1])) if hit else "%s: Oct 2025 shows no loss up to 32x today's book (exposure at 32x %s)." % (m, usd(expo(rs[-1][1]))),
+        print("%s: Oct 2025 first shows loss at %dx today's book (%s / %s, %.1f%% of the scaled market's supply)." % (m, hit[0], usd(bad(hit[1])), usd(expo(hit[1])), 100 * bad(hit[1]) / (SUPPLY[m] * hit[0]))
+              if hit else "%s: Oct 2025 shows no loss up to 32x today's book (exposure at 32x %s)." % (m, usd(expo(rs[-1][1]))),
               'Queue p95 %s at 1x, %s at 2x, %s at 32x; peak queue %s at 32x.\n' % (q(rs[0][1]), q(rs[1][1]), q(rs[-1][1]), usd(rs[-1][1]['max_queue_usd'])))
+        # size rule with numbers: one hour of Tier B collateral capacity at 62.5% (12 steps), as debt at the bonus; no replay
+        hour_cap = 12 * capacity(DEPTH, m, 0.625, dict(DEFAULTS, scenario='AB'))[1] / lif(0.625)
+        liq30 = next(c['borrow_usd'] for c in SUMMARY['markets'][m]['liquidatable_curve'] if c['drop'] == 0.3)
+        print("%s today's distribution: %s liquidatable at -30%% against a one-hour cap of %s (%.1fx headroom)." % (m, usd(liq30), usd(hour_cap), hour_cap / liq30 if liq30 else float('inf')))
+        print("%s drawn to the 55%% max draw, the whole book is liquidatable at -30%% (55/0.70 = 78.6%% > 62.5%%), so the cap is %s of debt; today's book is %s.\n" % (
+            m, usd(hour_cap), usd(SUMMARY['markets'][m]['state']['borrow_usd'])))
 
 
 def capital_range():
