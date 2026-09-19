@@ -153,7 +153,7 @@ The rule: **1 − LLTV must cover the worst move over the time it takes to clear
 | Feb 2026 | $0.60M | 0 | 0 | 0 min |
 | Jun 2026 | 0 | 0 | 0 | n/a |
 
-Today's alt books are too small to bind: releveraging the debt to 2x, 4x and 8x today's book (collateral unchanged, so the book saturates at the LLTV) and replaying Oct 2025 shows no loss up to 8x for either cbXRP or SOL. The size rule is about a book that has grown, not this one.
+Today's alt books are too small to bind: scaling each book (same LTV distribution) to 2x, 4x, 8x, 16x and 32x today's size and replaying Oct 2025 shows no loss up to 32x today's book for either cbXRP or SOL. The size rule is about a book that has grown, not this one.
 
 ## 7. What this does not capture
 

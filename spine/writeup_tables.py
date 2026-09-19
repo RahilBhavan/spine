@@ -1,5 +1,5 @@
 """Prints every numeric table in WRITEUP.md as Markdown, cut from data/ so the writeup cannot drift from the data. stdlib only.
-Run: python3.12 -m spine.writeup_tables   (reads data/backtest.json, calibration.json, summary.json, depth.json, prices/)"""
+Run: .venv/bin/python -m spine.writeup_tables   (reads data/backtest.json, calibration.json, summary.json, depth.json, prices/)"""
 from spine.api import load
 from spine.fetch_prices import WINDOWS, max_drop, H4, H24
 
@@ -204,9 +204,9 @@ def alt_table():
             r = find(market=m, window=w, lltv=0.625, cap=0.55)
             rows.append((LABEL[w], usd(r['liquidated_usd']), bad_pct(r), expo_pct(r), dur(r['queue_minutes_p95'])))
         table(['%s (supply $%.0fM)' % (m, SUPPLY[m] / 1e6), 'AB: liquidated', 'AB: loss by end of path', 'AB: exposure at trough', 'AB: queue p95'], rows)
-        rs = [(k, find(market=m, window='Oct2025', lltv=0.625, cap=0.55, book_multiple=float(k))) for k in (1, 2, 4, 8)]
+        rs = [(k, find(market=m, window='Oct2025', lltv=0.625, cap=0.55, book_multiple=float(k))) for k in (1, 2, 4, 8, 16, 32)]
         hit = next(((k, r) for k, r in rs if bad(r) > 0), None)
-        print("%s: Oct 2025 first shows loss at %dx today's book (%s).\n" % (m, hit[0], both(hit[1])) if hit else "%s: Oct 2025 shows no loss up to 8x today's book (exposure at 8x %s).\n" % (m, usd(expo(rs[-1][1]))))
+        print("%s: Oct 2025 first shows loss at %dx today's book (%s).\n" % (m, hit[0], both(hit[1])) if hit else "%s: Oct 2025 shows no loss up to 32x today's book (exposure at 32x %s).\n" % (m, usd(expo(rs[-1][1]))))
 
 
 def capital_range():

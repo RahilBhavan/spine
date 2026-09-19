@@ -244,7 +244,8 @@ def run(market, window, book, depth, candles, **kw):
         if params['hold_bars']:  # hold the trough low for hold_bars before the bounce; calibration (real_path) runs never hold
             i = int(np.argmin(path))
             path = np.concatenate([path[:i + 1], np.full(params['hold_bars'], path[i]), path[i + 1:]])
-        debt = reshape(coll, debt * params['book_multiple'], p_book, p_book, params['lltv'], params['cap'])  # collateral unchanged: a bigger multiple is a more levered book
+        coll, debt = coll * params['book_multiple'], debt * params['book_multiple']  # a bigger book with the same LTV distribution: size, not leverage
+        debt = reshape(coll, debt, p_book, p_book, params['lltv'], params['cap'])
     else:
         path = real_path(candles, params['start'], params['end'])
     params['base_eff'] = capacity(depth, market, params['lltv'], params)
@@ -365,7 +366,7 @@ def sensitivity(markets, depth, share, react, cf, get):
                     for lltv in (0.86, 0.80, 0.77):
                         get(m, w, bs, depth, c, dict(book=label), lltv=lltv, seed=seed, **star)
             if m in ('cbXRP', 'SOL') and w == 'Oct2025':  # book size: the multiple of today's debt at which the alt first loses
-                for mult in (1, 2, 4, 8):
+                for mult in (1, 2, 4, 8, 16, 32):
                     get(m, w, book, depth, c, dict(book=label), lltv=0.625, cap=0.55, scenario='AB', book_multiple=float(mult), **star)
 
 
