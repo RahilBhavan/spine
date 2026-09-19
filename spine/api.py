@@ -61,10 +61,11 @@ def budget(max_seconds):
 
 
 def argv_max_seconds(default=200):
-    """(max_seconds, remaining args) from sys.argv[1:], parsing `--max-seconds N` by hand."""
+    """(max_seconds, remaining args, check) from sys.argv[1:], parsing `--max-seconds N` and `--check` by hand.
+    check gates level asserts (market-dependent numbers) that the cron must not die on."""
     args = sys.argv[1:]
     n = float(args.pop(args.index('--max-seconds') + 1)) if '--max-seconds' in args else default
-    return n, [a for a in args if a != '--max-seconds']
+    return n, [a for a in args if a not in ('--max-seconds', '--check')], '--check' in args
 
 
 # Oracle rows are [ts, block, price] lists (data/oracle/*.json); read them through these, never by index.

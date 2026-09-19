@@ -306,7 +306,7 @@ def assemble():
 
 
 if __name__ == '__main__':
-    max_seconds, args = argv_max_seconds()
+    max_seconds, args, _ = argv_max_seconds()
     if '--since' in args:
         since = args[args.index('--since') + 1]
         new = propose(hot_days('cbBTC', since), WINDOWS)

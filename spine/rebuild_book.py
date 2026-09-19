@@ -118,7 +118,7 @@ def build(market, date, acc, snap):
 
 
 if __name__ == '__main__':
-    max_seconds, args = argv_max_seconds()
+    max_seconds, args, _ = argv_max_seconds()
     market, dates = args[0], args[1:]
     assert market in MARKETS and dates
     st = walk(market, dates, max_seconds)

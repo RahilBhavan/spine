@@ -1,6 +1,6 @@
 """Aggregate data/*.json into data/summary.json so the site never loads the raw positions files.
 Run: python3.12 -m spine.summarize"""
-import datetime, collections
+import sys, datetime, collections
 from spine.api import MARKETS, lif, load, save
 
 BIN = 0.02
@@ -137,6 +137,7 @@ def build():
 
 
 if __name__ == '__main__':
+    check = '--check' in sys.argv  # level asserts only; the cron runs without it
     out = build()
     save('summary', out, separators=(',', ':'))
     m = out['markets']['cbBTC']
@@ -145,7 +146,8 @@ if __name__ == '__main__':
     assert abs(hist_sum - st['borrow_usd']) / st['borrow_usd'] < 0.005, (hist_sum, st['borrow_usd'])
     above = sum(b['borrow_usd'] for b in m['ltv_hist'] if b['lo'] >= st['lltv'] - 1e-9)
     assert curve[0.0]['borrow_usd'] <= above + 1, (curve[0.0]['borrow_usd'], above)
-    assert 150e6 < curve[0.3]['borrow_usd'] < 500e6, curve[0.3]['borrow_usd']
+    if check:
+        assert 150e6 < curve[0.3]['borrow_usd'] < 500e6, curve[0.3]['borrow_usd']
     print('markets: %d, total borrow $%.0fM, positions %d, coinbase share %.1f%%' % (
         len(out['markets']), out['totals']['borrow_usd'] / 1e6, out['totals']['n_positions'], 100 * out['totals']['coinbase_share_borrow']))
     print('cbBTC borrow $%.0fM, price $%.0f, n=%d, cb share %.1f%%' % (st['borrow_usd'] / 1e6, st['price'], st['n_positions'], 100 * st['coinbase_share_borrow']))

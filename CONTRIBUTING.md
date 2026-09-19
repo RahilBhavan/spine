@@ -22,4 +22,5 @@ Rules the code follows. Reviews cite this file.
 
 ## Process
 - One phase per pull request, named after the ROADMAP.md phase. Each phase has an acceptance check in PLAN.md or ROADMAP.md; paste its output in the PR.
+- Level checks (market-dependent numbers) run only under `--check`; paste that output in the PR. The cron runs without it.
 - Reviews run on two axes (standards: this file; spec: PLAN.md and ROADMAP.md) and are reported separately.
