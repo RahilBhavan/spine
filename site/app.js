@@ -283,7 +283,7 @@ async function loadBacktest() {
   BT.cexCap = +Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
   BT.base = r => r.book === BT.latest_book && r.k_dex === d.k_dex && r.k_cex === d.k_cex && r.lag_bars === d.lag_bars && r.margin === d.margin &&
     r.resp_share === c.resp_share && r.react_min === c.react_min &&
-    ['beta', 'seed', 'close_target', 'full_below_usd'].every(k => !(k in d) || r[k] === d[k]);  // sensitivity sweeps stay out of the grid view
+    ['beta', 'seed', 'close_target', 'full_below_usd', 'hold_bars', 'book_multiple'].every(k => !(k in d) || r[k] === d[k]);  // sensitivity sweeps stay out of the grid view
   return BT;
 }
 

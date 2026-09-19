@@ -24,7 +24,7 @@ def cex_cap_default():
 # ponytail: one anchor point (Kaiko, Oct 10 2025: top-of-book depth down >90%); FTX ("about half") would pin the curve's shape.
 DEFAULTS = dict(lltv=0.86, cap=0.75, scenario='AB', k_dex=0.5, k_cex=0.3, r=0.2, lag_bars=1, reshape=True,
                 warn_gap=0.06, resp_share=0.0, react_min=60, cure=0.0, margin=0.01, cex_cap_usd=cex_cap_default(),
-                close_target=1.0, full_below_usd=0.0, beta=0.0, seed=0)
+                close_target=1.0, full_below_usd=0.0, beta=0.0, seed=0, hold_bars=0)
 SHARES, REACTS = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9], [15, 30, 60, 120, 240]
 FULL_BELOW, BETAS = (0.0, 1e3, 2.5e3, 5e3, 1e4, 2.5e4, 5e4), (0.0, math.log(3) / 2, math.log(3))  # beta: none, the Kaiko anchor, twice it
 HOUR_BARS, SEEDS = 60 // BAR_MIN, range(10)
@@ -240,6 +240,9 @@ def run(market, window, book, depth, candles, **kw):
     coll, debt, p_book, h = book
     if params['reshape']:
         path = crash_path(candles, p_book)
+        if params['hold_bars']:  # hold the trough low for hold_bars before the bounce; calibration (real_path) runs never hold
+            i = int(np.argmin(path))
+            path = np.concatenate([path[:i + 1], np.full(params['hold_bars'], path[i]), path[i + 1:]])
         debt = reshape(coll, debt, p_book, p_book, params['lltv'], params['cap'])
     else:
         path = real_path(candles, params['start'], params['end'])
@@ -250,9 +253,10 @@ def run(market, window, book, depth, candles, **kw):
 
 def key(r):
     d = {k: r[k] for k in ('market', 'window', 'lltv', 'cap', 'scenario', 'k_dex', 'k_cex', 'r', 'lag_bars', 'reshape', 'warn_gap', 'resp_share', 'react_min',
-                            'margin', 'cex_cap_usd', 'close_target', 'full_below_usd', 'beta', 'seed', 'book')}
+                            'margin', 'cex_cap_usd', 'close_target', 'full_below_usd', 'beta', 'seed', 'book', 'hold_bars')}
     d['resp_share'], d['react_min'] = float(d['resp_share']), int(d['react_min'])  # 0 and 0.0 are the same run
     d['close_target'], d['full_below_usd'], d['beta'], d['seed'] = float(d['close_target']), float(d['full_below_usd']), float(d['beta']), int(d['seed'])
+    d['hold_bars'] = int(d['hold_bars'])
     return json.dumps(d, sort_keys=True)
 
 
@@ -261,7 +265,7 @@ def save(rows, calibrated=None):
     with the most rows (ties to the newest), so readers see a complete grid while a new date fills in over several cron runs.
     Live rows under any label other than latest_book or the newest are dropped."""
     old = load('backtest') or {}
-    merged = {key(r): r for r in old.get('runs', [])}
+    merged = {key(r): r for r in saved_runs(old)}
     merged.update((key(r), r) for r in rows)
     live = collections.Counter(r['book'] for r in merged.values() if 'calib_window' not in r)
     latest = max(live, key=lambda b: (live[b], b)) if live else None
@@ -269,6 +273,11 @@ def save(rows, calibrated=None):
     out = dict(generated_at=int(time.time()), latest_book=latest, defaults=DEFAULTS, calibrated=calibrated or old.get('calibrated'), runs=runs)
     save_json('backtest', out)
     return out
+
+
+def saved_runs(out=None):
+    """Rows on disk, with params added since they were run filled in at the defaults they ran at."""
+    return [dict(DEFAULTS, **r) for r in (out if out is not None else load('backtest') or {}).get('runs', [])]
 
 
 def calibrated():
@@ -342,6 +351,9 @@ def sensitivity(markets, depth, share, react, cf, get):
                         get(m, w, book, depth, c, dict(book=label), lltv=lltv, beta=beta, **star)
                     for mult in (1, np.inf):  # liquidation style: bots trim to 74% instead of closing in full
                         get(m, w, book, depth, c, dict(book=label), lltv=lltv, close_target=0.74, cex_cap_usd=DEFAULTS['cex_cap_usd'] * mult, **star)
+                    for hb in (12, 288):  # held at the low: one hour, one day before the bounce
+                        for sc in ('AB', 'ABC'):
+                            get(m, w, book, depth, c, dict(book=label), lltv=lltv, scenario=sc, hold_bars=hb, **star)
                 for seed in SEEDS:  # which wallets are responsive: hash seed
                     bs, _ = today_book(m, seed)
                     for lltv in (0.86, 0.80, 0.77):
@@ -427,7 +439,7 @@ def calibration(depth, get):
 
 def table(out, share, react, cf):
     rows, latest = out['runs'], out['latest_book']
-    dflt = lambda r: (r.get('book') == latest and all(r[k] == DEFAULTS[k] for k in ('k_dex', 'k_cex', 'lag_bars', 'beta', 'seed', 'cex_cap_usd'))
+    dflt = lambda r: (r.get('book') == latest and all(r[k] == DEFAULTS[k] for k in ('k_dex', 'k_cex', 'lag_bars', 'beta', 'seed', 'cex_cap_usd', 'hold_bars'))
                       and r['resp_share'] == share and r['react_min'] == react and r['full_below_usd'] == cf)
     base = [r for r in rows if dflt(r) and r['lltv'] == 0.86 and r['cap'] == 0.75]
     ab = [r for r in rows if dflt(r) and r['scenario'] == 'AB']
@@ -457,7 +469,7 @@ if __name__ == '__main__':
     what = args[0] if args else 'all'
     depth = load('depth')
     t0, cal, star, partial = time.time(), None, None, False
-    done = {key(r): r for r in (load('backtest') or {}).get('runs', [])}
+    done = {key(r): r for r in saved_runs()}
     new = []
     get = runner(done, budget(max_seconds), new)
     try:

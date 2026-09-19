@@ -7,7 +7,7 @@ BT, CAL, SUMMARY, DEPTH = load('backtest'), load('calibration'), load('summary')
 STAR = BT['calibrated']
 D = BT['defaults']
 BASE = dict(book=BT['latest_book'], k_dex=D['k_dex'], k_cex=D['k_cex'], r=D['r'], lag_bars=D['lag_bars'], margin=D['margin'], cex_cap_usd=D['cex_cap_usd'],
-            beta=D['beta'], seed=0, resp_share=STAR['resp_share'], react_min=STAR['react_min'], close_target=STAR['close_target'], full_below_usd=STAR['full_below_usd'],
+            beta=D['beta'], seed=0, hold_bars=D['hold_bars'], resp_share=STAR['resp_share'], react_min=STAR['react_min'], close_target=STAR['close_target'], full_below_usd=STAR['full_below_usd'],
             lltv=0.86, cap=0.75, scenario='AB', market='cbBTC')
 FIT = 'fitted response s %.1f / d %d min, %s, depth multipliers constant (beta %.2f)' % (STAR['resp_share'], STAR['react_min'], 'bots close in full' if STAR['close_target'] >= 1 else 'bots trim to %.0f%%' % (100 * STAR['close_target']), D['beta'])
 BETAS = (0.0, 0.5493061443340549, 1.0986122886681098)
@@ -195,6 +195,16 @@ def capital_range():
         print('Cells are loss by end of path / exposure at trough.\n')
 
 
+def hold_table():
+    print('## Section 4: held at the low (cbBTC, AB, cap 75%%, %s; the trough low repeated for 0 / 12 / 288 bars before the bounce)\n' % FIT)
+    rows = []
+    for w in ('Mar2020', 'May2021'):
+        for l in (0.86, 0.80, 0.77):
+            rs = [find(window=w, lltv=l, hold_bars=hb) for hb in (0, 12, 288)]
+            rows.append((LABEL[w], '%g%%' % (100 * l), *(bad_pct(r) for r in rs), expo_pct(rs[0])))
+    table(['Path', 'LLTV', 'Loss, no hold', 'Loss, held 1 h', 'Loss, held 1 day', 'Exposure at trough'], rows)
+
+
 def style_table():
     print('## Section 4: liquidation style (cbBTC, AB, cap 75%%, %s). Full close is what bots do (80-94%% of lived liquidations repaid the whole debt); trim-to-74%% is the alternative\n' % FIT)
     cols = [(1.0, D['cex_cap_usd']), (0.74, D['cex_cap_usd']), (1.0, float('inf')), (0.74, float('inf'))]
@@ -217,6 +227,7 @@ if __name__ == '__main__':
     beta_table()
     weth_line()
     capital_range()
+    hold_table()
     seed_table()
     style_table()
     assert find(window='Mar2020') is find(lltv=0.86, cap=0.75, window='Mar2020', scenario='AB')  # seven-path row is the grid's 86% cell
