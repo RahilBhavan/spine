@@ -135,7 +135,7 @@ The rule: **1 − LLTV must cover the worst move over the time it takes to clear
 
 **WETH.** 77%. Same as Coinbase already uses for cbETH, and the only setting in the grid that survives all seven paths under every scenario. The cost is small: the market is $83M. Cap 59-62% by the p95 rule.
 
-**Alts at 62.5%.** The volatility buffer is adequate: the bad-debt line is a further 29.6% below the liquidation line, and the worst observed 4-hour moves are -31% (XRP, Mar 2020), -35% (XRP, Oct 2025), -37% (DOGE, Oct 2025), -34% (SOL, FTX). The max draw should come down from 55% to the p95 cap of 46-48%. What is missing is a size rule. There is no on-chain venue for cbXRP, cbDOGE, cbADA or cbLTC on Base; every seized unit must be redeemed through Coinbase and sold on Coinbase's book, which holds $8-10M of XRP or SOL bids within 10% of mid against a 12.7% bonus. A per-asset cap of the form "debt that would be liquidatable at -30% must not exceed one hour of Coinbase's own depth" keeps these markets in the regime where 62.5% is safe. cbXRP at $48M is the one to watch. Replaying the two alt books with data (cbXRP, SOL) at 62.5% / 55% against Coinbase depth alone:
+**Alts at 62.5%.** The volatility buffer is adequate: the bad-debt line is a further 29.6% below the liquidation line, and the worst observed 4-hour moves are -31% (XRP, Mar 2020), -35% (XRP, Oct 2025), -37% (DOGE, Oct 2025), -34% (SOL, FTX). The max draw should come down from 55% to the p95 cap of 46-48%. What is missing is a size rule. There is no on-chain venue for cbXRP, cbDOGE, cbADA or cbLTC on Base; every seized unit must be redeemed through Coinbase and sold on Coinbase's book, which holds $8-10M of XRP or SOL bids within 10% of mid against a 12.7% bonus. The per-asset cap: debt that would be liquidatable at -30% must not exceed one hour of Coinbase's own depth (one hour of Tier B collateral capacity at 62.5%, converted to debt at the bonus). Today's distribution: cbXRP has $10.7M liquidatable at -30% against a one-hour cap of $20.9M (1.9x headroom); SOL $1.4M against $29.0M (20.2x). Drawn to the 55% max draw, the whole book is liquidatable at -30% (55/0.70 = 78.6% > 62.5%), so the cap is $20.9M of debt for cbXRP and $29.0M for SOL; today's books are $48.7M and $5.5M. cbXRP is already past it and is the one to watch. Replaying the two alt books with data (cbXRP, SOL) at 62.5% / 55% against Coinbase depth alone:
 
 | cbXRP (supply $54M) | AB: liquidated | AB: loss by end of path | AB: exposure at trough | AB: queue p95 |
 |---|---|---|---|---|
@@ -145,7 +145,7 @@ The rule: **1 − LLTV must cover the worst move over the time it takes to clear
 | Feb 2026 | $8.9M | 0 | 0 | 0 min |
 | Jun 2026 | $2.6M | 0 | 0 | 0 min |
 
-| SOL (supply $6M) | AB: liquidated | AB: loss by end of path | AB: exposure at trough | AB: queue p95 |
+| SOL (supply $7M) | AB: liquidated | AB: loss by end of path | AB: exposure at trough | AB: queue p95 |
 |---|---|---|---|---|
 | FTX Nov 2022 | $4.9M | 0 | 0 | 0 min |
 | Aug 2024 | $1.3M | 0 | 0 | 0 min |
