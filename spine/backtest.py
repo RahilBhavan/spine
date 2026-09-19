@@ -489,8 +489,8 @@ if __name__ == '__main__':
         assert r['realized_bad_debt_usd'] == 0, r
         print('asserts ok (no borrower action): Jun2026 %s realized bad debt 0 (liquidated $%.1fM)' % (sc, r['liquidated_usd'] / 1e6))
     r2 = run('cbBTC', 'Mar2020', book, depth, candles_for('cbBTC', 'Mar2020'), lltv=0.86, cap=0.75, scenario='A')
-    assert r2['unrealized_bad_debt_usd'] > 0, r2
-    print('asserts ok (no borrower action): Mar2020 A unrealized bad debt $%.1fM' % (r2['unrealized_bad_debt_usd'] / 1e6))
+    assert r2['trough_exposure_usd'] > 0, r2
+    print('asserts ok (no borrower action): Mar2020 A exposure at trough $%.1fM' % (r2['trough_exposure_usd'] / 1e6))
     # Tier B ring: no Tier A, cap = one step of Tier B, three positions each seizing exactly 1.0 at p=1 from step 1 on.
     # One clears per rolling 24h: steps 1, 289, 577 (a 578-step path fits all three, a 577-step path only two).
     syn = (np.ones(3), np.ones(3), np.full(3, 0.5))
