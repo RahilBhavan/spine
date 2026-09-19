@@ -2,7 +2,7 @@
 `code`, [links](url), unordered lists, pipe tables. Two Plotly figures (built client-side from data/backtest.json by site/app.js)
 go at the top of section 4. Run: python3.12 -m spine.render_writeup [--stdout]"""
 import os, re, html, sys
-from spine.api import DATA
+from spine.api import DATA, load
 
 ROOT = os.path.dirname(DATA)
 SRC, OUT = os.path.join(ROOT, 'WRITEUP.md'), os.path.join(ROOT, 'site', 'writeup.html')
@@ -92,7 +92,11 @@ def render(md):
 
 
 def page():
-    return TEMPLATE.replace("@@BODY@@", render(open(SRC).read()))
+    body, bt = render(open(SRC).read()), load('backtest')
+    if bt:  # book date stamp after the italic intro
+        i = body.index('</p>', body.index('<p><em>Spine,')) + 4
+        body = body[:i] + '\n<p><em>Backtest book as of %s; the dashboard refreshes hourly.</em></p>' % bt['latest_book'] + body[i:]
+    return TEMPLATE.replace("@@BODY@@", body)
 
 
 if __name__ == '__main__':

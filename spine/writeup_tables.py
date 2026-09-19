@@ -238,6 +238,7 @@ def style_table():
 
 if __name__ == '__main__':
     fs = STAR['full_share']
+    print('Backtest book as of %s; the dashboard refreshes hourly.\n' % BT['latest_book'])
     print('Calibrated (s*, d*, fb*) = (%.1f, %d min, $%.0fk); ratios: %s\n' % (STAR['resp_share'], STAR['react_min'], STAR['full_below_usd'] / 1e3, ', '.join('%s %.2fx' % kv for kv in STAR['ratios'].items())))
     print('Full-close threshold sweep (simulated full-liquidation share vs observed %.2f): %s\n' % (fs['observed'], ', '.join('below $%s: %.2f' % kv for kv in fs['sweep'].items())))
     recommendation()
