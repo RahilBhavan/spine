@@ -139,21 +139,21 @@ The rule: **1 − LLTV must cover the worst move over the time it takes to clear
 
 | cbXRP (supply $54M) | AB: liquidated | AB: loss by end of path | AB: exposure at trough | AB: queue p95 |
 |---|---|---|---|---|
-| Mar 2020 | $12.0M | 0 | 0 | 80 min |
-| Aug 2024 | $0.10M | 0 | 0 | 0 min |
-| Oct 2025 | $2.5M | 0 | 0 | 0 min |
-| Feb 2026 | $1.1M | 0 | 0 | 0 min |
-| Jun 2026 | 0 | 0 | 0 | n/a |
+| Mar 2020 | $32.3M | 0 | 0 | 11 h |
+| Aug 2024 | $7.8M | 0 | 0 | 50 min |
+| Oct 2025 | $9.8M | 0 | 0 | 75 min |
+| Feb 2026 | $8.9M | 0 | 0 | 0 min |
+| Jun 2026 | $2.6M | 0 | 0 | 0 min |
 
 | SOL (supply $6M) | AB: liquidated | AB: loss by end of path | AB: exposure at trough | AB: queue p95 |
 |---|---|---|---|---|
-| FTX Nov 2022 | $3.0M | 0 | 0 | 0 min |
-| Aug 2024 | $0.44M | 0 | 0 | 0 min |
-| Oct 2025 | 0 | 0 | 0 | n/a |
-| Feb 2026 | $0.60M | 0 | 0 | 0 min |
-| Jun 2026 | 0 | 0 | 0 | n/a |
+| FTX Nov 2022 | $4.9M | 0 | 0 | 0 min |
+| Aug 2024 | $1.3M | 0 | 0 | 0 min |
+| Oct 2025 | $0.78M | 0 | 0 | 0 min |
+| Feb 2026 | $1.8M | 0 | 0 | 0 min |
+| Jun 2026 | $0.54M | 0 | 0 | 0 min |
 
-Today's alt books are too small to bind: scaling each book (same LTV distribution) to 2x, 4x, 8x, 16x and 32x today's size and replaying Oct 2025 shows no loss up to 32x today's book for either cbXRP or SOL. The size rule is about a book that has grown, not this one.
+Today's alt books are too small to bind: scaling each book (same LTV distribution) to 2x, 4x, 8x, 16x and 32x today's size and replaying Oct 2025 shows no loss up to 32x today's book for either market; cbXRP at 32x has $0.30M underwater at the trough, SOL nothing. The size rule is about a book that has grown, not this one.
 
 ## 7. What this does not capture
 

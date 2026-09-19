@@ -10,17 +10,18 @@ UA = {'User-Agent': 'spine-risk-dashboard', 'Content-Type': 'application/json'}
 DATA = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
 
 # Coinbase-linked Morpho markets on Base. lltv as a fraction. decimals = collateral token decimals.
-# feed = Chainlink feed name used in data/oracle/<window>_<feed>.json.
+# feed = Chainlink feed name used in data/oracle/<window>_<feed>.json. max_draw = the product's max draw LTV (75% BTC/ETH, 55% alts;
+# cbETH's is unverified and assumed 75%); backtest.reshape() scales LTV by cap / max_draw.
 MARKETS = {
-    'cbBTC':   dict(id='0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836', lltv=0.86,  decimals=8,  cb_product='BTC-USD',  feed='BTC'),
-    'WETH':    dict(id='0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda', lltv=0.86,  decimals=18, cb_product='ETH-USD',  feed='ETH'),
-    'cbETH':   dict(id='0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d', lltv=0.77,  decimals=18, cb_product='ETH-USD',  feed='ETH'),
-    'cbXRP':   dict(id='0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109', lltv=0.625, decimals=6,  cb_product='XRP-USD',  feed='XRP'),
-    'SOL':     dict(id='0x7dc02ff6c536b1d49d7fba770438d79f5bd1f1c78884629b7d1aaee19675782b', lltv=0.625, decimals=9,  cb_product='SOL-USD',  feed='SOL'),
-    'cbDOGE':  dict(id='0x73527ddd796e6d4f48387adaae36f6f3d49d606d7f2a15eb0c931416a58875d8', lltv=0.625, decimals=8,  cb_product='DOGE-USD', feed='DOGE'),
-    'cbADA':   dict(id='0xd7520ad198b497b6eb75bc690268f4597630dbc12e305e9d4105843bab36e41d', lltv=0.625, decimals=6,  cb_product='ADA-USD',  feed='ADA'),
-    'cbLTC':   dict(id='0x9125d0fa03c3137166df68bcc72283477830de2a4a5536512374c573ad4583c3', lltv=0.625, decimals=8,  cb_product='LTC-USD',  feed='LTC'),
-    'JitoSOL': dict(id='0x09276541cfecb6920a80679a1deced4dde3ae64bf5fc2c9c1f9c21e0c152e1a5', lltv=0.625, decimals=9,  cb_product='SOL-USD',  feed='SOL'),
+    'cbBTC':   dict(id='0x9103c3b4e834476c9a62ea009ba2c884ee42e94e6e314a26f04d312434191836', lltv=0.86,  decimals=8,  cb_product='BTC-USD',  feed='BTC', max_draw=0.75),
+    'WETH':    dict(id='0x8793cf302b8ffd655ab97bd1c695dbd967807e8367a65cb2f4edaf1380ba1bda', lltv=0.86,  decimals=18, cb_product='ETH-USD',  feed='ETH', max_draw=0.75),
+    'cbETH':   dict(id='0x0ca10126f6c94cbd9cf0a48cc9516ae5e3dec5aa68303e6d988ee37c5149bf0d', lltv=0.77,  decimals=18, cb_product='ETH-USD',  feed='ETH', max_draw=0.75),
+    'cbXRP':   dict(id='0xd4a903dc6d949519060c7707f9604fdc9772c046e05c2e3a8fce0bd7196e4109', lltv=0.625, decimals=6,  cb_product='XRP-USD',  feed='XRP', max_draw=0.55),
+    'SOL':     dict(id='0x7dc02ff6c536b1d49d7fba770438d79f5bd1f1c78884629b7d1aaee19675782b', lltv=0.625, decimals=9,  cb_product='SOL-USD',  feed='SOL', max_draw=0.55),
+    'cbDOGE':  dict(id='0x73527ddd796e6d4f48387adaae36f6f3d49d606d7f2a15eb0c931416a58875d8', lltv=0.625, decimals=8,  cb_product='DOGE-USD', feed='DOGE', max_draw=0.55),
+    'cbADA':   dict(id='0xd7520ad198b497b6eb75bc690268f4597630dbc12e305e9d4105843bab36e41d', lltv=0.625, decimals=6,  cb_product='ADA-USD',  feed='ADA', max_draw=0.55),
+    'cbLTC':   dict(id='0x9125d0fa03c3137166df68bcc72283477830de2a4a5536512374c573ad4583c3', lltv=0.625, decimals=8,  cb_product='LTC-USD',  feed='LTC', max_draw=0.55),
+    'JitoSOL': dict(id='0x09276541cfecb6920a80679a1deced4dde3ae64bf5fc2c9c1f9c21e0c152e1a5', lltv=0.625, decimals=9,  cb_product='SOL-USD',  feed='SOL', max_draw=0.55),
 }
 LOAN_DECIMALS = 6  # USDC
 
@@ -121,6 +122,7 @@ if __name__ == '__main__':
     assert abs(lif(0.86) - 1.04384) < 1e-4 and abs(lif(0.625) - 1.1274) < 1e-3
     assert day_ts('2026-02-05') == 1770249600 and budget(10)() and not budget(-1)()
     assert {m['feed'] for m in MARKETS.values()} == {'BTC', 'ETH', 'XRP', 'SOL', 'DOGE', 'ADA', 'LTC'}
+    assert all(m['max_draw'] < m['lltv'] for m in MARKETS.values())
     m = graphql('{ marketById(marketId: "%s", chainId: %d) { lltv state { borrowAssetsUsd } } }' % (MARKETS['cbBTC']['id'], CHAIN))
     assert int(m["marketById"]['lltv']) == 860000000000000000
     print('ok, cbBTC borrow $%.0fM' % (m["marketById"]['state']['borrowAssetsUsd'] / 1e6))

@@ -139,7 +139,7 @@ def test_tier_b_ring_window():
 def test_reshape():
     coll, debt, p_book, _ = book_arrays(synthetic_book(), 'cbBTC')
     old = debt / (coll * p_book)
-    new = reshape(coll, debt, p_book, p_book, 0.80, 0.60) / (coll * p_book)
+    new = reshape(coll, debt, p_book, p_book, 0.80, 0.60, 0.75) / (coll * p_book)
     assert np.allclose(new, 0.8 * old, rtol=1e-12) and new.max() <= 0.80 * 0.99 + 1e-12
 
 

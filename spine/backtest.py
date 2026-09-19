@@ -46,9 +46,10 @@ def book_arrays(raw, market, seed=0):
     return coll, debt, cusd.sum() / coll.sum(), h
 
 
-def reshape(coll, debt, p_book, p0, lltv, cap):
-    """Borrowers draw the same fraction of their allowance under (lltv, cap); debt restated at p0."""
-    ltv = np.minimum(debt / (coll * p_book) * cap / 0.75, lltv * 0.99)
+def reshape(coll, debt, p_book, p0, lltv, cap, max_draw):
+    """Borrowers draw the same fraction of their allowance under (lltv, cap) as they do under the product's max_draw today;
+    debt restated at p0."""
+    ltv = np.minimum(debt / (coll * p_book) * cap / max_draw, lltv * 0.99)
     return ltv * coll * p0
 
 
@@ -245,7 +246,7 @@ def run(market, window, book, depth, candles, **kw):
             i = int(np.argmin(path))
             path = np.concatenate([path[:i + 1], np.full(params['hold_bars'], path[i]), path[i + 1:]])
         coll, debt = coll * params['book_multiple'], debt * params['book_multiple']  # a bigger book with the same LTV distribution: size, not leverage
-        debt = reshape(coll, debt, p_book, p_book, params['lltv'], params['cap'])
+        debt = reshape(coll, debt, p_book, p_book, params['lltv'], params['cap'], MARKETS[market]['max_draw'])
     else:
         path = real_path(candles, params['start'], params['end'])
     params['base_eff'] = capacity(depth, market, params['lltv'], params)

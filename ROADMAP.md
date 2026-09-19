@@ -117,9 +117,6 @@ appended so the grid tracks the live book.
 Liquidator leaderboard with profit, supplier-side vault exposure, Chainlink deviation replay,
 alert bot on the distance-to-capacity gauge, Aave/TradFi comparison table in the writeup.
 
-- `reshape()` scales LTV by cap/0.75; for markets whose product max draw is not 0.75 (the alts at 0.55) use
-  cap/own_max_draw. Alt rows in backtest.json are understated until then.
-
 ## Order and effort
 
 A (1d) -> B (1d) -> C (0.5d) -> D (1d) -> E (2d) -> F (0.5d): about six working days, same as
