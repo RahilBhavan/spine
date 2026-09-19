@@ -145,7 +145,7 @@ The rule: **1 − LLTV must cover the worst move over the time it takes to clear
 | Feb 2026 | $8.9M | 0 | 0 | 0 min |
 | Jun 2026 | $2.6M | 0 | 0 | 0 min |
 
-| SOL (supply $6M) | AB: liquidated | AB: loss by end of path | AB: exposure at trough | AB: queue p95 |
+| SOL (supply $7M) | AB: liquidated | AB: loss by end of path | AB: exposure at trough | AB: queue p95 |
 |---|---|---|---|---|
 | FTX Nov 2022 | $4.9M | 0 | 0 | 0 min |
 | Aug 2024 | $1.3M | 0 | 0 | 0 min |

@@ -198,26 +198,27 @@ def weth_line():
 
 
 def alt_table():
+    MD, LLTV_ALT = 0.55, 0.625  # the alt product's max draw and LLTV
     print('## Section 6: alts (AB, LLTV 62.5%%, cap 55%%, %s; CEX depth only, no venue on Base)\n' % FIT)
     for m in ('cbXRP', 'SOL'):
         ws = [w for w, _, _ in WINDOWS if any(r['market'] == m and r['window'] == w for r in RUNS)]
         rows = []
         for w in ws:
-            r = find(market=m, window=w, lltv=0.625, cap=0.55)
+            r = find(market=m, window=w, lltv=LLTV_ALT, cap=MD)
             rows.append((LABEL[w], usd(r['liquidated_usd']), bad_pct(r), expo_pct(r), dur(r['queue_minutes_p95'])))
         table(['%s (supply $%.0fM)' % (m, SUPPLY[m] / 1e6), 'AB: liquidated', 'AB: loss by end of path', 'AB: exposure at trough', 'AB: queue p95'], rows)
-        rs = [(k, find(market=m, window='Oct2025', lltv=0.625, cap=0.55, book_multiple=float(k))) for k in (1, 2, 4, 8, 16, 32)]
+        rs = [(k, find(market=m, window='Oct2025', lltv=LLTV_ALT, cap=MD, book_multiple=float(k))) for k in (1, 2, 4, 8, 16, 32)]
         hit = next(((k, r) for k, r in rs if bad(r) > 0), None)
         q = lambda r: dur(r['queue_minutes_p95'])
         print("%s: Oct 2025 first shows loss at %dx today's book (%s / %s, %.1f%% of the scaled market's supply)." % (m, hit[0], usd(bad(hit[1])), usd(expo(hit[1])), 100 * bad(hit[1]) / (SUPPLY[m] * hit[0]))
               if hit else "%s: Oct 2025 shows no loss up to 32x today's book (exposure at 32x %s)." % (m, usd(expo(rs[-1][1]))),
               'Queue p95 %s at 1x, %s at 2x, %s at 32x; peak queue %s at 32x.\n' % (q(rs[0][1]), q(rs[1][1]), q(rs[-1][1]), usd(rs[-1][1]['max_queue_usd'])))
         # size rule with numbers: one hour of Tier B collateral capacity at 62.5% (12 steps), as debt at the bonus; no replay
-        hour_cap = 12 * capacity(DEPTH, m, 0.625, dict(DEFAULTS, scenario='AB'))[1] / lif(0.625)
+        hour_cap = 12 * capacity(DEPTH, m, LLTV_ALT, dict(DEFAULTS, scenario='AB'))[1] / lif(LLTV_ALT)
         liq30 = next(c['borrow_usd'] for c in SUMMARY['markets'][m]['liquidatable_curve'] if c['drop'] == 0.3)
         print("%s today's distribution: %s liquidatable at -30%% against a one-hour cap of %s (%.1fx headroom)." % (m, usd(liq30), usd(hour_cap), hour_cap / liq30 if liq30 else float('inf')))
-        print("%s drawn to the 55%% max draw, the whole book is liquidatable at -30%% (55/0.70 = 78.6%% > 62.5%%), so the cap is %s of debt; today's book is %s.\n" % (
-            m, usd(hour_cap), usd(SUMMARY['markets'][m]['state']['borrow_usd'])))
+        print("%s drawn to the %.0f%% max draw, the whole book is liquidatable at -30%% (%.0f/0.70 = %.1f%% > %.1f%%), so the cap is %s of debt; today's book is %s.\n" % (
+            m, 100 * MD, 100 * MD, 100 * MD / 0.7, 100 * LLTV_ALT, usd(hour_cap), usd(SUMMARY['markets'][m]['state']['borrow_usd'])))
 
 
 def capital_range():
