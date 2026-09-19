@@ -216,3 +216,142 @@ Acceptance: `pytest -q tests` green; `backtest.py calib` ratios and every `data/
 
 G1 (0.5 d) -> G2 (1 d) -> G3 (0.25 d). G1.1 before G1.2 so the grid is regenerated once. G2.3 depends on G1.2's
 `latest_book`. G3 last so the regenerated grid is its reference.
+
+## Phase H: the site, rebuilt to be read (planned 2026-09-19)
+
+What exists: one page with a header (five totals, nine gauge cards), two tabs (Live: cards, LTV histogram,
+health-factor CDF, liquidatable-vs-drop curve, liquidation history, two tables; Backtest: heatmap, capital
+heatmap, warning-time bars), a footer link to the writeup. It is correct and it is hard to read: the first
+thing on the page is five numbers and nine coloured cards with no sentence saying what they mean, the
+vocabulary (LLTV, LIF, 1/LIF, HF, A/AB/ABC, "book", "capacity") is never defined on the page, the LTV chart
+is a dual-axis plot, seven of the nine gauges are markets under $50M given the same weight as the $1.4B one,
+the backtest hides behind a tab, `history.csv` is collected hourly and shown nowhere, and hover text prints
+`1.4G` for $1.4B. The writeup page wraps seven-column tables with `overflow-wrap: anywhere` on phones.
+
+Audience, in order: a risk person at Coinbase or Morpho checking the book each morning; a USDC supplier who
+wants to know what they are exposed to; a reader arriving from the writeup. Design target: a first-time
+reader knows within thirty seconds how big the book is, how far it is from trouble, and what the model says
+about the worst path, without knowing what an LLTV is. Constraints unchanged from CONTRIBUTING: static
+files, no build step, Plotly the only external script, colours as tokens on `:root` with a dark variant,
+phone width works. No framework, no bundler, no new dependency. `site/app.js` stays one file; if it passes
+~700 lines, split into `charts.js` and `app.js` and nothing else.
+
+### H0. Structure: one page, four sections, a sticky nav
+
+Tabs go. The page becomes one scroll with a sticky section nav (`Now`, `Book`, `Liquidations`,
+`Stress test`, `Writeup` as an external link) and `#` anchors. Each section opens with one sentence in
+plain words stating what the reader should take from it, and a one-line "how to read this" under every
+chart, two sentences maximum, no undefined term. Terms get a glossary: a `<details>` block under the header
+("What the words mean": LLTV, liquidation bonus, bad-debt LTV, health factor, capacity, scenarios A / AB /
+ABC, book, stress multiplier) and `<abbr title>` on first use in each section so hover and tap both
+explain. Markets are grouped once, everywhere: cbBTC, WETH, cbETH first; the six alts under "Alts" as a
+second row that is collapsed by default (they are 3% of the book).
+
+### H1. Now: the header becomes three hero tiles
+
+1. **The book**: total borrow, collateral, book LTV, positions, Coinbase share, as one tile with the
+   large number being borrow. Snapshot time and the stale colour stay.
+2. **Distance to capacity, cbBTC**: the one number a desk checks, as the hero figure with its band colour, a
+   marker icon next to the colour (status is never colour alone), and the sentence "BTC has to fall X%
+   before more debt becomes liquidatable than liquidators can sell in one step." The other markets sit
+   under it as a compact ordered list (borrow descending) with their own number; alts collapsed.
+3. **Worst modeled path**: from `backtest.json`, cbBTC Mar 2020 AB at today's terms: loss by end of path,
+   exposure at trough, loss if held a day at the low. Three numbers, one sentence, a link to the Stress
+   test section. This is the bridge between the dashboard and the writeup that does not exist today.
+
+### H2. Book: the distribution, one axis
+
+- **LTV distribution** keeps the histogram but on one axis (borrow USD). The positions count moves into the
+  tooltip. Reference lines are labelled in words: "liquidation 86%", "bad debt 95.8%". The Coinbase-only
+  toggle keeps the same hue (colour follows the entity). The log toggle stays.
+- **Health-factor CDF is deleted.** HF = LLTV / LTV; it is the same information as the histogram read from
+  the other end. It is replaced by one stat under the histogram: "share of borrow within 10% of
+  liquidation" (HF < 1.1, already in `hf_cdf`).
+- **Liquidatable borrow vs price drop** is the chart that carries the argument, so it gets the most work:
+  the region above the capacity line is shaded and labelled "more than liquidators can sell"; the
+  distance-to-capacity point is a marked dot with its number; the capacity lines are named in words
+  ("Coinbase bids within the bonus", "DEX capacity within the bonus"); the bad-debt series is explained in
+  the subtitle. Log toggle stays.
+- **Top 25 borrowers** collapses into a `<details>` (open on desktop, closed on phones). Address links stay.
+
+### H3. Liquidations: what has happened
+
+- **History bars** get a range control (all / 1y / 90d) in one row above the chart and the three lived
+  events annotated by name (Oct 2025, Feb 2026, Jun 2026), not by five dates.
+- **New: trend panel from `history.csv`**: book LTV, distance to capacity and liquidatable-at-20% for the
+  selected market over time, one series per small chart (small multiples, one axis each). Three days of
+  data today; it is the panel that makes "live" mean something over months, and it costs one CSV parse.
+- **Top 10 liquidators** table stays, collapsed the same way as borrowers.
+
+### H4. Stress test: the backtest as a section, story first
+
+- Lead with a **six-cell summary table** for the selected market at today's terms: Mar 2020 and May 2021
+  rows, columns loss / exposure / held a day. It is the writeup's argument in one glance.
+- The **heatmap** (LLTV x path) keeps its scenario and metric controls, but the controls get a one-line
+  explanation each, inline: "A: on-chain bots only. AB: plus exchange-hedged liquidators (what we observe).
+  ABC: plus a Coinbase backstop (hypothetical)." and "Loss: realized by the end of the path. Exposure:
+  underwater at the lowest print." The colour scale is one hue light to dark from the surface (sequential),
+  and cells carry their number as today.
+- **Capital heatmap** and **warning-time bars** stay, with subtitles rewritten in words ("How much liquidator
+  capital would have to exist for the Mar 2020 path to leave nothing exposed").
+- The backtest "book as of" stamp moves into the section header.
+
+### H5. Chart hygiene, applied to every chart
+
+- Hover and tick text through one `usd()` formatter (no `$,.3s`, so no `1.4G`); percent ticks through
+  `pct()`.
+- Solid hairline grid, one shade off the surface; dashed only for threshold lines; no zero lines; margins
+  from one `baseLayout`; legend only when there are two or more series; direct labels only on thresholds
+  and the marked point.
+- **Table view**: every chart gets a "table" toggle that swaps the plot for a plain `<table>` of the same
+  numbers (accessibility, copy-paste, and the print case). One generic function, since every chart already
+  has its rows in memory.
+- Colours: keep the existing tokens; run the dataviz validator
+  (`scripts/validate_palette.js` from the bundled `dataviz` skill) on `[accent, danger, warn, ok, muted]`
+  for light and dark surfaces and adjust any token that fails. Status tokens (`--danger`, `--warn`, `--ok`)
+  are used only for the gauge bands and threshold lines, never as a series colour; the bad-debt series on
+  the curve becomes a second categorical hue, not red.
+- Plotly bundle: `plotly.js-cartesian-dist-min` (scatter, bar, heatmap; about a third of the full bundle)
+  instead of `plotly.js-dist-min`. Same CDN, same rule (one external script).
+- Loading: each chart container shows "loading" text on the surface colour until its first render; a
+  failed fetch shows one red banner at the top with the file that failed, not a silent blank.
+
+### H6. Layout, type, phone, accessibility
+
+- Type scale: h1 1.75rem, section h2 1.25rem, chart h3 1rem, body 15px, muted 0.875rem; tabular numbers on
+  every figure (already); hero number 2.25rem.
+- Spacing on an 8px grid; max-width 1040px; 16px gutters at phone width, 24px above 700px; sections
+  separated by a hairline, not by whitespace alone.
+- Phone (375px): hero tiles stack, nav becomes a horizontal scroll strip, charts 280px tall, tables inside
+  `overflow-x: auto` wrappers, details blocks closed by default.
+- Buttons carry `aria-pressed`; the nav is a `<nav>` with a list; every chart container has an
+  `aria-label` matching its heading and the table view is its text alternative; focus outlines visible;
+  colour never the only signal (gauge marker icon, threshold labels in words).
+- Dark mode stays automatic; every token is checked on the dark surface by the validator, and Plotly
+  re-renders on the media query change as today.
+
+### H7. Writeup page
+
+- A table of contents generated by `render_writeup` from the `##` headings, at the top, with the "as of"
+  stamp beside it; a sticky "Dashboard" link.
+- Tables go inside an `overflow-x: auto` wrapper with `white-space: nowrap` cells; `overflow-wrap: anywhere`
+  is removed. Headline cells keep their bold.
+- Figures get captions that say what to look for ("Loss by LLTV and path; the only non-zero cells are the
+  two 2020-2021 paths"), and the two figures move next to the tables they illustrate rather than at the top
+  of section 4.
+
+### Acceptance and order
+
+Three `runner` dispatches: H0 + H1 + H6 (structure, hero, layout); H2 + H3 + H4 + H5 (charts, trend
+panel, stress section, hygiene); H7 (writeup page). Then one `reviewer` pass with screenshots: install
+Chromium once into the scratch directory with `npx playwright install chromium` (dev tooling, not a project
+dependency) and capture `site/index.html` and `site/writeup.html` at 375px and 1200px in light and dark
+from a local `python -m http.server`. Acceptance per dispatch: `node --check site/app.js`; no console
+errors on load; the page renders with `summary.json` alone (backtest section shows "not available" if
+`backtest.json` is missing); every chart has a table view whose numbers match its tooltip; the validator
+passes for both surfaces; the first screen at 375px shows the three hero tiles and nothing else. Final
+check by you: open the page cold and say in one sentence what the book's state is; if you need the
+glossary to do it, H0's sentences are not done.
+
+Effort: about two days. H0/H1/H6 can start now; H2-H5 after, since they render into H0's structure; H7 is
+independent and can run in parallel with either.
