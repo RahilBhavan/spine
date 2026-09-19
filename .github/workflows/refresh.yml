@@ -17,7 +17,7 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - run: pip install numpy
-      - name: fetch live data (positions, liquidations, tags, depth)
+      - name: fetch live data (positions, liquidations, tags, depth) and summarize
         run: |
           python -m spine.fetch_positions
           python -m spine.fetch_liquidations
@@ -26,13 +26,16 @@ jobs:
           python -m spine.summarize
           python -m spine.history
           python -m spine.render_writeup
-          python -m spine.backtest --max-seconds 600
+      - name: backtest (incremental; a model failure leaves a warning and a stale Backtest tab, not a dead dashboard)
+        continue-on-error: true
+        run: python -m spine.backtest --max-seconds 600
       - name: commit snapshot
         run: |
           git config user.name spine-bot
           git config user.email spine-bot@users.noreply.github.com
-          git add data/positions_*.json data/liquidations_*.json data/coinbase_wallets.json data/depth.json data/summary.json data/history.csv site/writeup.html data/backtest.json
+          git add data/liquidations_*.json data/coinbase_wallets.json data/depth.json data/summary.json data/history.csv site/writeup.html data/backtest.json
           git diff --cached --quiet || git commit -qm "data: hourly snapshot $(date -u +%FT%H:%MZ)"
+          git pull --rebase origin main
           git push
       - name: stage site
         run: |
