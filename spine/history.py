@@ -1,5 +1,5 @@
 """Append one row per market from data/summary.json to data/history.csv (the hourly snapshot series).
-Run: python3.12 -m spine.history. Idempotent within the hour: a market whose last row is under 50 minutes old is skipped."""
+Run: .venv/bin/python -m spine.history. Idempotent within the hour: a market whose last row is under 50 minutes old is skipped."""
 import csv, os, datetime
 from spine.api import DATA, load
 

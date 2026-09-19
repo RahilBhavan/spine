@@ -1,6 +1,6 @@
 """Every Morpho position with debt, per market -> data/positions_<mkt>.json.
 The API caps first=1000 and skip=10000, so we walk healthFactor ascending, moving healthFactor_gte
-to the last value seen. Run from repo root: python3.12 -m spine.fetch_positions"""
+to the last value seen. Run from repo root: .venv/bin/python -m spine.fetch_positions"""
 import time
 from spine.api import graphql, MARKETS, CHAIN, save
 

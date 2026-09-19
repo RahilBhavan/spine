@@ -1,7 +1,7 @@
 """Chainlink AnswerUpdated path on Base for BTC/USD and ETH/USD in each stress window
 -> data/oracle/<window>_<asset>.json as sorted [[updatedAt, block, price], ...].
 Window start is padded by 24h so calibrate.py can find the crossing for early liquidations.
-Run: python3.12 -m spine.fetch_oracle [--max-seconds N]. Partial log ranges checkpoint to data/cache/;
+Run: .venv/bin/python -m spine.fetch_oracle [--max-seconds N]. Partial log ranges checkpoint to data/cache/;
 when the time budget runs out it exits 0 and says so; rerun until it prints "complete"."""
 import os, sys, time
 from spine.api import rpc, load, save, data_path, day_ts, budget, argv_max_seconds, row_price

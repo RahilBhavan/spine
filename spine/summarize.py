@@ -1,5 +1,5 @@
 """Aggregate data/*.json into data/summary.json so the site never loads the raw positions files.
-Run: python3.12 -m spine.summarize"""
+Run: .venv/bin/python -m spine.summarize"""
 import sys, datetime, collections
 from spine.api import MARKETS, lif, load, save
 

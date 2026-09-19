@@ -1,6 +1,6 @@
 """Rebuild a market's borrower book as of a UTC date (00:00) from Morpho transaction history
 -> data/book_<market>_<date>.json, same schema as positions_<market>.json.
-Run: python3.12 -m spine.rebuild_book cbBTC 2026-02-03 [2025-10-09 ...] [--max-seconds N]
+Run: .venv/bin/python -m spine.rebuild_book cbBTC 2026-02-03 [2025-10-09 ...] [--max-seconds N]
 Several dates share one walk: the walk starts at the latest date and snapshots the accumulators when
 the cursor crosses each earlier one (book(T2) = book(T1) - txs in (T2, T1]). Each invocation stops
 after max-seconds, checkpoints to data/cache/, and prints "partial, rerun to continue"."""

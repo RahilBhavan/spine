@@ -2,7 +2,7 @@
 A Coinbase Smart Wallet is an ERC-1967 proxy whose implementation() (slot 0x3608...2bbc) is the v1.0 or
 v1.1 impl. We ask Multicall3 to call implementation() on 1000 addresses per eth_call (~1s); any chunk
 that fails falls back to eth_getStorageAt per address. Cache: data/coinbase_wallets.json
-{addr_lowercase: "v1.0"|"v1.1"|null}. Run: python3.12 -m spine.tag_coinbase"""
+{addr_lowercase: "v1.0"|"v1.1"|null}. Run: .venv/bin/python -m spine.tag_coinbase"""
 import glob, json, os, time
 from spine.api import rpc, MARKETS, DATA, load, save
 

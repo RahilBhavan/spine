@@ -1,6 +1,6 @@
 """WRITEUP.md -> site/writeup.html at build time, with a stdlib Markdown subset: #/## headings, paragraphs, **bold**, *italic*,
 `code`, [links](url), unordered lists, pipe tables. Two Plotly figures (built client-side from data/backtest.json by site/app.js)
-go at the top of section 4. Run: python3.12 -m spine.render_writeup [--stdout]"""
+go at the top of section 4. Run: .venv/bin/python -m spine.render_writeup [--stdout]"""
 import os, re, html, sys
 from spine.api import DATA, load
 

@@ -1,6 +1,6 @@
 """Every liquidation per market -> data/liquidations_<mkt>.json.
 marketTransactions has no orderBy but returns newest first, so we walk timestamp_lte backwards from
-now to the last saved timestamp minus a day, then merge. Run: python3.12 -m spine.fetch_liquidations"""
+now to the last saved timestamp minus a day, then merge. Run: .venv/bin/python -m spine.fetch_liquidations"""
 import time
 from spine.api import graphql, MARKETS, CHAIN, load, save
 

@@ -2,9 +2,9 @@
 Per window/market: liquidated volume (USD at the oracle price of the liquidation block), realized bonus
 (seized/repaid - 1), latency from the oracle crossing the borrower's liquidation price to the Liquidate
 event, and liquidator concentration.
-Run: python3.12 -m spine.calibrate <window> [--max-seconds N]   one window -> data/cache/calib_<window>.json
-     python3.12 -m spine.calibrate                              assemble data/calibration.json, print tables
-     python3.12 -m spine.calibrate --since YYYY-MM-DD [--apply]  propose windows around later days with > $5M cbBTC repaid
+Run: .venv/bin/python -m spine.calibrate <window> [--max-seconds N]   one window -> data/cache/calib_<window>.json
+     .venv/bin/python -m spine.calibrate                              assemble data/calibration.json, print tables
+     .venv/bin/python -m spine.calibrate --since YYYY-MM-DD [--apply]  propose windows around later days with > $5M cbBTC repaid
                                                                 that no window covers; --apply appends them to data/windows.json
 The latency step fetches one Morpho history per borrower (cached in data/cache/history_*.json); when the
 time budget runs out it exits 0 with "partial", rerun until it prints "complete"."""
