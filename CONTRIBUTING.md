@@ -3,7 +3,7 @@
 Rules the code follows. Reviews cite this file.
 
 ## Code
-- Python 3.12. Standard library only, except `spine/backtest.py` (numpy, in `.venv`). No frameworks, no ORMs, no CLI libraries.
+- Python 3.12. Standard library only, except `spine/backtest.py` (numpy). One interpreter: `uv venv .venv && uv pip install numpy pytest`, then `.venv/bin/python -m spine.<x>` for every script. No frameworks, no ORMs, no CLI libraries.
 - No classes. Short functions, plain dicts and lists, module-level constants. Shared helpers live in `spine/api.py`; do not re-implement `load`, `save`, `day_ts`, `budget`, HTTP, or the market table locally.
 - Parse `sys.argv` by hand and only under `if __name__ == '__main__':`. Importing a module must not read argv or touch the network.
 - Every script ends with a `__main__` block that does its job and then asserts one or two things that would fail if the logic broke. No test frameworks inside scripts; `tests/` holds the reference checks.

@@ -95,9 +95,15 @@ function usdTicks(values, log) {
   return { tickmode: 'array', tickvals: vals, ticktext: vals.map(usd) };
 }
 
+// Timestamp into el; past 8 h it turns red (class stale) so a dead cron shows on the page.
+function stamp(el, text, ms) {
+  el.textContent = text;
+  el.classList.toggle('stale', (Date.now() - ms) / 36e5 > 8);
+}
+
 function renderHeader() {
   const t = DATA.totals;
-  document.getElementById('generated-at').textContent = DATA.generated_at.replace('T', ' ').replace('+00:00', ' UTC');
+  stamp(document.getElementById('generated-at'), DATA.generated_at.replace('T', ' ').replace('+00:00', ' UTC'), Date.parse(DATA.generated_at));
   cards(document.getElementById('totals'), [
     ['Total borrow', usd(t.borrow_usd)],
     ['Total collateral', usd(t.collateral_usd)],
@@ -347,6 +353,7 @@ async function renderBacktest() {
   const c = bt.calibrated || {};
   note.textContent = 'Grid rows at the fitted borrower response (' + pct(c.resp_share, 0) + ' within ' + c.react_min + ' min), depth multipliers DEX ' +
     bt.defaults.k_dex + ' / CEX ' + bt.defaults.k_cex + ', liquidator daily capital ' + usd(bt.cexCap) + '. Max draw 75%, or 60% where the LLTV is below 75%.';
+  stamp(document.getElementById('bt-generated-at'), new Date(bt.generated_at * 1000).toISOString().slice(0, 16).replace('T', ' ') + ' UTC, book ' + bt.latest_book, bt.generated_at * 1000);
   buttons('bt-market-buttons', markets, btMarket, k => { btMarket = k; renderBacktest(); });
   buttons('bt-scenario-buttons', ['A', 'AB', 'ABC'], btScenario, k => { btScenario = k; renderBacktest(); });
   buttons('bt-metric-buttons', Object.keys(METRICS), btMetric, k => { btMetric = k; renderBacktest(); });
