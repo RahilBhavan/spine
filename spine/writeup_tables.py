@@ -41,6 +41,13 @@ def bad_pct(r):
     return '0' if bad(r) == 0 else '%s (%s)' % (usd(bad(r)), pct(bad(r), r['market']))
 
 
+def seed_range(**kw):
+    """' (min-max)' of bad debt over the hash seeds; '' where only seed 0 was run or the seeds agree."""
+    f = dict(BASE, **kw)
+    xs = [bad(r) for r in BT['runs'] if all(r.get(k) == v for k, v in f.items() if k != 'seed')]
+    return ' (%s-%s)' % (usd(min(xs)), usd(max(xs))) if len(xs) > 1 and min(xs) < max(xs) else ''
+
+
 def expo(r):
     """Exposure marked at the trough: realized so far plus every alive position's shortfall at the lowest oracle print."""
     return r['trough_exposure_usd']
@@ -117,6 +124,7 @@ def borrower_response():
             r = find(window=w, resp_share=sh, react_min=dm)
             rows.append((label, usd(r['liquidated_usd']), usd(bad(r))))
         table(['Borrowers', 'Liquidated', 'Bad debt'], rows)
+    print('Plateau, Mar 2020, loss / exposure: ' + '; '.join('s %.1f, d %d min: %s' % (sh, dm, both(find(window='Mar2020', resp_share=sh, react_min=dm))) for sh in (0.6, 0.7) for dm in (60, 120)) + '.\n')
 
 
 def seven_paths():
@@ -125,10 +133,10 @@ def seven_paths():
     for w, _, _ in WINDOWS:
         c = load('prices/%s_BTC-USD' % w)
         ab, abc = find(window=w), find(window=w, scenario='ABC')
-        rows.append((LABEL[w], '-%.0f%% / -%.0f%%' % (100 * max_drop(c, H4), 100 * max_drop(c, H24)), usd(ab['liquidated_usd']), bad_pct(ab), expo_pct(ab),
+        rows.append((LABEL[w], '-%.0f%% / -%.0f%%' % (100 * max_drop(c, H4), 100 * max_drop(c, H24)), usd(ab['liquidated_usd']), bad_pct(ab) + seed_range(window=w), expo_pct(ab),
                      '%s / %s' % (dur(ab['queue_minutes_p50']), dur(ab['queue_minutes_p95'])), both(abc)))
     table(['Path', 'Worst 4h / 24h', 'AB: liquidated', 'AB: loss by end of path', 'AB: exposure at trough', 'AB: queue p50 / p95', 'ABC: loss / exposure'], rows)
-    print('Percentages are of the $%.2fB USDC supplied to the market. Loss = shortfall realized on liquidations plus what is still underwater at the end of the path; exposure = the same marked at the lowest oracle print. %s\n' % (SUPPLY['cbBTC'] / 1e9, BETA_NOTE))
+    print('Percentages are of the $%.2fB USDC supplied to the market; the range in brackets is the loss over hash seeds 0-9 where those were run. Loss = shortfall realized on liquidations plus what is still underwater at the end of the path; exposure = the same marked at the lowest oracle print. %s\n' % (SUPPLY['cbBTC'] / 1e9, BETA_NOTE))
 
 
 def lltv_grid():
@@ -138,11 +146,12 @@ def lltv_grid():
     for l in (0.86, 0.80, 0.77, 0.70, 0.625):
         cap = 0.75 if l > 0.75 else 0.60
         lif = min(1.15, 1 / (0.3 * l + 0.7))
-        cells = ['%s / %s' % (usd(bad(r)), usd(expo(r))) for r in (find(lltv=l, cap=cap, window=w, scenario=sc) for sc in ('AB', 'ABC') for w in ('Mar2020', 'May2021'))]
+        cells = ['%s%s / %s' % (usd(bad(find(lltv=l, cap=cap, window=w, scenario=sc))), seed_range(lltv=l, cap=cap, window=w, scenario=sc), usd(expo(find(lltv=l, cap=cap, window=w, scenario=sc))))
+                 for sc in ('AB', 'ABC') for w in ('Mar2020', 'May2021')]
         other = max(max(bad(r), expo(r)) for r in (find(lltv=l, cap=cap, window=w, scenario=sc) for sc in ('AB', 'ABC') for w in others))
         rows.append(('%g%%' % (100 * l), '%.1f%%' % (100 / lif), *cells, usd(other)))
     table(['LLTV', 'Bad-debt LTV (1/LIF)', 'AB: Mar 2020', 'AB: May 2021', 'ABC: Mar 2020', 'ABC: May 2021', 'Other five paths (max)'], rows)
-    print('Cells are loss by end of path / exposure at trough.\n')
+    print('Cells are loss by end of path / exposure at trough; the range in brackets is the loss over hash seeds 0-9 where those were run.\n')
 
 
 def k_cex_line():

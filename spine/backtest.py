@@ -341,8 +341,8 @@ def sensitivity(markets, depth, share, react, cf, get):
                     for lag in (0, 1, 3):
                         get(m, w, book, depth, c, dict(book=label), k_dex=kd, k_cex=kc, lag_bars=lag, **star)
             if m == 'cbBTC' and w in ('Mar2020', 'May2021'):
-                for sh in sorted({0, share, 0.9}):
-                    for d in sorted({15, react, 240}):
+                for sh in sorted({0, 0.6, share, 0.9}):
+                    for d in sorted({15, 60, react, 240}):
                         get(m, w, book, depth, c, dict(book=label), resp_share=sh, react_min=d, full_below_usd=cf)
                 for lltv in (0.86, 0.80, 0.77):  # liquidator capital: observed max day, multiples, and depth-limited only
                     for mult in CAP_MULTIPLES:
