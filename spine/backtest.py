@@ -24,7 +24,7 @@ def cex_cap_default():
 # ponytail: one anchor point (Kaiko, Oct 10 2025: top-of-book depth down >90%); FTX ("about half") would pin the curve's shape.
 DEFAULTS = dict(lltv=0.86, cap=0.75, scenario='AB', k_dex=0.5, k_cex=0.3, r=0.2, lag_bars=1, reshape=True,
                 warn_gap=0.06, resp_share=0.0, react_min=60, cure=0.0, margin=0.01, cex_cap_usd=cex_cap_default(),
-                close_target=1.0, full_below_usd=0.0, beta=0.0, seed=0, hold_bars=0)
+                close_target=1.0, full_below_usd=0.0, beta=0.0, seed=0, hold_bars=0, book_multiple=1.0)
 SHARES, REACTS = [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9], [15, 30, 60, 120, 240]
 FULL_BELOW, BETAS = (0.0, 1e3, 2.5e3, 5e3, 1e4, 2.5e4, 5e4), (0.0, math.log(3) / 2, math.log(3))  # beta: none, the Kaiko anchor, twice it
 HOUR_BARS, SEEDS = 60 // BAR_MIN, range(10)
@@ -61,7 +61,8 @@ def interp(table, pct):
 def capacity(depth, market, lltv, params):
     """(Tier A, Tier B) USD of collateral absorbable per step at slippage <= lif-1-margin (gas and oracle slack)."""
     pct, prod = 100 * (lif(lltv) - 1 - params['margin']), MARKETS[market]['cb_product']
-    dex = interp({k: v['usd'] for k, v in depth['dex'][market]['capacity_usd_at_slippage'].items()}, pct)
+    dex_tab = depth['dex'].get(market)  # alts have no venue on Base: CEX only
+    dex = interp({k: v['usd'] for k, v in dex_tab['capacity_usd_at_slippage'].items()}, pct) if dex_tab else 0.0
     cex = sum(interp(v[prod]['bid_depth_usd'], pct) for v in depth['cex'].values() if prod in v)
     s = params['scenario']
     if s == 'ABC':
@@ -243,7 +244,7 @@ def run(market, window, book, depth, candles, **kw):
         if params['hold_bars']:  # hold the trough low for hold_bars before the bounce; calibration (real_path) runs never hold
             i = int(np.argmin(path))
             path = np.concatenate([path[:i + 1], np.full(params['hold_bars'], path[i]), path[i + 1:]])
-        debt = reshape(coll, debt, p_book, p_book, params['lltv'], params['cap'])
+        debt = reshape(coll, debt * params['book_multiple'], p_book, p_book, params['lltv'], params['cap'])  # collateral unchanged: a bigger multiple is a more levered book
     else:
         path = real_path(candles, params['start'], params['end'])
     params['base_eff'] = capacity(depth, market, params['lltv'], params)
@@ -253,10 +254,10 @@ def run(market, window, book, depth, candles, **kw):
 
 def key(r):
     d = {k: r[k] for k in ('market', 'window', 'lltv', 'cap', 'scenario', 'k_dex', 'k_cex', 'r', 'lag_bars', 'reshape', 'warn_gap', 'resp_share', 'react_min',
-                            'margin', 'cex_cap_usd', 'close_target', 'full_below_usd', 'beta', 'seed', 'book', 'hold_bars')}
+                            'margin', 'cex_cap_usd', 'close_target', 'full_below_usd', 'beta', 'seed', 'book', 'hold_bars', 'book_multiple')}
     d['resp_share'], d['react_min'] = float(d['resp_share']), int(d['react_min'])  # 0 and 0.0 are the same run
     d['close_target'], d['full_below_usd'], d['beta'], d['seed'] = float(d['close_target']), float(d['full_below_usd']), float(d['beta']), int(d['seed'])
-    d['hold_bars'] = int(d['hold_bars'])
+    d['hold_bars'], d['book_multiple'] = int(d['hold_bars']), float(d['book_multiple'])
     return json.dumps(d, sort_keys=True)
 
 
@@ -323,9 +324,11 @@ def grid(markets, depth, shares, react, cf, get):
         book, label = today_book(m)
         for w, _, _ in WINDOWS:
             c = candles_for(m, w)
+            if c is None:  # no price file for this product in this window (SOL predates May 2021)
+                continue
             for sh in shares:
-                for lltv in (0.625, 0.70, 0.77, 0.80, 0.86):
-                    for cap in (c for c in (0.50, 0.60, 0.70, 0.75) if c < lltv):  # cap >= lltv clips most of the book: meaningless
+                for lltv in ((0.625, 0.70) if MARKETS[m]['lltv'] < 0.7 else (0.625, 0.70, 0.77, 0.80, 0.86)):
+                    for cap in (c for c in (0.50, 0.55, 0.60, 0.70, 0.75) if c < lltv):  # cap >= lltv clips most of the book: meaningless
                         for sc in ('A', 'AB', 'ABC'):
                             get(m, w, book, depth, c, dict(book=label), lltv=lltv, cap=cap, scenario=sc, resp_share=sh, react_min=react, full_below_usd=cf)
 
@@ -336,6 +339,8 @@ def sensitivity(markets, depth, share, react, cf, get):
         book, label = today_book(m)
         for w, _, _ in WINDOWS:
             c = candles_for(m, w)
+            if c is None:
+                continue
             for kd in (0.1, 0.5, 1.0):
                 for kc in (0.1, 0.3, 1.0):
                     for lag in (0, 1, 3):
@@ -358,6 +363,9 @@ def sensitivity(markets, depth, share, react, cf, get):
                     bs, _ = today_book(m, seed)
                     for lltv in (0.86, 0.80, 0.77):
                         get(m, w, bs, depth, c, dict(book=label), lltv=lltv, seed=seed, **star)
+            if m in ('cbXRP', 'SOL') and w == 'Oct2025':  # book size: the multiple of today's debt at which the alt first loses
+                for mult in (1, 2, 4, 8):
+                    get(m, w, book, depth, c, dict(book=label), lltv=0.625, cap=0.55, scenario='AB', book_multiple=float(mult), **star)
 
 
 def oracle_end(cw, market):
@@ -439,7 +447,7 @@ def calibration(depth, get):
 
 def table(out, share, react, cf):
     rows, latest = out['runs'], out['latest_book']
-    dflt = lambda r: (r.get('book') == latest and all(r[k] == DEFAULTS[k] for k in ('k_dex', 'k_cex', 'lag_bars', 'beta', 'seed', 'cex_cap_usd', 'hold_bars'))
+    dflt = lambda r: (r.get('book') == latest and all(r[k] == DEFAULTS[k] for k in ('k_dex', 'k_cex', 'lag_bars', 'beta', 'seed', 'cex_cap_usd', 'hold_bars', 'book_multiple'))
                       and r['resp_share'] == share and r['react_min'] == react and r['full_below_usd'] == cf)
     base = [r for r in rows if dflt(r) and r['lltv'] == 0.86 and r['cap'] == 0.75]
     ab = [r for r in rows if dflt(r) and r['scenario'] == 'AB']

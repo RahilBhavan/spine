@@ -7,13 +7,13 @@ BT, CAL, SUMMARY, DEPTH = load('backtest'), load('calibration'), load('summary')
 STAR = BT['calibrated']
 D = BT['defaults']
 BASE = dict(book=BT['latest_book'], k_dex=D['k_dex'], k_cex=D['k_cex'], r=D['r'], lag_bars=D['lag_bars'], margin=D['margin'], cex_cap_usd=D['cex_cap_usd'],
-            beta=D['beta'], seed=0, hold_bars=D['hold_bars'], resp_share=STAR['resp_share'], react_min=STAR['react_min'], close_target=STAR['close_target'], full_below_usd=STAR['full_below_usd'],
+            beta=D['beta'], seed=0, hold_bars=D['hold_bars'], book_multiple=D['book_multiple'], resp_share=STAR['resp_share'], react_min=STAR['react_min'], close_target=STAR['close_target'], full_below_usd=STAR['full_below_usd'],
             lltv=0.86, cap=0.75, scenario='AB', market='cbBTC')
 FIT = 'fitted response s %.1f / d %d min, %s, depth multipliers constant (beta %.2f)' % (STAR['resp_share'], STAR['react_min'], 'bots close in full' if STAR['close_target'] >= 1 else 'bots trim to %.0f%%' % (100 * STAR['close_target']), D['beta'])
 BETAS = (0.0, 0.5493061443340549, 1.0986122886681098)
 BETA_NOTE = ('Depth per step is k * exp(-beta * |trailing 1h return| / 0.05); beta %.2f is anchored on one Kaiko point (Oct 10 2025: '
              'top-of-book depth down >90%% on a ~10%% hourly move), not fitted.' % D['beta'])
-SUPPLY = {m: SUMMARY['markets'][m]['state']['supply_usd'] for m in ('cbBTC', 'WETH')}
+SUPPLY = {m: SUMMARY['markets'][m]['state']['supply_usd'] for m in ('cbBTC', 'WETH', 'cbXRP', 'SOL')}
 LIVED = [('Oct2025', 'Oct 9-12 2025'), ('Feb2026', 'Feb 2-8 2026'), ('Jun2026a', 'Jun 1-7 2026'), ('Jun2026b', 'Jun 23-27 2026')]
 LABEL = dict(Mar2020='Mar 2020', May2021='May 2021', FTX2022='FTX Nov 2022', Aug2024='Aug 2024', Oct2025='Oct 2025', Feb2026='Feb 2026', Jun2026='Jun 2026')
 
@@ -195,6 +195,20 @@ def weth_line():
     table(['LLTV', 'Scenario', 'Mar 2020', 'May 2021', 'Aug 2024', 'Other four (max)'], rows)
 
 
+def alt_table():
+    print('## Section 6: alts (AB, LLTV 62.5%%, cap 55%%, %s; CEX depth only, no venue on Base)\n' % FIT)
+    for m in ('cbXRP', 'SOL'):
+        ws = [w for w, _, _ in WINDOWS if any(r['market'] == m and r['window'] == w for r in BT['runs'])]
+        rows = []
+        for w in ws:
+            r = find(market=m, window=w, lltv=0.625, cap=0.55)
+            rows.append((LABEL[w], usd(r['liquidated_usd']), bad_pct(r), expo_pct(r), dur(r['queue_minutes_p95'])))
+        table(['%s (supply $%.0fM)' % (m, SUPPLY[m] / 1e6), 'AB: liquidated', 'AB: loss by end of path', 'AB: exposure at trough', 'AB: queue p95'], rows)
+        rs = [(k, find(market=m, window='Oct2025', lltv=0.625, cap=0.55, book_multiple=float(k))) for k in (1, 2, 4, 8)]
+        hit = next(((k, r) for k, r in rs if bad(r) > 0), None)
+        print("%s: Oct 2025 first shows loss at %dx today's book (%s).\n" % (m, hit[0], both(hit[1])) if hit else "%s: Oct 2025 shows no loss up to 8x today's book (exposure at 8x %s).\n" % (m, usd(expo(rs[-1][1]))))
+
+
 def capital_range():
     for w in ('Mar2020', 'May2021'):
         print('## Section 4: liquidator capital (cbBTC, %s, AB, cap 75%%, %s; Tier B rolling-24h cap as a multiple of the max collateral seized in one day on the market, $%.1fM from calibration.json via backtest.json defaults)\n' % (LABEL[w], FIT, D['cex_cap_usd'] / 1e6))
@@ -237,6 +251,7 @@ if __name__ == '__main__':
     weth_line()
     capital_range()
     hold_table()
+    alt_table()
     seed_table()
     style_table()
     assert find(window='Mar2020') is find(lltv=0.86, cap=0.75, window='Mar2020', scenario='AB')  # seven-path row is the grid's 86% cell
