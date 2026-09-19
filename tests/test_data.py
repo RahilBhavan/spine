@@ -31,6 +31,7 @@ def test_backtest():
     for r in b['runs']:
         assert keys <= set(r), keys - set(r)
     assert {'resp_share', 'react_min'} <= set(b['calibrated'] or {})
+    assert b['latest_book'] and all(r['book'] != 'today' for r in b['runs'])  # live rows are keyed by book date since Phase G1
 
 
 def test_calibration():

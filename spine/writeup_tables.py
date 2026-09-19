@@ -6,7 +6,7 @@ from spine.fetch_prices import WINDOWS, max_drop, H4, H24
 BT, CAL, SUMMARY, DEPTH = load('backtest'), load('calibration'), load('summary'), load('depth')
 STAR = BT['calibrated']
 D = BT['defaults']
-BASE = dict(book='today', k_dex=D['k_dex'], k_cex=D['k_cex'], r=D['r'], lag_bars=D['lag_bars'], margin=D['margin'], cex_cap_usd=D['cex_cap_usd'],
+BASE = dict(book=BT['latest_book'], k_dex=D['k_dex'], k_cex=D['k_cex'], r=D['r'], lag_bars=D['lag_bars'], margin=D['margin'], cex_cap_usd=D['cex_cap_usd'],
             beta=D['beta'], seed=0, resp_share=STAR['resp_share'], react_min=STAR['react_min'], close_target=STAR['close_target'], full_below_usd=STAR['full_below_usd'],
             lltv=0.86, cap=0.75, scenario='AB', market='cbBTC')
 FIT = 'fitted response s %.1f / d %d min, %s, depth multipliers constant (beta %.2f)' % (STAR['resp_share'], STAR['react_min'], 'bots close in full' if STAR['close_target'] >= 1 else 'bots trim to %.0f%%' % (100 * STAR['close_target']), D['beta'])

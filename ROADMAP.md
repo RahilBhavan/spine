@@ -1,6 +1,6 @@
 # Roadmap: from prototype to a maintained project
 
-Status 2026-09-18: Phases A-E done (E1 item 3, alt-asset replays, deferred; item 6 lands as
+Status 2026-09-19: Phase G (pipeline, model, code fixes) planned below. Status 2026-09-18: Phases A-E done (E1 item 3, alt-asset replays, deferred; item 6 lands as
 `calibrate --since` plus `data/windows.json`). The partial-liquidation model changed the
 headline: under calm-day liquidator behaviour (trim to 74%), LLTV barely moves March 2020
 losses; liquidator policy and capital do. See WRITEUP.md section 4. Phase F remains.
@@ -122,3 +122,97 @@ alert bot on the distance-to-capacity gauge, Aave/TradFi comparison table in the
 A (1d) -> B (1d) -> C (0.5d) -> D (1d) -> E (2d) -> F (0.5d): about six working days, same as
 the original build. A and B are independent of each other but B must land before C's tests
 freeze the interfaces. D and E can run in parallel (disjoint files). F waits on E.
+
+## Phase G: keep the live parts live (review of 2026-09-19)
+
+Written 2026-09-19 after reading the model, the workflows and the last six refresh runs. Three groups, three
+`runner` dispatches with a `reviewer` pass each, in this order: G1 changes what the cron commits and what the
+backtest keys on, so G2's new grid rows must land after it; G3 is a behaviour-preserving cleanup that G1/G2's
+regenerated `backtest.json` verifies.
+
+### G1. Pipeline (one PR, half a day)
+
+Findings: the hourly `backtest --max-seconds 600` has done zero runs since the grid was first cut (every row is
+keyed `book='today'`); each snapshot commits ~25 MB of JSON and `.git` is 99 MB after 15 snapshots; two of the
+last six refresh runs died on level asserts (`unrealized_bad_debt_usd > 0` for Mar 2020 flipped as the book
+moved) and took the Pages deploy down with them; the push has no rebase; `cex_cap_usd` in every run key is a
+float read from `calibration.json` at import.
+
+1. **Round the capital cap before it enters a key.** `cex_cap_default()` returns `round(max(days), -5)`; the
+   stale check in `calibrated()` compares the same rounded values. Every existing grid row stops matching, which
+   is fine because item 2 regenerates them anyway. Do this first so the grid is cut once.
+2. **Grid rows carry the book date.** `today_book()` also returns the label
+   `datetime.date.fromtimestamp(raw['fetched_at'], UTC).isoformat()`; `grid()` and `sensitivity()` pass
+   `dict(book=label)` instead of `'today'`. `save()` adds `latest_book` to the top level: the live label with the
+   most rows (ties to the newest), so the site and `writeup_tables` read a complete grid while a new date fills in
+   over several cron runs. `save()` prunes live rows (no `calib_window`) whose label is neither `latest_book` nor
+   the newest label. `writeup_tables.BASE['book']`, `backtest.table()` and `site/app.js:274,278` read
+   `BT.latest_book` instead of the literal `'today'`. Measure one full cbBTC+WETH grid+sens locally and record
+   the minutes in this file; if it exceeds four cron runs of 600 s, label by ISO week instead of day.
+   Measured 2026-09-19: full cbBTC+WETH grid+sens+calib took 8 min (2008 runs, one invocation, M-series laptop); day label kept.
+3. **Stop committing the positions files.** Drop `data/positions_*.json` from the `git add` line in
+   `refresh.yml`, `git rm --cached` them, add the pattern to `.gitignore`. Keep `coinbase_wallets.json` and
+   `liquidations_*.json`: both are append-only caches that delta-compress well and without them the cron would
+   re-tag 70k wallets and re-page every liquidation each run. `tests/test_data.py` already skips on absent files.
+   README gets one line: `fetch_positions` is the first thing to run on a fresh clone. Rewriting history to
+   reclaim the 99 MB is a separate decision (destructive); not part of this item.
+4. **Level checks behind `--check`.** `api.argv_max_seconds()` also strips and returns a `check` flag. Level
+   asserts (`summarize.py:148`; the Jun 2026 zero-bad-debt and Mar 2020 exposure asserts in `backtest.py
+   __main__`) run only under `--check`. Invariants stay unconditional: histogram sums to borrow, curve monotone,
+   Tier B ring window is exactly 288 bars, calibration ratios within 25%. The cron omits `--check`;
+   CONTRIBUTING gets the sentence "paste `--check` output in the PR".
+5. **`refresh.yml` order.** Steps become: fetch + summarize + history + render_writeup; backtest in its own step
+   with `continue-on-error: true`; commit (with `git pull --rebase origin main` before `git push`); stage and
+   upload. A model failure then leaves a warning annotation and a stale Backtest tab, not a dead dashboard.
+6. **Staleness on the page.** `app.js` computes hours since `DATA.generated_at` (and `BT.generated_at` on the
+   Backtest tab); past 8 h the timestamp gets a `stale` class (red, from `:root`). Six lines of JS, two of CSS.
+7. **One interpreter in the docs.** README and CONTRIBUTING use `.venv/bin/python -m spine.<x>` throughout, with
+   `uv venv .venv && uv pip install numpy pytest` as the setup line. `ci.yml` is unchanged.
+
+Acceptance: two consecutive scheduled refresh runs green; `git count-objects -vH` size-pack grows by under 2 MB
+across them; `backtest.json` has `latest_book` equal to a date and zero rows with `book == 'today'`; the Backtest
+tab and `writeup_tables` render from it; `python -m spine.summarize` passes without `--check` on a book where the
+-30% liquidatable figure is outside $150-500M (patch the loaded JSON in a one-off shell to prove it).
+
+### G2. Model and writeup (one PR, one day)
+
+1. **Hold at the low.** `hold_bars` (default 0) in `DEFAULTS` and `key()`. `crash_path()` inserts `hold_bars`
+   copies of the trough low immediately after the trough index, before the bounce. Sensitivity adds, for cbBTC on
+   Mar 2020 and May 2021 at LLTV 0.86 / 0.80 / 0.77, `hold_bars` in (12, 288) (one hour, one day) under AB and
+   ABC. `writeup_tables` gets a "held at the low" table: loss by end of path at hold 0 / 1 h / 1 day next to the
+   trough exposure. Writeup section 4 gains the table and section 7's second bullet becomes a number.
+2. **Ranges in the headline rows.** `writeup_tables.seven_paths()` and `lltv_grid()` print `point (min-max)` over
+   `SEEDS` wherever seed rows exist (Mar 2020 and May 2021 at 0.86 / 0.80 / 0.77). Sensitivity adds
+   `(resp_share, react_min)` in {0.6, 0.7} x {60, 120} on the same two windows so the plateau claim in section 3
+   has four cells behind it; `borrower_response()` prints them.
+3. **Alt replays.** `capacity()` treats a missing `depth['dex'][market]` as zero DEX depth (CEX only, which is
+   the alts' reality). `grid()` skips windows with no price file for the market (`candles_for` returns None; SOL
+   has no Mar 2020 or May 2021). Run `grid --market cbXRP` and `--market SOL` at LLTV 0.625 / 0.70 with caps 0.50
+   / 0.55 (add 0.55 to the cap list; it is the product's actual max draw). `writeup_tables` gets an alt table:
+   per window, AB liquidated / loss / exposure at trough / queue p95, plus the multiple of today's book at which
+   Oct 2025 first produces loss (rerun with `debt *= m` for m in 1, 2, 4, 8; a `book_multiple` param in
+   `reshape()`), which is the number section 6's size rule needs. `test_data.py` checks the alt rows exist.
+4. **Book date stamp.** `render_writeup` reads `latest_book` from `backtest.json` and inserts "Backtest book as
+   of <date>; dashboard refreshes hourly" after the italic intro. `writeup_tables` prints the same line first.
+
+Acceptance: `backtest.py --check` passes; `writeup_tables` output pasted into WRITEUP.md with no hand-typed
+numbers changed; the calib ratios at (s*, d*) are unchanged to two decimals (G2 adds runs, it does not change
+the model on the default path); `pytest -q tests` green.
+
+### G3. Code (one PR, two hours)
+
+1. **One event helper in `simulate()`.** The repay / full-close / seize computation appears twice (the
+   clear-everything branch and the chunked branch). `events(debt, coll, p, L, tau, fb)` returns
+   `(rep, full_ev, seize, under)`; both branches call it.
+2. **`tests/test_summarize.py`.** Five synthetic positions (two Coinbase, one over LLTV, one with zero
+   collateral): `ltv_hist` sums to total borrow, `liquidatable_curve` is monotone and its drop-0 row equals the
+   over-LLTV set, `distance_to_capacity` returns the first exceeding drop and None when cap is 0 or never
+   exceeded, `hf_cdf` starts at 0 and ends at 1 when every position has a health factor.
+
+Acceptance: `pytest -q tests` green; `backtest.py calib` ratios and every `data/backtest.json` row identical to
+1e-9 before and after G3.1 (diff the file); `python -m spine.summarize` output byte-identical.
+
+### Order and effort
+
+G1 (0.5 d) -> G2 (1 d) -> G3 (0.25 d). G1.1 before G1.2 so the grid is regenerated once. G2.3 depends on G1.2's
+`latest_book`. G3 last so the regenerated grid is its reference.

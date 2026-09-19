@@ -1,8 +1,8 @@
 """Liquidation-queue backtest (PLAN.md section 4) -> data/backtest.json. numpy; run with .venv/bin/python.
-Run: .venv/bin/python -m spine.backtest [grid|sens|calib|all] [--market cbBTC] [--share 0.7] [--max-seconds N]
+Run: .venv/bin/python -m spine.backtest [grid|sens|calib|all] [--market cbBTC] [--share 0.7] [--max-seconds N] [--check]
 Results append to data/backtest.json keyed on parameters; runs already there are skipped, so every mode is incremental.
 Past the budget (default 200 s) it saves, prints "partial, rerun to continue" and exits 0; "complete" when nothing is left."""
-import json, math, sys, time
+import json, math, sys, time, datetime, collections
 import numpy as np
 from spine.api import MARKETS, lif, load, save as save_json, data_path, budget, argv_max_seconds, row_ts
 from spine.fetch_prices import WINDOWS
@@ -14,9 +14,10 @@ DAY_STEPS = 24 * 60 // BAR_MIN
 
 def cex_cap_default():
     """Max single-UTC-day collateral seized on cbBTC across the calibration windows (Feb 5 2026): the observed ceiling on Tier B
-    inventory. Seized (market value of collateral), not repaid, because that is what the ring charges against the cap."""
+    inventory. Seized (market value of collateral), not repaid, because that is what the ring charges against the cap.
+    Rounded to $0.1M so the value is stable across calibration reruns: it is part of every run key."""
     days = [d['seized_usd'] for w in (load('calibration') or {'windows': {}})['windows'].values() for d in w.get('cbBTC', {}).get('daily', {}).values()]
-    return max(days) if days else 101.1e6
+    return round(max(days), -5) if days else 101.1e6
 
 
 # beta: k_cex(t) = k_cex * exp(-beta * |r_1h| / 0.05); ln(3)/2 makes a 10% hourly move cut depth to a third (0.3 -> 0.1).
@@ -261,10 +262,16 @@ def key(r):
 
 
 def save(rows, calibrated=None):
+    """Merge rows into data/backtest.json. Live rows (no calib_window) carry the book date as `book`; latest_book is the label
+    with the most rows (ties to the newest), so readers see a complete grid while a new date fills in over several cron runs.
+    Live rows under any label other than latest_book or the newest are dropped."""
     old = load('backtest') or {}
     merged = {key(r): r for r in old.get('runs', [])}
     merged.update((key(r), r) for r in rows)
-    out = dict(generated_at=int(time.time()), defaults=DEFAULTS, calibrated=calibrated or old.get('calibrated'), runs=list(merged.values()))
+    live = collections.Counter(r['book'] for r in merged.values() if 'calib_window' not in r)
+    latest = max(live, key=lambda b: (live[b], b)) if live else None
+    runs = [r for r in merged.values() if 'calib_window' in r or r['book'] in (latest, max(live))]
+    out = dict(generated_at=int(time.time()), latest_book=latest, defaults=DEFAULTS, calibrated=calibrated or old.get('calibrated'), runs=runs)
     save_json('backtest', out)
     return out
 
@@ -283,7 +290,9 @@ def calibrated():
 
 
 def today_book(market, seed=0):
-    return book_arrays(load('positions_%s' % market), market, seed)
+    """(book arrays, label): the label is the positions file's fetch date (UTC), the `book` key of every live grid row."""
+    raw = load('positions_%s' % market)
+    return book_arrays(raw, market, seed), datetime.datetime.fromtimestamp(raw['fetched_at'], datetime.UTC).date().isoformat()
 
 
 def candles_for(market, window):
@@ -307,41 +316,41 @@ def runner(done, within_budget, new):
 
 def grid(markets, depth, shares, react, cf, get):
     for m in markets:
-        book = today_book(m)
+        book, label = today_book(m)
         for w, _, _ in WINDOWS:
             c = candles_for(m, w)
             for sh in shares:
                 for lltv in (0.625, 0.70, 0.77, 0.80, 0.86):
                     for cap in (c for c in (0.50, 0.60, 0.70, 0.75) if c < lltv):  # cap >= lltv clips most of the book: meaningless
                         for sc in ('A', 'AB', 'ABC'):
-                            get(m, w, book, depth, c, dict(book='today'), lltv=lltv, cap=cap, scenario=sc, resp_share=sh, react_min=react, full_below_usd=cf)
+                            get(m, w, book, depth, c, dict(book=label), lltv=lltv, cap=cap, scenario=sc, resp_share=sh, react_min=react, full_below_usd=cf)
 
 
 def sensitivity(markets, depth, share, react, cf, get):
     star = dict(resp_share=share, react_min=react, full_below_usd=cf)
     for m in markets:
-        book = today_book(m)
+        book, label = today_book(m)
         for w, _, _ in WINDOWS:
             c = candles_for(m, w)
             for kd in (0.1, 0.5, 1.0):
                 for kc in (0.1, 0.3, 1.0):
                     for lag in (0, 1, 3):
-                        get(m, w, book, depth, c, dict(book='today'), k_dex=kd, k_cex=kc, lag_bars=lag, **star)
+                        get(m, w, book, depth, c, dict(book=label), k_dex=kd, k_cex=kc, lag_bars=lag, **star)
             if m == 'cbBTC' and w in ('Mar2020', 'May2021'):
                 for sh in sorted({0, share, 0.9}):
                     for d in sorted({15, react, 240}):
-                        get(m, w, book, depth, c, dict(book='today'), resp_share=sh, react_min=d, full_below_usd=cf)
+                        get(m, w, book, depth, c, dict(book=label), resp_share=sh, react_min=d, full_below_usd=cf)
                 for lltv in (0.86, 0.80, 0.77):  # liquidator capital: observed max day, multiples, and depth-limited only
                     for mult in CAP_MULTIPLES:
-                        get(m, w, book, depth, c, dict(book='today'), lltv=lltv, cex_cap_usd=DEFAULTS['cex_cap_usd'] * mult, **star)
+                        get(m, w, book, depth, c, dict(book=label), lltv=lltv, cex_cap_usd=DEFAULTS['cex_cap_usd'] * mult, **star)
                     for beta in BETAS:  # depth collapse: none, the Kaiko anchor, twice it
-                        get(m, w, book, depth, c, dict(book='today'), lltv=lltv, beta=beta, **star)
+                        get(m, w, book, depth, c, dict(book=label), lltv=lltv, beta=beta, **star)
                     for mult in (1, np.inf):  # liquidation style: bots trim to 74% instead of closing in full
-                        get(m, w, book, depth, c, dict(book='today'), lltv=lltv, close_target=0.74, cex_cap_usd=DEFAULTS['cex_cap_usd'] * mult, **star)
+                        get(m, w, book, depth, c, dict(book=label), lltv=lltv, close_target=0.74, cex_cap_usd=DEFAULTS['cex_cap_usd'] * mult, **star)
                 for seed in SEEDS:  # which wallets are responsive: hash seed
-                    bs = today_book(m, seed)
+                    bs, _ = today_book(m, seed)
                     for lltv in (0.86, 0.80, 0.77):
-                        get(m, w, bs, depth, c, dict(book='today'), lltv=lltv, seed=seed, **star)
+                        get(m, w, bs, depth, c, dict(book=label), lltv=lltv, seed=seed, **star)
 
 
 def oracle_end(cw, market):
@@ -421,8 +430,9 @@ def calibration(depth, get):
     return out
 
 
-def table(rows, share, react, cf):
-    dflt = lambda r: (r.get('book') == 'today' and all(r[k] == DEFAULTS[k] for k in ('k_dex', 'k_cex', 'lag_bars', 'beta', 'seed', 'cex_cap_usd'))
+def table(out, share, react, cf):
+    rows, latest = out['runs'], out['latest_book']
+    dflt = lambda r: (r.get('book') == latest and all(r[k] == DEFAULTS[k] for k in ('k_dex', 'k_cex', 'lag_bars', 'beta', 'seed', 'cex_cap_usd'))
                       and r['resp_share'] == share and r['react_min'] == react and r['full_below_usd'] == cf)
     base = [r for r in rows if dflt(r) and r['lltv'] == 0.86 and r['cap'] == 0.75]
     ab = [r for r in rows if dflt(r) and r['scenario'] == 'AB']
@@ -445,7 +455,7 @@ def table(rows, share, react, cf):
 
 
 if __name__ == '__main__':
-    max_seconds, args = argv_max_seconds()
+    max_seconds, args, check = argv_max_seconds()  # --check: level asserts too (paste in the PR); the cron omits it
     markets = [args.pop(args.index('--market') + 1)] if '--market' in args else ['cbBTC', 'WETH']
     share_arg = float(args.pop(args.index('--share') + 1)) if '--share' in args else None  # grid at this share only (to split invocations)
     args = [a for a in args if a not in ('--market', '--share')]
@@ -483,14 +493,15 @@ if __name__ == '__main__':
         off = {k: v for k, v in cal['ratios'].items() if 'cbBTC' in k and abs(v - 1) > 0.25}
         assert not off, 'cbBTC lived events off by more than 25%%: %s' % off
 
-    book, c = today_book('cbBTC'), candles_for('cbBTC', 'Jun2026')
+    (book, _), c = today_book('cbBTC'), candles_for('cbBTC', 'Jun2026')
+    lvl = 'asserts ok' if check else 'level, not asserted without --check'
     for sc in ('AB', 'ABC'):
         r = run('cbBTC', 'Jun2026', book, depth, c, lltv=0.86, cap=0.75, scenario=sc)
-        assert r['realized_bad_debt_usd'] == 0, r
-        print('asserts ok (no borrower action): Jun2026 %s realized bad debt 0 (liquidated $%.1fM)' % (sc, r['liquidated_usd'] / 1e6))
+        assert not check or r['realized_bad_debt_usd'] == 0, r
+        print('%s (no borrower action): Jun2026 %s realized bad debt $%.0f (liquidated $%.1fM)' % (lvl, sc, r['realized_bad_debt_usd'], r['liquidated_usd'] / 1e6))
     r2 = run('cbBTC', 'Mar2020', book, depth, candles_for('cbBTC', 'Mar2020'), lltv=0.86, cap=0.75, scenario='A')
-    assert r2['trough_exposure_usd'] > 0, r2
-    print('asserts ok (no borrower action): Mar2020 A exposure at trough $%.1fM' % (r2['trough_exposure_usd'] / 1e6))
+    assert not check or r2['trough_exposure_usd'] > 0, r2
+    print('%s (no borrower action): Mar2020 A exposure at trough $%.1fM' % (lvl, r2['trough_exposure_usd'] / 1e6))
     # Tier B ring: no Tier A, cap = one step of Tier B, three positions each seizing exactly 1.0 at p=1 from step 1 on.
     # One clears per rolling 24h: steps 1, 289, 577 (a 578-step path fits all three, a 577-step path only two).
     syn = (np.ones(3), np.ones(3), np.full(3, 0.5))
@@ -503,7 +514,7 @@ if __name__ == '__main__':
     if star[0]:
         for sc in ('AB', 'ABC'):
             r = run('cbBTC', 'Jun2026', book, depth, c, lltv=0.86, cap=0.75, scenario=sc, resp_share=star[0], react_min=star[1], full_below_usd=star[2])
-            assert r['realized_bad_debt_usd'] == 0, r
-            print('asserts ok (s %.1f, d %d, c %.2f): Jun2026 %s realized bad debt 0 (liquidated $%.1fM, repaid by borrowers $%.1fM)' % (
-                star[0], star[1], star[2], sc, r['liquidated_usd'] / 1e6, r['cured_usd'] / 1e6))
-    table(out['runs'], *star)
+            assert not check or r['realized_bad_debt_usd'] == 0, r
+            print('%s (s %.1f, d %d, c %.2f): Jun2026 %s realized bad debt $%.0f (liquidated $%.1fM, repaid by borrowers $%.1fM)' % (
+                lvl, star[0], star[1], star[2], sc, r['realized_bad_debt_usd'], r['liquidated_usd'] / 1e6, r['cured_usd'] / 1e6))
+    table(out, *star)
