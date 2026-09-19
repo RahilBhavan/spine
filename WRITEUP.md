@@ -90,7 +90,7 @@ What moves the trough exposure. Scenario AB, March 2020, loss / exposure:
 | 80% | $4.0M (0.3%) / $143.0M (9.0%) | $0.70M (0.0%) / $91.8M (5.8%) | $1.2M (0.1%) / $54.1M (3.4%) | $1.2M (0.1%) / $54.1M (3.4%) |
 | 77% | $2.4M (0.2%) / $133.5M (8.4%) | $1.1M (0.1%) / $88.7M (5.6%) | $1.5M (0.1%) / $38.0M (2.4%) | $1.5M (0.1%) / $38.0M (2.4%) |
 
-Read down a column: the LLTV buys under a point of supply per step. Read across a row: liquidator capital buys four to five. At 70% and 62.5% LLTV (with a 60% max draw) the exposure falls to $25-28M and the realized loss to rounding dust, but that is a different product. On May 2021 the exposure is $17.1M (1.1%) at 86% and under $2M from 80% down, at any capital level.
+Read down a column: the LLTV buys about a point of supply from 86% to 80% and half a point from 80% to 77%. Read across a row: tripling liquidator capital buys three to four points, and unlimited capital five to six. At 70% and 62.5% LLTV (with a 60% max draw) the exposure falls to $25-28M and the realized loss to rounding dust, but that is a different product. On May 2021 the exposure is $17.1M (1.1%) at 86% and under $2M from 80% down, at any capital level.
 
 The gap between loss and exposure is the bounce. To see what a slower recovery costs, the same paths are replayed with the trough low held for an hour and for a day before the historical bounce resumes:
 
@@ -103,7 +103,7 @@ The gap between loss and exposure is the bounce. To see what a slower recovery c
 | May 2021 | 80% | 0 | 0 | $0.20M (0.0%) | $1.1M (0.1%) |
 | May 2021 | 77% | 0 | 0 | $0.00M (0.0%) | $0.20M (0.0%) |
 
-An hour at the low changes little; a day at the low quadruples the March 2020 loss at 86% and cuts what the LLTV buys, because the queue is then served at the low and liquidator capital decides how much of the exposure is realized.
+An hour at the low changes little; a day at the low quadruples the March 2020 loss at 86% and shrinks what the LLTV buys in relative terms (cutting 86% to 77% removes three-quarters of the loss with no hold, a third after a day at the low), because the queue is then served at the low and liquidator capital decides how much of the exposure is realized.
 
 Whether bots trim positions instead of closing them (trim to 74%, which on Morpho means repaying about two-thirds of the debt), the exchange-depth multiplier, a volatility-driven depth collapse, and the hash seed that decides which wallets are responsive each move these results by a few percent and are in `data/backtest.json`. The depth-collapse term was anchored on Kaiko's Oct 10 2025 measurement and turned off by default because it under-predicts the liquidations that actually happened that day by 40%.
 
@@ -153,7 +153,7 @@ The rule: **1 − LLTV must cover the worst move over the time it takes to clear
 | Feb 2026 | $1.8M | 0 | 0 | 0 min |
 | Jun 2026 | $0.54M | 0 | 0 | 0 min |
 
-Today's alt books are too small to bind: scaling each book (same LTV distribution) to 2x, 4x, 8x, 16x and 32x today's size and replaying Oct 2025 shows no loss up to 32x today's book for either market; cbXRP at 32x has $0.30M underwater at the trough, SOL nothing. The size rule is about a book that has grown, not this one.
+Scaling each book (same LTV distribution) to 2x, 4x, 8x, 16x and 32x today's size and replaying Oct 2025 shows no loss up to 32x today's book for either market; cbXRP at 32x has $0.30M underwater at the trough, SOL nothing. That is not because capacity holds. cbXRP's queue p95 is 75 min at 1x, 3 h at 2x and 24 h at 32x, with a peak queue of $887.3M at 32x; the loss stays zero because the book sits at low LTV and the Oct 2025 path stops short of the 88.7% bad-debt line for almost every position. The size rule in the previous paragraph is already breached at 2x.
 
 ## 7. What this does not capture
 

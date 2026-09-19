@@ -206,7 +206,9 @@ def alt_table():
         table(['%s (supply $%.0fM)' % (m, SUPPLY[m] / 1e6), 'AB: liquidated', 'AB: loss by end of path', 'AB: exposure at trough', 'AB: queue p95'], rows)
         rs = [(k, find(market=m, window='Oct2025', lltv=0.625, cap=0.55, book_multiple=float(k))) for k in (1, 2, 4, 8, 16, 32)]
         hit = next(((k, r) for k, r in rs if bad(r) > 0), None)
-        print("%s: Oct 2025 first shows loss at %dx today's book (%s).\n" % (m, hit[0], both(hit[1])) if hit else "%s: Oct 2025 shows no loss up to 32x today's book (exposure at 32x %s).\n" % (m, usd(expo(rs[-1][1]))))
+        q = lambda r: dur(r['queue_minutes_p95'])
+        print("%s: Oct 2025 first shows loss at %dx today's book (%s)." % (m, hit[0], both(hit[1])) if hit else "%s: Oct 2025 shows no loss up to 32x today's book (exposure at 32x %s)." % (m, usd(expo(rs[-1][1]))),
+              'Queue p95 %s at 1x, %s at 2x, %s at 32x; peak queue %s at 32x.\n' % (q(rs[0][1]), q(rs[1][1]), q(rs[-1][1]), usd(rs[-1][1]['max_queue_usd'])))
 
 
 def capital_range():
