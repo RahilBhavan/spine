@@ -69,6 +69,15 @@ def capacity(depth, market, lltv, params):
     return dex * params['k_dex'], cex * params['k_cex'] if s == 'AB' else 0.0
 
 
+def events(debt, coll, p, L, tau, fb):
+    """Per-position (repay, closes in full, seizure at oracle price p, underwater) for the liquidation rule in simulate()'s docstring."""
+    under = debt * L > coll * p
+    rep = debt if tau >= 1 else np.clip((debt - tau * coll * p) / (1 - tau * L), 0, debt)  # repay to target LTV; clip to the whole debt
+    full_ev = under | (rep >= debt * (1 - 1e-9)) | (debt <= fb)  # small positions are closed outright (gas)
+    rep = np.where(full_ev, debt, rep)
+    return rep, full_ev, np.where(under, coll * p, rep * L), under
+
+
 def simulate(book, path, params):
     """book: (coll_units, debt_usd, hash) arrays. path: market price per step; the oracle lags it by params['lag_bars'].
     Positions are sorted by their initial liquidation price, so at oracle price p everything that can be in the queue or
@@ -142,14 +151,7 @@ def simulate(book, path, params):
             inq[:] = False
             k = 0
         if k:
-            under = debt[:kw] * L > coll[:kw] * p
-            if tau >= 1:
-                rep = debt[:kw]
-            else:
-                rep = np.clip((debt[:kw] - tau * coll[:kw] * p) / (1 - tau * L), 0, debt[:kw])
-            full_ev = under | (rep >= debt[:kw] * (1 - 1e-9)) | (debt[:kw] <= fb)  # small positions are closed outright (gas)
-            rep = np.where(full_ev, debt[:kw], rep)
-            sz = np.where(under, coll[:kw] * p, rep * L)  # per-event seizure
+            rep, full_ev, sz, under = events(debt[:kw], coll[:kw], p, L, tau, fb)
             q_total = float((sz * m).sum())
             max_q = max(max_q, float((np.minimum(debt[:kw] * L, coll[:kw] * p) * m).sum()))
             if L * f <= 1:  # market already below oracle by more than the bonus: no one liquidates at a loss
@@ -173,14 +175,7 @@ def simulate(book, path, params):
                     idx = idx[inq[idx]]
                     if not len(idx):
                         continue
-                    under = debt[idx] * L > coll[idx] * p
-                    if tau >= 1:
-                        rep = debt[idx]
-                    else:  # repay to target LTV; clip to the whole debt
-                        rep = np.clip((debt[idx] - tau * coll[idx] * p) / (1 - tau * L), 0, debt[idx])
-                    full_ev = under | (rep >= debt[idx] * (1 - 1e-9)) | (debt[idx] <= fb)
-                    rep = np.where(full_ev, debt[idx], rep)
-                    seize = np.where(under, coll[idx] * p, rep * L)
+                    rep, full_ev, seize, under = events(debt[idx], coll[idx], p, L, tau, fb)
                     cum = np.cumsum(seize)
                     nf = int(np.searchsorted(cum, avail / f - step_seized, side='right'))  # events that fit whole
                     close = full_ev[:nf]
