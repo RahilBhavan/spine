@@ -41,3 +41,21 @@ def test_calibration():
     for w, v in c['windows'].items():
         if 'cbBTC' in v:
             assert {'volume', 'bonus', 'latency', 'liquidators'} <= set(v['cbBTC']), w
+    board = c['leaderboard']
+    assert board
+    keys = {'address', 'count', 'repaid_usd', 'seized_usd', 'gross_bonus_usd', 'windows', 'latency_p50', 'is_contract', 'coinbase_affiliated'}
+    for r in board:
+        assert keys <= set(r), keys - set(r)
+        assert r['latency_p50'] is None or r['latency_p50'] >= 0, r
+    assert all(x['repaid_usd'] >= y['repaid_usd'] for x, y in zip(board, board[1:]))
+
+
+def test_oracle_lag():
+    o = need('oracle_lag')
+    keys = {'n_updates', 'interval_s', 'deviation', 'low', 'oracle_low', 'oracle_low_gap_pct', 'lag_to_low_s'}
+    for w, assets in o.items():
+        if w == 'generated_at':
+            continue
+        for asset, s in assets.items():
+            assert keys <= set(s), (w, asset, keys - set(s))
+            assert 0 <= s['deviation']['p50'] <= 0.02, (w, asset)

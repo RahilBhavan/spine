@@ -1,10 +1,11 @@
 """Prints every numeric table in WRITEUP.md as Markdown, cut from data/ so the writeup cannot drift from the data. stdlib plus spine.backtest (numpy).
-Run: .venv/bin/python -m spine.writeup_tables   (reads data/backtest.json, calibration.json, summary.json, depth.json, prices/)"""
+Run: .venv/bin/python -m spine.writeup_tables   (reads data/backtest.json, calibration.json, summary.json, depth.json, oracle_lag.json, prices/)"""
 from spine.api import load, lif
 from spine.fetch_prices import WINDOWS, max_drop, H4, H24
 from spine.backtest import DEFAULTS, capacity, saved_runs
+from spine.oracle_lag import NEAR_LOW
 
-BT, CAL, SUMMARY, DEPTH = load('backtest'), load('calibration'), load('summary'), load('depth')
+BT, CAL, SUMMARY, DEPTH, ORACLE = load('backtest'), load('calibration'), load('summary'), load('depth'), load('oracle_lag')
 RUNS = saved_runs()
 STAR = BT['calibrated']
 D = BT['defaults']
@@ -248,6 +249,17 @@ def style_table():
         table(['Path, LLTV', 'full close, capital 1x', 'trim to 74%, capital 1x', 'full close, unlimited capital', 'trim to 74%, unlimited capital'], rows)
 
 
+def oracle_table():
+    print('## Section 7: oracle lag (Chainlink on Base vs Coinbase 5-minute candles, from oracle_lag.json; deviation is |oracle - candle close| / close at each update; lag is candle low to the first oracle print within %.1f%% of it)\n' % (100 * (NEAR_LOW - 1)))
+    rows = []
+    for w, label in LIVED:
+        for asset, s in ORACLE[w].items():
+            rows.append((label, asset, '{:,}'.format(s['n_updates']), '%ds / %ds' % (s['interval_s']['p50'], s['interval_s']['max']),
+                         '%.2f%% / %.2f%%' % (100 * s['deviation']['p50'], 100 * s['deviation']['max']), '%+.2f%%' % (100 * s['oracle_low_gap_pct']),
+                         'never within %.1f%%' % (100 * (NEAR_LOW - 1)) if s['lag_to_low_s'] is None else '%ds' % s['lag_to_low_s']))
+    table(['Window', 'Feed', 'Updates', 'Interval p50 / max', 'Deviation p50 / max', 'Oracle low vs candle low', 'Lag to the low'], rows)
+
+
 if __name__ == '__main__':
     fs = STAR['full_share']
     print('Backtest book as of %s; the dashboard refreshes hourly.\n' % BT['latest_book'])
@@ -267,6 +279,7 @@ if __name__ == '__main__':
     alt_table()
     seed_table()
     style_table()
+    oracle_table()
     assert find(window='Mar2020') is find(lltv=0.86, cap=0.75, window='Mar2020', scenario='AB')  # seven-path row is the grid's 86% cell
     assert all(bad(find(window=w, scenario='ABC')) <= bad(find(window=w, scenario='A')) + 1 for w in ('Oct2025', 'Feb2026', 'Jun2026'))
     print('ok')

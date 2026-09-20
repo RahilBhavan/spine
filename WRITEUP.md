@@ -163,7 +163,20 @@ Scaling each book (same LTV distribution) to 2x, 4x, 8x, 16x and 32x today's siz
 - The March 2020 replay drops a 2026-sized book onto 2020 prices. BTC's market is far deeper now; it is also true that Oct 10 2025 produced the thinnest books Kaiko has ever measured.
 - Borrower response is fit on three events with two parameters and assumes Coinbase's warning cadence stays as it is.
 - Coinbase does not, on the public record, liquidate its own book, and the top liquidators trace to independent operators. The ABC column is a hypothetical commitment, not a description.
-- Oracle behaviour is modeled as a one-bar lag on Coinbase's candle low. The Chainlink path on Base tracked the exchange low within 0.1% on the lived events.
+- Oracle behaviour is modeled as a one-bar lag on Coinbase's candle low. The replay of the Chainlink BTC/USD and ETH/USD paths on Base against Coinbase 5-minute candles (table below) puts the feed 0.07% to 0.16% from the Coinbase close at the median update and 1.26% to 6.50% from it at the worst update; the feed's low landed between 1.77% below and 0.55% above the Coinbase candle low, and reached it 25 s to 273 s after the candle, except ETH in Feb 2026, which never came within 0.5%. Median update interval 62 s to 182 s; longest gap 1232 s to 4600 s. The Oct 2025 BTC low 1.77% under Coinbase's is the multi-exchange feed printing a wick that Coinbase did not trade, which a lag on Coinbase's low cannot reproduce.
+
+Chainlink on Base vs Coinbase 5-minute candles, from oracle_lag.json; deviation is |oracle - candle close| / close at each update; lag is candle low to the first oracle print within 0.5% of it.
+
+| Window | Feed | Updates | Interval p50 / max | Deviation p50 / max | Oracle low vs candle low | Lag to the low |
+|---|---|---|---|---|---|---|
+| Oct 9-12 2025 | BTC | 1,395 | 122s / 1248s | 0.07% / 4.47% | -1.77% | 91s |
+| Oct 9-12 2025 | ETH | 1,610 | 120s / 1232s | 0.12% / 6.50% | +0.16% | 25s |
+| Feb 2-8 2026 | BTC | 4,912 | 62s / 1232s | 0.13% / 2.04% | +0.05% | 273s |
+| Feb 2-8 2026 | ETH | 4,299 | 90s / 1232s | 0.16% / 2.33% | +0.55% | never within 0.5% |
+| Jun 1-7 2026 | BTC | 3,410 | 120s / 1272s | 0.09% / 2.57% | +0.13% | 47s |
+| Jun 1-7 2026 | ETH | 2,674 | 150s / 1292s | 0.11% / 3.81% | +0.20% | 171s |
+| Jun 23-27 2026 | BTC | 1,583 | 150s / 4592s | 0.07% / 1.26% | +0.16% | 235s |
+| Jun 23-27 2026 | ETH | 1,209 | 182s / 4600s | 0.08% / 1.75% | +0.03% | 141s |
 
 ## Changelog: what each revision changed in the recommendation
 
