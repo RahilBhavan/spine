@@ -165,6 +165,22 @@ Scaling each book (same LTV distribution) to 2x, 4x, 8x, 16x and 32x today's siz
 - Coinbase does not, on the public record, liquidate its own book, and the top liquidators trace to independent operators. The ABC column is a hypothetical commitment, not a description.
 - Oracle behaviour is modeled as a one-bar lag on Coinbase's candle low. The Chainlink path on Base tracked the exchange low within 0.1% on the lived events.
 
+## Changelog: what each revision changed in the recommendation
+
+The cbBTC row is the one that moved. WETH has read 77% / 70% since the first draft; the alts have read 62.5% plus a size cap since the first draft, with the max draw cut to 47% in v2. Numbers below are as each version printed them.
+
+| Date | Change to the model or data | cbBTC recommendation | March 2020 at 86% |
+|---|---|---|---|
+| 2026-09-15 (v1) | Today's book reshaped by haircut, full seizure, constant depth, borrower response fit on the three lived events (70% responsive, 2 h) | 80% / 70%, or keep 86% with a disclosed backstop | $64M bad debt (4.1% of supply) |
+| 2026-09-15 | Bad-debt double count and stale queue flag fixed; depth-collapse sensitivity added | 80% / 70% and a pre-liquidation band | $24M (1.5%) at 30% surviving depth; $62-76M if depth collapses 90% |
+| 2026-09-17 (Phase A) | Capacity margin below the bonus; Tier B liquidator capital capped at the observed daily maximum ($96.8M); calibration asserted within 25% of the three lived events | Backstop liquidator first; then 80% / 70% | $34-72M (2.2-4.6%) across the capital range |
+| 2026-09-17 | Tier B cap moved to a rolling 24 h window and measured in seized units | Unchanged | $23-81M (1.5-5.1%) |
+| 2026-09-18 (Phase E, v2) | Partial liquidations (repay to 74%, full close under $2.5k), vol-driven depth collapse, seed and liquidation-style sensitivities, origination cap from the p95 weekly drawdown | Cliff protocol first (full closes, backstop capital); then 80% / 66-70% | $140M (8.9%) under calm-day liquidator behaviour; $76M with full closes |
+| 2026-09-18 (v3) | Full closes measured by debt repaid (80-94% of lived liquidations, not 28-50%); the model closes in full; beta off by default; exposure at the trough reported next to realized loss | Backstop liquidator first; then 80% / 66-70% | $10M realized (0.7%), $164M exposed at the trough (10.4%) |
+| 2026-09-19 (Phase G) | Ranges over hash seeds in the headline rows; held-at-the-low table; alt replays for cbXRP and SOL against Coinbase depth alone; book-size sweep to 32x; grid keyed by book date | Unchanged | $9.2M realized (0.6%), $158.4M exposed (10.0%); $38.1M realized if held a day at the low |
+
+What the sequence shows: the first drafts overstated realized loss because they seized in full at a constant depth, then understated it once partial liquidations were taken from a miscounted sample. Once the lived events were measured by debt repaid, the headline stopped moving: realized loss on the worst path is single-digit millions and depends on the bounce; exposure at the trough is about 10% of supply and depends on liquidator capital, which the LLTV does not fix. That is why the recommendation leads with a backstop liquidator and puts the LLTV second.
+
 ## Sources
 
 Morpho Blue API and contracts on Base; Coinbase Exchange public candles and L2 book; Chainlink BTC/USD and ETH/USD aggregators on Base; Morpho's Coinbase Dune dashboards; Kaiko research on Oct 2025 and March 2020 depth; Chaos Labs' Aave risk methodology; RiskDAO SmartLTV; Basel SCO60. Full citations in `research/`.

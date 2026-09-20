@@ -1,18 +1,28 @@
 'use strict';
 
 let DATA = null;
-let BT = null;  // backtest.json, loaded on first visit to the Backtest tab
+let BT = null;  // backtest.json, feeds the Stress test section and the worst-path tile
 let market = 'cbBTC';
 let cbOnly = false;
 let logY = false;
 let curveLogY = true;
-let tab = 'live';
 let btMarket = 'cbBTC';
 let btScenario = 'AB';
 
 const WINDOWS = ['Mar2020', 'May2021', 'FTX2022', 'Aug2024', 'Oct2025', 'Feb2026', 'Jun2026'];
 const LLTVS = [0.86, 0.80, 0.77, 0.70, 0.625];
-const GAUGE_BANDS = [[0.10, 'red'], [0.20, 'amber'], [Infinity, 'green']];
+const MAJORS = ['cbBTC', 'WETH', 'cbETH'];  // everything else is an alt, shown collapsed
+// Distance-to-capacity bands: [upper bound, colour class, marker, word]. Marker and word carry the status without colour.
+const GAUGE_BANDS = [[0.10, 'red', '▲', 'tight'], [0.20, 'amber', '◆', 'watch'], [Infinity, 'green', '●', 'clear']];
+
+function band(d) {
+  return d == null ? GAUGE_BANDS[2] : GAUGE_BANDS.find(([lim]) => d < lim);
+}
+
+function mark(d) {
+  const [, cls, icon, word] = band(d);
+  return '<span class="mark ' + cls + '" title="' + word + '">' + icon + '</span>';
+}
 
 function css(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -101,44 +111,57 @@ function stamp(el, text, ms) {
   el.classList.toggle('stale', (Date.now() - ms) / 36e5 > 8);
 }
 
+// Tile 1: the book. Large number is borrow; the rest as small cards.
 function renderHeader() {
   const t = DATA.totals;
   stamp(document.getElementById('generated-at'), DATA.generated_at.replace('T', ' ').replace('+00:00', ' UTC'), Date.parse(DATA.generated_at));
+  document.getElementById('hero-borrow').textContent = usd(t.borrow_usd);
   cards(document.getElementById('totals'), [
-    ['Total borrow', usd(t.borrow_usd)],
-    ['Total collateral', usd(t.collateral_usd)],
+    ['Collateral', usd(t.collateral_usd)],
     ['Book LTV', pct(t.borrow_usd / t.collateral_usd)],
-    ['Positions with debt', num(t.n_positions)],
+    ['Positions', num(t.n_positions)],
     ['Coinbase share', pct(t.coinbase_share_borrow)],
   ]);
 }
 
-function buttons(id, keys, current, onpick) {
+function split(keys) {
+  return [keys.filter(k => MAJORS.includes(k)), keys.filter(k => !MAJORS.includes(k))];
+}
+
+// alts, when given, go under a collapsed "Alts" disclosure that opens only if the current pick is one of them.
+function buttons(id, keys, current, onpick, alts) {
   const el = document.getElementById(id);
-  el.innerHTML = keys.map(k => '<button data-k="' + k + '" class="' + (k === current ? 'active' : '') + '">' + k + '</button>').join('');
-  el.querySelectorAll('button').forEach(b => b.onclick = () => onpick(b.dataset.k));
+  const b = k => '<button data-k="' + k + '" class="' + (k === current ? 'active' : '') + '" aria-pressed="' + (k === current) + '">' + k + '</button>';
+  el.innerHTML = keys.map(b).join('') + (alts && alts.length ?
+    '<details class="alts"' + (alts.includes(current) ? ' open' : '') + '><summary>Alts</summary><div class="buttons">' + alts.map(b).join('') + '</div></details>' : '');
+  el.querySelectorAll('button').forEach(x => x.onclick = () => onpick(x.dataset.k));
 }
 
 function renderButtons() {
-  buttons('market-buttons', Object.keys(DATA.markets), market, k => { market = k; renderAll(); });
+  const [maj, alt] = split(Object.keys(DATA.markets));
+  buttons('market-buttons', maj, market, k => { market = k; renderAll(); }, alt);
 }
 
+function distance(d) {
+  return d == null ? '> 70%' : '-' + pct(d, 0);
+}
+
+// Tile 2: distance to capacity. cbBTC is the hero; the others sit in a list ordered by borrow, alts collapsed.
 function renderGauges() {
-  const el = document.getElementById('gauges');
-  cards(el, Object.entries(DATA.markets).map(([name, m]) => {
-    const d = m.state.distance_to_capacity;
-    const band = d == null ? 'green' : GAUGE_BANDS.find(([lim]) => d < lim)[1];
-    return [name, d == null ? '> 70%' : '-' + pct(d, 0), band];
-  }));
-  el.querySelectorAll('.card').forEach((c, i) => c.onclick = () => { market = Object.keys(DATA.markets)[i]; showTab('live'); renderAll(); });
-}
-
-function showTab(name) {
-  tab = name;
-  document.querySelectorAll('#tabs button').forEach(b => b.classList.toggle('active', b.dataset.tab === name));
-  document.getElementById('tab-live').hidden = name !== 'live';
-  document.getElementById('tab-backtest').hidden = name !== 'backtest';
-  if (name === 'backtest') renderBacktest();
+  const d = DATA.markets.cbBTC.state.distance_to_capacity;
+  const hero = document.getElementById('hero-distance');
+  hero.className = 'hero ' + band(d)[1];
+  hero.innerHTML = mark(d) + ' ' + distance(d);
+  document.getElementById('distance-sentence').textContent = d == null ?
+    'BTC has to fall more than 70% before more debt becomes liquidatable than liquidators can sell in one step.' :
+    'BTC has to fall ' + pct(d, 0) + ' before more debt becomes liquidatable than liquidators can sell in one step.';
+  const rows = Object.entries(DATA.markets).filter(([k]) => k !== 'cbBTC').sort((a, b) => b[1].state.borrow_usd - a[1].state.borrow_usd);
+  const li = ([k, m]) => '<li><a href="#book" data-k="' + k + '">' + mark(m.state.distance_to_capacity) + ' ' + k +
+    ' <b>' + distance(m.state.distance_to_capacity) + '</b> <span class="muted">' + usd(m.state.borrow_usd) + '</span></a></li>';
+  const [maj, alt] = [rows.filter(([k]) => MAJORS.includes(k)), rows.filter(([k]) => !MAJORS.includes(k))];
+  const el = document.getElementById('distance-list');
+  el.innerHTML = maj.map(li).join('') + (alt.length ? '<li><details class="alts"><summary>Alts</summary><ol>' + alt.map(li).join('') + '</ol></details></li>' : '');
+  el.querySelectorAll('a[data-k]').forEach(a => a.onclick = () => { market = a.dataset.k; renderAll(); });
 }
 
 function renderCards(m) {
@@ -252,7 +275,7 @@ function renderLiq(m) {
 
 function renderBorrowers(m) {
   const rows = (cbOnly ? m.top_borrowers.filter(b => b.is_coinbase) : m.top_borrowers);
-  document.getElementById('table-borrowers').innerHTML =
+  document.getElementById('borrowers').innerHTML =
     '<tr><th>#</th><th>Address</th><th>Borrow</th><th>Collateral</th><th>LTV</th><th>HF</th></tr>' +
     rows.map((b, i) =>
       '<tr><td>' + (i + 1) + '</td><td>' + link(b.user) + (b.is_coinbase ? '<span class="badge">Coinbase</span>' : '') +
@@ -261,7 +284,7 @@ function renderBorrowers(m) {
 }
 
 function renderLiquidators(m) {
-  document.getElementById('table-liquidators').innerHTML =
+  document.getElementById('liquidators').innerHTML =
     '<tr><th>#</th><th>Liquidator</th><th>Liquidations</th><th>Repaid</th><th>Share</th></tr>' +
     m.liquidators_top.map((l, i) =>
       '<tr><td>' + (i + 1) + '</td><td>' + link(l.liquidator) + '</td><td>' + num(l.count) +
@@ -281,14 +304,15 @@ async function loadBacktest() {
   const counts = {};
   grid.forEach(r => counts[r.cex_cap_usd] = (counts[r.cex_cap_usd] || 0) + 1);
   BT.cexCap = +Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
-  BT.base = r => r.book === BT.latest_book && r.k_dex === d.k_dex && r.k_cex === d.k_cex && r.lag_bars === d.lag_bars && r.margin === d.margin &&
-    r.resp_share === c.resp_share && r.react_min === c.react_min &&
-    ['beta', 'seed', 'close_target', 'full_below_usd', 'hold_bars', 'book_multiple'].every(k => !(k in d) || r[k] === d[k]);  // sensitivity sweeps stay out of the grid view
+  const want = { k_dex: d.k_dex, k_cex: d.k_cex, lag_bars: d.lag_bars, margin: d.margin, resp_share: c.resp_share, react_min: c.react_min };
+  ['beta', 'seed', 'close_target', 'full_below_usd', 'hold_bars', 'book_multiple'].forEach(k => { if (k in d) want[k] = d[k]; });  // sensitivity sweeps stay out of the grid view
+  // over: defaults to replace for one lookup, e.g. { hold_bars: 288 } for the held-at-the-low row.
+  BT.base = (r, over) => r.book === BT.latest_book && Object.entries(Object.assign({}, want, over)).every(([k, v]) => r[k] === v);
   return BT;
 }
 
-function btRows(bt, f) {
-  return bt.runs.filter(r => bt.base(r) && Object.keys(f).every(k => r[k] === f[k]));
+function btRows(bt, f, over) {
+  return bt.runs.filter(r => bt.base(r, over) && Object.keys(f).every(k => r[k] === f[k]));
 }
 
 let btMetric = 'Loss by end of path';
@@ -344,17 +368,34 @@ function renderWarn(el, bt, mkt) {
   Plotly.react(el, traces, layout, PLOT_CONFIG);
 }
 
+// Tile 3: cbBTC on March 2020, scenario AB, at today's terms (86% / 75%). Bridge from the dashboard to the writeup.
+function renderWorst(bt) {
+  const el = document.getElementById('worst'), p = document.getElementById('worst-sentence');
+  const f = { market: 'cbBTC', window: 'Mar2020', scenario: 'AB', lltv: 0.86, cap: 0.75 };
+  const row = bt && btRows(bt, Object.assign({ cex_cap_usd: bt.cexCap }, f))[0];
+  if (!row) { el.innerHTML = ''; p.textContent = 'not available'; return; }
+  const held = btRows(bt, Object.assign({ cex_cap_usd: bt.cexCap }, f), { hold_bars: 288 })[0];
+  cards(el, [
+    ['Loss by end of path', usd(METRICS['Loss by end of path'](row))],
+    ['Exposure at trough', usd(METRICS['Exposure at trough'](row))],
+    ['Loss if held a day at the low', held ? usd(METRICS['Loss by end of path'](held)) : 'not run'],
+  ]);
+  p.innerHTML = "Today's cbBTC book replayed through March 2020 with liquidators selling on-chain and on exchanges (scenario AB): " +
+    'what lenders lose by the end of the path, what sat underwater at the lowest print, and the loss if the low had held for a day. <a href="#stress">Stress test</a>';
+}
+
 async function renderBacktest() {
   const bt = await loadBacktest();
   const note = document.getElementById('bt-note');
+  renderWorst(bt);
   if (!bt) { note.textContent = 'failed to load ../data/backtest.json'; return; }
-  const markets = [...new Set(bt.runs.filter(bt.base).map(r => r.market))];
-  if (!markets.includes(btMarket)) btMarket = markets[0];
+  const [markets, alts] = split([...new Set(bt.runs.filter(r => bt.base(r)).map(r => r.market))]);
+  if (!markets.concat(alts).includes(btMarket)) btMarket = markets[0];
   const c = bt.calibrated || {};
   note.textContent = 'Grid rows at the fitted borrower response (' + pct(c.resp_share, 0) + ' within ' + c.react_min + ' min), depth multipliers DEX ' +
     bt.defaults.k_dex + ' / CEX ' + bt.defaults.k_cex + ', liquidator daily capital ' + usd(bt.cexCap) + '. Max draw 75%, or 60% where the LLTV is below 75%.';
   stamp(document.getElementById('bt-generated-at'), new Date(bt.generated_at * 1000).toISOString().slice(0, 16).replace('T', ' ') + ' UTC, book ' + bt.latest_book, bt.generated_at * 1000);
-  buttons('bt-market-buttons', markets, btMarket, k => { btMarket = k; renderBacktest(); });
+  buttons('bt-market-buttons', markets, btMarket, k => { btMarket = k; renderBacktest(); }, alts);
   buttons('bt-scenario-buttons', ['A', 'AB', 'ABC'], btScenario, k => { btScenario = k; renderBacktest(); });
   buttons('bt-metric-buttons', Object.keys(METRICS), btMetric, k => { btMetric = k; renderBacktest(); });
   renderHeatmap('chart-heat', bt, btMarket, btScenario);
@@ -390,11 +431,11 @@ async function main() {
   document.getElementById('chart-curve').insertAdjacentHTML('beforebegin',
     '<p class="muted"><label class="toggle"><input type="checkbox" id="log-y-curve" checked> log y</label></p>');
   document.getElementById('log-y-curve').onchange = e => { curveLogY = e.target.checked; renderCurve(DATA.markets[market]); };
-  document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => showTab(b.dataset.tab));
-  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { renderAll(); if (tab === 'backtest') renderBacktest(); });
+  window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { renderAll(); renderBacktest(); });
   renderHeader();
   renderAll();
-  if (location.hash === '#backtest') showTab('backtest');
+  renderBacktest();
+  if (DATA.markets[location.hash.slice(1)]) document.getElementById('book').scrollIntoView();  // the market anchor has no element of its own
 }
 
 main();
