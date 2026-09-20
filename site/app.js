@@ -19,6 +19,7 @@ const EVENTS = [['Oct 2025', '2025-10-09', '2025-10-12'], ['Feb 2026', '2026-02-
 const RANGES = { all: Infinity, '1y': 365, '90d': 90 };
 // Distance-to-capacity bands: [upper bound, colour class, marker, word]. Marker and word carry the status without colour.
 const GAUGE_BANDS = [[0.10, 'red', '▲', 'tight'], [0.20, 'amber', '◆', 'watch'], [Infinity, 'green', '●', 'clear']];
+const PHONE = window.matchMedia('(max-width: 700px)').matches;  // read once; the layout rules in style.css switch at the same width
 
 function band(d) {
   return d == null ? GAUGE_BANDS[2] : GAUGE_BANDS.find(([lim]) => d < lim);
@@ -33,13 +34,13 @@ function css(name) {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 }
 
+// $9.2M, $281k, $1B: one decimal below 100 of the unit, none above, a trailing .0 dropped. Ticks, tiles, tables and cells all use it.
 function usd(x) {
   if (x == null || isNaN(x)) return '-';
   const a = Math.abs(x);
-  if (a >= 1e9) return '$' + (x / 1e9).toFixed(2) + 'B';
-  if (a >= 1e6) return '$' + (x / 1e6).toFixed(1) + 'M';
-  if (a >= 1e3) return '$' + (x / 1e3).toFixed(1) + 'k';
-  return '$' + x.toFixed(0);
+  const [div, unit] = a >= 1e9 ? [1e9, 'B'] : a >= 1e6 ? [1e6, 'M'] : a >= 1e3 ? [1e3, 'k'] : [1, ''];
+  const m = x / div;
+  return '$' + m.toFixed(unit && Math.abs(m) < 100 ? 1 : 0).replace(/\.0$/, '') + unit;
 }
 
 function pct(x, d) {
@@ -63,12 +64,6 @@ function cards(el, items) {
     '<div class="card' + (cls ? ' ' + cls : '') + '"><div class="label">' + label + '</div><div class="value">' + value + '</div></div>').join('');
 }
 
-function musd(x) {
-  if (x == null) return '';
-  if (x < 5e4) return '0';
-  return '$' + (x / 1e6).toFixed(x < 1e6 ? 2 : 1) + 'M';
-}
-
 function dur(min) {
   if (min == null) return '-';
   if (min < 120) return min.toFixed(0) + ' min';
@@ -76,9 +71,9 @@ function dur(min) {
   return (min / 1440).toFixed(1) + ' d';
 }
 
-// Every axis: solid hairline grid one shade off the surface, no zero line.
+// Every axis: solid hairline grid one shade off the surface, no zero line, margins grow to fit long tick labels and the title.
 function axis(extra) {
-  return Object.assign({ gridcolor: css('--grid'), gridwidth: 1, zeroline: false, color: css('--muted') }, extra || {});
+  return Object.assign({ gridcolor: css('--grid'), gridwidth: 1, zeroline: false, color: css('--muted'), automargin: true }, extra || {});
 }
 
 function baseLayout(extra) {
@@ -112,10 +107,6 @@ function ticks(values, fmt, log) {
   return { tickmode: 'array', tickvals: vals, ticktext: vals.map(fmt) };
 }
 
-function usdTicks(values, log) {
-  return ticks(values, usd, log);
-}
-
 function pctTicks(values) {
   return ticks(values, v => pct(v, Math.abs(v * 100 - Math.round(v * 100)) > 1e-9 ? 1 : 0), false);
 }
@@ -144,6 +135,7 @@ function tableView(el, columns, rows) {
 function plot(id, traces, layout, columns, rows) {
   const el = typeof id === 'string' ? document.getElementById(id) : id;
   if (layout.showlegend == null) layout.showlegend = traces.length > 1;
+  if (!layout.showlegend) layout.margin.b = 48;  // no legend row; automargin still grows it for the tick labels and title
   Plotly.react(el, traces, layout, PLOT_CONFIG);
   tableView(el, columns, rows);
 }
@@ -250,13 +242,14 @@ function renderLtv(m) {
   const bin = b => pct(b.lo, 0) + ' to ' + pct(b.lo + 0.02, 0);
   const hover = m.ltv_hist.map((b, i) => 'LTV ' + bin(b) + ': ' + usd(y[i]) + ', ' + num(n[i]) + ' positions');
   const traces = [{ type: 'bar', x, y, name: 'Borrow USD', marker: { color: css('--accent') }, width: 0.02, customdata: hover, hovertemplate: '%{customdata}<extra></extra>' }];
-  // Threshold lines with their labels: liquidation above the plot, bad debt inside it, both ending at their line.
-  const vline = (v, text, yanchor) => ({ type: 'line', x0: v, x1: v, y0: 0, y1: 1, yref: 'paper', line: { color: css('--danger'), width: 1.5, dash: 'dash' },
-    label: { text, textposition: 'end', textangle: 0, xanchor: 'right', yanchor, padding: 2, font: { color: css('--danger'), size: 11 } } });
+  // Threshold lines with their labels above the plot, each ending at its line; the bad-debt label takes the upper row so the two do not overlap.
+  const vline = (v, text, padding) => ({ type: 'line', x0: v, x1: v, y0: 0, y1: 1, yref: 'paper', line: { color: css('--danger'), width: 1.5, dash: 'dash' },
+    label: { text, textposition: 'end', textangle: 0, xanchor: 'right', yanchor: 'bottom', padding, font: { color: css('--danger'), size: 11 } } });
   const layout = baseLayout({
+    margin: { l: 64, r: 16, t: 40, b: 80 },
     xaxis: Object.assign({ title: 'LTV', range: [0, 1] }, pctTicks([1])),
-    yaxis: Object.assign({ title: 'Borrow USD', automargin: true, type: logY ? 'log' : 'linear' }, usdTicks(y, logY)),
-    shapes: [vline(m.state.lltv, 'liquidation ' + pct(m.state.lltv, 0), 'top'), vline(m.state.bad_debt_ltv, 'bad debt ' + pct(m.state.bad_debt_ltv), 'bottom')],
+    yaxis: Object.assign({ title: 'Borrow USD', automargin: true, type: logY ? 'log' : 'linear' }, ticks(y, usd, logY)),
+    shapes: [vline(m.state.lltv, 'liquidation ' + pct(m.state.lltv, 0), 2), vline(m.state.bad_debt_ltv, 'bad debt ' + pct(m.state.bad_debt_ltv), 18)],
   });
   plot('chart-ltv', traces, layout, ['LTV bin', 'Borrow', 'Positions'], m.ltv_hist.map((b, i) => [bin(b), usd(y[i]), num(n[i])]));
   const near = m.hf_cdf.reduce((a, p) => Math.abs(p.hf - 1.1) < Math.abs(a.hf - 1.1) ? p : a);  // the grid point nearest HF 1.1
@@ -285,13 +278,14 @@ function renderCurve(m) {
   const ly = v => curveLogY ? Math.log10(v) : v;  // annotations and ranges take log10 units on a log axis; shapes take raw values
   const top = Math.max(...y, cap.cex || 0, cap.dex || 0) * 1.08, lo = Math.min(...y.filter(v => v > 0), total || Infinity) / 2;
   const shapes = [], annotations = [];
+  // Capacity lines are traces so a phone can name them in the legend; a wide screen labels them at their right end instead.
   const hline = (v, text, yshift) => {
     if (!v) return;
-    shapes.push({ type: 'line', x0: 0, x1: 1, xref: 'paper', yref: 'y', y0: v, y1: v, layer: 'above', line: { color: muted, width: 1.5, dash: 'dash' } });
-    annotations.push({ x: 0.995, xref: 'paper', yref: 'y', y: ly(v), yshift, text: text + ' ' + usd(v), showarrow: false, xanchor: 'right', yanchor: 'bottom', font: { color: muted, size: 11 } });
+    traces.push({ type: 'scatter', mode: 'lines', x: [x[0], x[x.length - 1]], y: [v, v], name: text + ' ' + usd(v), showlegend: PHONE, hoverinfo: 'skip', line: { color: muted, width: 1.5, dash: 'dash' } });
+    if (!PHONE) annotations.push({ x: 0.995, xref: 'paper', yref: 'y', y: ly(v), yshift, text: text + ' within the bonus ' + usd(v), showarrow: false, xanchor: 'right', yanchor: 'bottom', font: { color: muted, size: 11 } });
   };
-  hline(cap.cex, 'Coinbase bids within the bonus', curveLogY ? 0 : 16);  // in linear mode both lines hug zero, so the upper label is shifted up
-  hline(cap.dex, 'DEX capacity within the bonus', 0);
+  hline(cap.cex, 'Coinbase bids', curveLogY ? 0 : 16);  // in linear mode both lines hug zero, so the upper label is shifted up
+  hline(cap.dex, 'DEX capacity', 0);
   if (total) {
     shapes.push({ type: 'rect', xref: 'paper', x0: 0, x1: 1, yref: 'y', y0: total, y1: top, fillcolor: css('--shade'), line: { width: 0 }, layer: 'below' });
     annotations.push({ x: 0.005, xref: 'paper', y: 0.99, yref: 'paper', text: 'more than liquidators can sell', showarrow: false, xanchor: 'left', yanchor: 'top', font: { color: muted, size: 11 } });
@@ -303,7 +297,7 @@ function renderCurve(m) {
   }
   const layout = baseLayout({
     xaxis: Object.assign({ title: 'Instantaneous price drop' }, pctTicks(x)),
-    yaxis: Object.assign({ title: 'Borrow USD', automargin: true, type: curveLogY ? 'log' : 'linear', range: [curveLogY ? ly(lo) : 0, ly(top)] }, usdTicks(y.concat(bad, [cap.cex, cap.dex]), curveLogY)),
+    yaxis: Object.assign({ title: 'Borrow USD', automargin: true, type: curveLogY ? 'log' : 'linear', range: [curveLogY ? ly(lo) : 0, ly(top)] }, ticks(y.concat(bad, [cap.cex, cap.dex]), usd, curveLogY)),
     shapes, annotations,
   });
   plot('chart-curve', traces, layout, ['Price drop', 'Liquidatable', 'Past bad-debt LTV'], c.map((p, i) => [(p.drop ? '-' : '') + pct(p.drop, 0), usd(y[i]), usd(bad[i])]));
@@ -320,7 +314,7 @@ function renderLiq(m) {
   const peaks = EVENTS.map(([name, lo, hi]) => [name, days.filter(d => d.day >= lo && d.day <= hi).sort((a, b) => b.repaid_usd - a.repaid_usd)[0]]).filter(([, d]) => d);
   const layout = baseLayout({
     xaxis: { type: 'date' },
-    yaxis: Object.assign({ title: 'Repaid USD' }, usdTicks(traces[0].y, false)),
+    yaxis: Object.assign({ title: 'Repaid USD' }, ticks(traces[0].y, usd, false)),
     annotations: peaks.map(([name, d]) => ({ x: d.day, y: d.repaid_usd, text: name + ' ' + usd(d.repaid_usd), showarrow: true, arrowhead: 0, arrowcolor: muted, ax: 0, ay: -28, font: { size: 11, color: muted } })),
   });
   plot('chart-liq', traces, layout, ['Day', 'Repaid', 'Liquidations'], days.map((d, i) => [d.day, usd(d.repaid_usd), num(d.n)]));
@@ -346,16 +340,17 @@ function renderTrend() {
   const rows = HIST.filter(r => r.market === market);
   if (!rows.length) { el.textContent = 'not available'; return; }
   const x = rows.map(r => r.utc_ts);
-  const series = [['book_ltv', 'Book LTV', v => pct(v), pctTicks], ['distance_to_capacity', 'Distance to capacity', v => v == null ? '> 70%' : pct(v, 0), pctTicks], ['liq_20', 'Liquidatable at -20%', usd, usdTicks]];
+  const series = [['book_ltv', 'Book LTV', v => pct(v), pctTicks], ['distance_to_capacity', 'Distance to capacity', v => v == null ? '> 70%' : pct(v, 0), pctTicks], ['liq_20', 'Liquidatable at -20%', usd, v => ticks(v, usd)]];
   const traces = series.map(([k, name, f], i) => {
     const y = rows.map(r => r[k]);
     return { type: 'scatter', mode: 'lines+markers', x, y, name, yaxis: 'y' + (i ? i + 1 : ''), line: { color: css('--accent'), width: 2 }, marker: { size: 5 },
       customdata: y.map(f), hovertemplate: '%{customdata}<extra>' + name + '</extra>' };
   });
-  const layout = baseLayout({ grid: { rows: 3, columns: 1, pattern: 'coupled', ygap: 0.18 }, showlegend: false, xaxis: { type: 'date' } });
-  series.forEach(([k, name, f, tk], i) => {
+  const layout = baseLayout({ grid: { rows: 3, columns: 1, pattern: 'coupled', ygap: 0.18 }, showlegend: false, xaxis: { type: 'date' }, annotations: [] });
+  series.forEach(([k, name, f, tk], i) => {  // each subplot is named above its top-left corner; a y-axis title would collide with the tick labels on a phone
     const sfx = i ? i + 1 : '';
-    layout['yaxis' + sfx] = axis(Object.assign({ title: { text: name, font: { size: 11 } }, automargin: true, rangemode: 'tozero' }, tk(traces[i].y.filter(v => v != null))));
+    layout['yaxis' + sfx] = axis(Object.assign({ rangemode: 'tozero' }, tk(traces[i].y.filter(v => v != null))));
+    layout.annotations.push({ text: name, xref: 'paper', x: 0, yref: 'y' + sfx + ' domain', y: 1, xanchor: 'left', yanchor: 'bottom', showarrow: false, font: { size: 11, color: css('--muted') } });
   });
   plot(el, traces, layout, ['Time (UTC)', 'Book LTV', 'Distance to capacity', 'Liquidatable at -20%'],
     rows.map((r, i) => [r.utc_ts.slice(0, 16).replace('T', ' '), traces[0].customdata[i], traces[1].customdata[i], traces[2].customdata[i]]));
@@ -419,13 +414,13 @@ function pickCap(rows) {
 
 // Sequential scale, surface to accent; cells carry their number.
 function heat(el, rowLabels, colLabels, z, xtitle) {
-  const flat = z.flat().filter(v => v != null), text = z.map(row => row.map(musd));
+  const flat = z.flat().filter(v => v != null), text = z.map(row => row.map(usd));
   const traces = [{ type: 'heatmap', x: colLabels, y: rowLabels, z, text, texttemplate: '%{text}',
-    textfont: { size: 12 }, colorscale: [[0, css('--card')], [1, css('--accent')]], zmin: 0, zmax: Math.max(...flat, 1), showscale: false,
+    textfont: { size: PHONE ? 9 : 12 }, colorscale: [[0, css('--card')], [1, css('--accent')]], zmin: 0, zmax: Math.max(...flat, 1), showscale: false,
     xgap: 2, ygap: 2, hovertemplate: '%{y} / %{x}: %{text}<extra></extra>' }];
   const layout = baseLayout({ showlegend: false, hovermode: 'closest',
     xaxis: { title: xtitle || '', type: 'category', side: 'bottom' },
-    yaxis: { title: 'LLTV', type: 'category', autorange: 'reversed' } });
+    yaxis: { title: { text: 'LLTV', standoff: 12 }, type: 'category', autorange: 'reversed' } });  // Plotly puts a category axis title flush against its tick labels without an explicit standoff
   plot(el, traces, layout, ['LLTV'].concat(colLabels), rowLabels.map((l, i) => [l].concat(text[i])));
 }
 
@@ -442,7 +437,7 @@ function renderCapital(el, bt) {
   const caps = [...new Set(rows.map(r => r.cex_cap_usd))].sort((a, b) => a - b);
   const lltvs = LLTVS.filter(l => rows.some(r => r.lltv === l));
   const z = lltvs.map(l => caps.map(c => { const r = rows.find(r => r.lltv === l && r.cex_cap_usd === c); return r ? badDebt(r) : null; }));
-  heat(el, lltvs.map(l => pct(l, 0)), caps.map(c => c === Infinity ? 'depth-limited only' : (c / bt.cexCap).toFixed(0) + 'x'), z, 'Liquidator daily capital, multiple of ' + usd(bt.cexCap));
+  heat(el, lltvs.map(l => pct(l, 0)), caps.map(c => c === Infinity ? 'unlimited' : (c / bt.cexCap).toFixed(0) + 'x'), z, 'Liquidator daily capital, multiple of ' + usd(bt.cexCap));
 }
 
 function renderWarn(el, bt, mkt) {
@@ -520,7 +515,7 @@ function renderAll() {
 
 async function main() {
   if (!document.getElementById('totals')) return;  // writeup.html loads this file for the backtest figures only
-  if (window.matchMedia('(max-width: 700px)').matches) document.querySelectorAll('details.fold').forEach(d => d.open = false);  // tables fold on phones
+  if (PHONE) document.querySelectorAll('details.fold').forEach(d => d.open = false);  // tables fold on phones
   const text = await get('summary.json');
   if (!text) { document.getElementById('generated-at').textContent = 'not available'; return; }
   DATA = JSON.parse(text);

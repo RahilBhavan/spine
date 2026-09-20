@@ -1,5 +1,11 @@
 # Roadmap: from prototype to a maintained project
 
+Status 2026-09-20: Phases A-E, G and H done. Phase F: F1 and F3 done (repo public, Pages live, PLAN §8 answered),
+F2 done (WRITEUP.md changelog section), F4 drafted in `research/outreach.md` (forum post and thread; the Dune mirror
+is not drafted, it needs an account and queries this repo cannot check). E1.3 alt replays landed as G2.3. G1.3's
+history rewrite done 2026-09-20 (`git filter-repo` on `data/positions_*.json`, force-pushed; clones from before
+that date must re-clone). What is left is the "Later" list below.
+
 Status 2026-09-19: Phase G (pipeline, model, code fixes) planned below. Status 2026-09-18: Phases A-E done (E1 item 3, alt-asset replays, deferred; item 6 lands as
 `calibrate --since` plus `data/windows.json`). The partial-liquidation model changed the
 headline: under calm-day liquidator behaviour (trim to 74%), LLTV barely moves March 2020
@@ -309,8 +315,8 @@ second row that is collapsed by default (they are 3% of the book).
   numbers (accessibility, copy-paste, and the print case). One generic function, since every chart already
   has its rows in memory.
 - Colours: keep the existing tokens; run the dataviz validator
-  (`scripts/validate_palette.js` from the bundled `dataviz` skill) on `[accent, danger, warn, ok, muted]`
-  for light and dark surfaces and adjust any token that fails. Status tokens (`--danger`, `--warn`, `--ok`)
+  (`scripts/validate_palette.js` from the bundled `dataviz` skill) on the series pair `[accent, accent2]`
+  for light and dark surfaces (the validator is scoped to categorical series; status tokens ship with icon and label) and adjust any token that fails. Status tokens (`--danger`, `--warn`, `--ok`)
   are used only for the gauge bands and threshold lines, never as a series colour; the bad-debt series on
   the curve becomes a second categorical hue, not red.
 - Plotly bundle: `plotly.js-cartesian-dist-min` (scatter, bar, heatmap; about a third of the full bundle)

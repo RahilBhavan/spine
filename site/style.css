@@ -9,7 +9,7 @@
   --danger: #d0342c;
   --warn: #c77700;
   --ok: #1f8a4c;
-  --accent2: #7a3ec8;
+  --accent2: #d9480f;
   --band: rgba(0, 82, 255, 0.08);
   --shade: rgba(107, 114, 128, 0.14);
   --gutter: 24px;
@@ -27,7 +27,7 @@
     --danger: #f07168;
     --warn: #f0a63a;
     --ok: #4fc47f;
-    --accent2: #b78cf0;
+    --accent2: #d97706;
     --band: rgba(77, 140, 255, 0.12);
     --shade: rgba(154, 160, 166, 0.16);
     --nav-bg: rgba(16, 18, 20, 0.92);
@@ -65,14 +65,14 @@ details > summary { cursor: pointer; color: var(--accent); }
 #glossary dd { margin: 0; }
 @media (max-width: 700px) { #glossary dl { grid-template-columns: 1fr; } #glossary dt { margin-top: 8px; } }
 
-nav {
+nav.sections {
   position: sticky; top: 0; z-index: 2;
   background: var(--nav-bg); backdrop-filter: blur(6px);
   border-bottom: 1px solid var(--border);
   margin: 0 calc(-1 * var(--gutter)); padding: 0 var(--gutter);
 }
-nav ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 16px; overflow-x: auto; white-space: nowrap; }
-nav a { display: inline-block; padding: 12px 0; font-weight: 600; }
+nav.sections ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 16px; overflow-x: auto; white-space: nowrap; }
+nav.sections a { display: inline-block; padding: 12px 0; font-weight: 600; }
 
 section { padding: 24px 0; border-top: 1px solid var(--border); }
 section:first-child { border-top: 0; }
@@ -140,6 +140,7 @@ h2 small { font-size: 0.875rem; font-weight: 400; margin-left: 8px; }
 @media (max-width: 700px) {
   .chart, .chart-short { height: 280px; }
   .chart-tall { height: 480px; }
+  #chart-curve { height: 380px; }  /* four-row legend sits inside the chart on phones */
 }
 
 .scroll-x { overflow-x: auto; }
