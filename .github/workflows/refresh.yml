@@ -5,6 +5,7 @@ on:
   workflow_dispatch:
 permissions:
   contents: write
+  issues: write
   pages: write
   id-token: write
 concurrency: refresh
@@ -26,6 +27,15 @@ jobs:
           python -m spine.summarize
           python -m spine.history
           python -m spine.render_writeup
+      - name: alert (one open issue while any market's distance to capacity is 10% or less)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python -m spine.alert > alert.txt
+          [ -s alert.txt ] || exit 0
+          title="Alert: liquidatable borrow within 10% of modeled capacity"
+          n=$(gh issue list --state open --search "\"$title\" in:title" --json number -q '.[0].number')
+          [ -n "$n" ] || gh issue create --title "$title" --body-file alert.txt
       - name: backtest (incremental; a model failure leaves a warning and a stale Backtest tab, not a dead dashboard)
         continue-on-error: true
         run: python -m spine.backtest --max-seconds 600

@@ -52,6 +52,7 @@ Stress-test pipeline (slow, chunked; every script takes `--max-seconds` and resu
 ```
 
 Fetchers are stdlib only; `backtest.py` needs numpy. The GitHub Actions workflow refreshes the live data hourly and deploys to Pages.
+The hourly job also opens a GitHub issue (`spine.alert`) when any market's distance to capacity is 10% or under; closing the issue acknowledges it, and a new one opens on the next hour the condition holds.
 
 ## Citing or reusing
 
