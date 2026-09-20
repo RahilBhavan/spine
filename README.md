@@ -5,6 +5,7 @@ Live risk dashboard and haircut backtest over Coinbase's on-chain loan book (Mor
 - **Dashboard**: `site/index.html` (LTV distribution, liquidatable-vs-capacity curve, liquidation history, per market).
 - **Writeup**: `WRITEUP.md` (argued haircuts per asset), rendered at `site/writeup.html`.
 - **Plan and research**: `PLAN.md`, `research/`. Next steps: `ROADMAP.md`.
+- **Codebase guide**: `CODEBASE_GUIDE.md` (architecture, design rationale, module tour, and a four-pass learning plan).
 
 ## Run
 
