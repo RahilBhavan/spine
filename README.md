@@ -1,6 +1,27 @@
 # Spine
 
+[![refresh](https://github.com/RahilBhavan/spine/actions/workflows/refresh.yml/badge.svg)](https://github.com/RahilBhavan/spine/actions/workflows/refresh.yml)
+[![ci](https://github.com/RahilBhavan/spine/actions/workflows/ci.yml/badge.svg)](https://github.com/RahilBhavan/spine/actions/workflows/ci.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+**Live dashboard: [rahilbhavan.github.io/spine](https://rahilbhavan.github.io/spine)** (refreshes hourly)
+
 Live risk dashboard and haircut backtest over Coinbase's on-chain loan book (Morpho Blue on Base).
+
+## What it answers
+
+Coinbase lends USDC against cbBTC and ETH on Morpho at an 86% liquidation LTV. The book is about $1.4B of debt against $2.9B of cbBTC across 39,000 positions, 97.5% of it Coinbase Smart Wallets. It has cleared $256M of liquidations across three real stress events with zero bad debt. Spine asks what happens on a path those events never tested: March 2020, where borrowers got 25 minutes of warning instead of hours.
+
+The answer, from replaying today's book through seven historical crash paths with liquidator and borrower behavior calibrated on the lived events:
+
+| Collateral | Today | Recommended | Why |
+|---|---|---|---|
+| cbBTC | 86% LLTV / 75% max draw | A committed backstop liquidator first; then 80% / 66-70% | March 2020 at 86%: $9M realized loss but $158M (10% of supply) underwater and unserved at the trough. Liquidator capital, not the haircut, is what binds |
+| WETH | 86% / 75% | 77% / 70% | ETH gaps more than the 4.38% bonus inside five minutes; at 86% three of seven paths leave bad debt |
+| Alts | 62.5% / 55% | 62.5%, max draw 47%, per-asset book cap | No on-chain venue on Base; every seized unit must clear through Coinbase's own book |
+
+Full argument, every number reproducible from a script in this repo: [WRITEUP.md](WRITEUP.md). The writeup's changelog shows how the headline moved as the model was corrected, which is the part to read if you want to check the work.
+
+## How it is built
 
 - **Dashboard**: `site/index.html` (LTV distribution, liquidatable-vs-capacity curve, liquidation history, per market).
 - **Writeup**: `WRITEUP.md` (argued haircuts per asset), rendered at `site/writeup.html`.
@@ -31,3 +52,7 @@ Stress-test pipeline (slow, chunked; every script takes `--max-seconds` and resu
 ```
 
 Fetchers are stdlib only; `backtest.py` needs numpy. The GitHub Actions workflow refreshes the live data hourly and deploys to Pages.
+
+## Citing or reusing
+
+MIT licensed. If you use the calibration numbers (liquidator latency, full-close rate, daily capacity) or the borrower-response fit, cite the writeup by date; the data snapshot in `data/` is what the tables were printed from. Issues and pull requests are welcome, especially historical order-book depth for the crash windows, which is the least-known input.
