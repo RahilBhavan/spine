@@ -8,10 +8,15 @@ let logY = false;
 let curveLogY = true;
 let btMarket = 'cbBTC';
 let btScenario = 'AB';
+let liqRange = 'all';
+let HIST = null;  // history.csv rows, feeds the trend panel
 
 const WINDOWS = ['Mar2020', 'May2021', 'FTX2022', 'Aug2024', 'Oct2025', 'Feb2026', 'Jun2026'];
 const LLTVS = [0.86, 0.80, 0.77, 0.70, 0.625];
 const MAJORS = ['cbBTC', 'WETH', 'cbETH'];  // everything else is an alt, shown collapsed
+// The crashes the book has lived through, named on the history chart: [name, first day, last day] from data/windows.json.
+const EVENTS = [['Oct 2025', '2025-10-09', '2025-10-12'], ['Feb 2026', '2026-02-02', '2026-02-08'], ['Jun 2026', '2026-06-01', '2026-06-27']];
+const RANGES = { all: Infinity, '1y': 365, '90d': 90 };
 // Distance-to-capacity bands: [upper bound, colour class, marker, word]. Marker and word carry the status without colour.
 const GAUGE_BANDS = [[0.10, 'red', '▲', 'tight'], [0.20, 'amber', '◆', 'watch'], [Infinity, 'green', '●', 'clear']];
 
@@ -71,27 +76,29 @@ function dur(min) {
   return (min / 1440).toFixed(1) + ' d';
 }
 
+// Every axis: solid hairline grid one shade off the surface, no zero line.
+function axis(extra) {
+  return Object.assign({ gridcolor: css('--grid'), gridwidth: 1, zeroline: false, color: css('--muted') }, extra || {});
+}
+
 function baseLayout(extra) {
-  const fg = css('--fg'), muted = css('--muted'), grid = css('--grid');
+  extra = extra || {};
   return Object.assign({
     paper_bgcolor: 'rgba(0,0,0,0)',
     plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { color: fg, family: 'inherit', size: 12 },
-    margin: { l: 56, r: 56, t: 12, b: 64 },
-    xaxis: { gridcolor: grid, zeroline: false, color: muted },
-    yaxis: { gridcolor: grid, zeroline: false, color: muted },
-    legend: { orientation: 'h', y: -0.18, x: 0 },
+    font: { color: css('--fg'), family: 'inherit', size: 12 },
+    margin: { l: 64, r: 16, t: 28, b: 80 },  // bottom holds the tick labels, the axis title and a one-row legend
+    legend: { orientation: 'h', yref: 'container', y: 0, yanchor: 'bottom', x: 0 },
     hovermode: 'x unified',
-    showlegend: true,
-  }, extra || {});
+  }, extra, { xaxis: axis(extra.xaxis), yaxis: axis(extra.yaxis) });
 }
 
 const PLOT_CONFIG = { displayModeBar: false, responsive: true };
 
-// Explicit USD ticks: Plotly's SI format prints 1.4G, we want $1.4B.
-function usdTicks(values, log) {
+// Explicit ticks through our own formatters: Plotly's SI format prints 1.4G, we want $1.4B.
+function ticks(values, fmt, log) {
   const pos = values.filter(v => v > 0);
-  const max = Math.max(...pos, 1);
+  const max = Math.max(...pos, 1e-9);
   const vals = [];
   if (log) {
     const hi = Math.ceil(Math.log10(max));
@@ -102,7 +109,61 @@ function usdTicks(values, log) {
     const step = [1, 2, 2.5, 5, 10].map(k => k * p).find(v => v >= raw);
     for (let v = 0; v <= max + step * 0.999; v += step) vals.push(v);
   }
-  return { tickmode: 'array', tickvals: vals, ticktext: vals.map(usd) };
+  return { tickmode: 'array', tickvals: vals, ticktext: vals.map(fmt) };
+}
+
+function usdTicks(values, log) {
+  return ticks(values, usd, log);
+}
+
+function pctTicks(values) {
+  return ticks(values, v => pct(v, Math.abs(v * 100 - Math.round(v * 100)) > 1e-9 ? 1 : 0), false);
+}
+
+// One "table" toggle per chart (aria-pressed): swaps the plot for the same numbers as a plain table.
+function tableView(el, columns, rows) {
+  let t = document.getElementById(el.id + '-table');
+  if (!t) {
+    el.insertAdjacentHTML('beforebegin', '<button type="button" class="table-toggle" aria-pressed="false" aria-controls="' + el.id + '-table">table</button>');
+    el.insertAdjacentHTML('afterend', '<div class="scroll-x" hidden><table id="' + el.id + '-table"></table></div>');
+    t = document.getElementById(el.id + '-table');
+    const b = el.previousElementSibling;
+    b.onclick = () => {
+      const on = b.getAttribute('aria-pressed') !== 'true';
+      b.setAttribute('aria-pressed', on);
+      el.hidden = on;
+      t.parentElement.hidden = !on;
+      if (!on) Plotly.Plots.resize(el);  // it was laid out at zero width while hidden
+    };
+  }
+  t.innerHTML = '<tr>' + columns.map(c => '<th>' + c + '</th>').join('') + '</tr>' +
+    rows.map(r => '<tr>' + r.map(v => '<td>' + v + '</td>').join('') + '</tr>').join('');
+}
+
+// Every chart goes through here: legend only with two or more series, and the table view gets the same rows.
+function plot(id, traces, layout, columns, rows) {
+  const el = typeof id === 'string' ? document.getElementById(id) : id;
+  if (layout.showlegend == null) layout.showlegend = traces.length > 1;
+  Plotly.react(el, traces, layout, PLOT_CONFIG);
+  tableView(el, columns, rows);
+}
+
+// One red banner at the top naming every file that failed to load.
+function banner(file) {
+  let b = document.getElementById('banner');
+  if (!b) {
+    document.body.insertAdjacentHTML('afterbegin', '<p id="banner" class="banner" role="alert">failed to load </p>');
+    b = document.getElementById('banner');
+  }
+  if (!b.textContent.includes(file)) b.textContent += (b.textContent.endsWith('load ') ? '' : ', ') + file;
+}
+
+// Text of data/<file>, or null (and the banner) on any failure.
+async function get(file) {
+  const r = await fetch('../data/' + file).catch(() => null);
+  if (r && r.ok) return r.text();
+  banner('../data/' + file);
+  return null;
 }
 
 // Timestamp into el; past 8 h it turns red (class stale) so a dead cron shows on the page.
@@ -185,37 +246,21 @@ function renderCards(m) {
 
 function renderLtv(m) {
   const k = cbOnly ? 'cb_' : '';
-  const x = m.ltv_hist.map(b => b.lo + 0.01);
-  const accent = css('--accent'), danger = css('--danger'), muted = css('--muted');
-  const traces = [
-    { type: 'bar', x, y: m.ltv_hist.map(b => b[k + 'borrow_usd']), name: 'Borrow USD', marker: { color: accent }, width: 0.02,
-      hovertemplate: 'LTV %{x:.0%}: %{y:$,.3s}<extra></extra>' },
-    { type: 'scatter', mode: 'lines', x, y: m.ltv_hist.map(b => b[k + 'count']), name: 'Positions', yaxis: 'y2',
-      line: { color: muted, width: 1.5 }, hovertemplate: '%{y} positions<extra></extra>' },
-  ];
-  const vline = (v, color, text) => ({ type: 'line', x0: v, x1: v, y0: 0, y1: 1, yref: 'paper', line: { color, width: 1.5, dash: 'dash' }, label: { text, textposition: 'end', font: { color } } });
+  const x = m.ltv_hist.map(b => b.lo + 0.01), y = m.ltv_hist.map(b => b[k + 'borrow_usd']), n = m.ltv_hist.map(b => b[k + 'count']);
+  const bin = b => pct(b.lo, 0) + ' to ' + pct(b.lo + 0.02, 0);
+  const hover = m.ltv_hist.map((b, i) => 'LTV ' + bin(b) + ': ' + usd(y[i]) + ', ' + num(n[i]) + ' positions');
+  const traces = [{ type: 'bar', x, y, name: 'Borrow USD', marker: { color: css('--accent') }, width: 0.02, customdata: hover, hovertemplate: '%{customdata}<extra></extra>' }];
+  // Threshold lines with their labels: liquidation above the plot, bad debt inside it, both ending at their line.
+  const vline = (v, text, yanchor) => ({ type: 'line', x0: v, x1: v, y0: 0, y1: 1, yref: 'paper', line: { color: css('--danger'), width: 1.5, dash: 'dash' },
+    label: { text, textposition: 'end', textangle: 0, xanchor: 'right', yanchor, padding: 2, font: { color: css('--danger'), size: 11 } } });
   const layout = baseLayout({
-    barmode: 'overlay', margin: { l: 56, r: 56, t: 40, b: 64 },  // room for the rotated LLTV / 1/LIF labels above the plot
-    xaxis: { title: 'LTV', tickformat: '.0%', range: [0, 1], gridcolor: css('--grid'), color: muted },
-    yaxis: Object.assign({ title: 'Borrow USD', automargin: true, type: logY ? 'log' : 'linear', gridcolor: css('--grid'), color: muted }, usdTicks(traces[0].y, logY)),
-    yaxis2: { title: 'Positions', overlaying: 'y', side: 'right', showgrid: false, type: logY ? 'log' : 'linear', color: muted },
-    shapes: [vline(m.state.lltv, danger, 'LLTV ' + pct(m.state.lltv)), vline(m.state.bad_debt_ltv, danger, '1/LIF ' + pct(m.state.bad_debt_ltv))],
+    xaxis: Object.assign({ title: 'LTV', range: [0, 1] }, pctTicks([1])),
+    yaxis: Object.assign({ title: 'Borrow USD', automargin: true, type: logY ? 'log' : 'linear' }, usdTicks(y, logY)),
+    shapes: [vline(m.state.lltv, 'liquidation ' + pct(m.state.lltv, 0), 'top'), vline(m.state.bad_debt_ltv, 'bad debt ' + pct(m.state.bad_debt_ltv), 'bottom')],
   });
-  Plotly.react('chart-ltv', traces, layout, PLOT_CONFIG);
-}
-
-function renderHf(m) {
-  const accent = css('--accent'), danger = css('--danger'), muted = css('--muted');
-  const traces = [{ type: 'scatter', mode: 'lines', x: m.hf_cdf.map(p => p.hf), y: m.hf_cdf.map(p => p.share), name: 'Share of borrow with HF below',
-    line: { color: accent, width: 2.5, shape: 'hv' }, fill: 'tozeroy', fillcolor: css('--band'), hovertemplate: 'HF < %{x:.2f}: %{y:.1%} of borrow<extra></extra>' }];
-  const layout = baseLayout({
-    margin: { l: 56, r: 56, t: 40, b: 64 },
-    xaxis: { title: 'Health factor', range: [1, 3], gridcolor: css('--grid'), color: muted },
-    showlegend: false,
-    yaxis: { title: 'Share of borrow USD', tickformat: '.0%', range: [0, 1], gridcolor: css('--grid'), color: muted },
-    shapes: [{ type: 'line', x0: 1.1, x1: 1.1, y0: 0, y1: 1, yref: 'paper', line: { color: danger, width: 1.5, dash: 'dash' }, label: { text: 'HF 1.1', textposition: 'end', font: { color: danger } } }],
-  });
-  Plotly.react('chart-hf', traces, layout, PLOT_CONFIG);
+  plot('chart-ltv', traces, layout, ['LTV bin', 'Borrow', 'Positions'], m.ltv_hist.map((b, i) => [bin(b), usd(y[i]), num(n[i])]));
+  const near = m.hf_cdf.reduce((a, p) => Math.abs(p.hf - 1.1) < Math.abs(a.hf - 1.1) ? p : a);  // the grid point nearest HF 1.1
+  document.getElementById('ltv-stat').textContent = 'Share of borrow within 10% of liquidation (health factor below 1.1): ' + pct(near.share) + ' of the whole market.';
 }
 
 function capacity(m) {
@@ -228,49 +273,92 @@ function capacity(m) {
 
 function renderCurve(m) {
   const k = cbOnly ? 'cb_' : '';
-  const x = m.liquidatable_curve.map(c => c.drop);
-  const accent = css('--accent'), danger = css('--danger'), muted = css('--muted');
-  const cap = capacity(m);
+  const c = m.liquidatable_curve, x = c.map(p => p.drop), y = c.map(p => p[k + 'borrow_usd']), bad = c.map(p => p[k + 'bad_borrow_usd']);
+  const muted = css('--muted');
+  const cap = capacity(m), total = m.state.capacity_ab_usd, d = m.state.distance_to_capacity;
   const traces = [
-    { type: 'scatter', mode: 'lines', x, y: m.liquidatable_curve.map(c => c[k + 'borrow_usd']), name: 'Liquidatable borrow',
-      line: { color: accent, width: 2.5 }, fill: 'tozeroy', fillcolor: css('--band'), hovertemplate: '%{y:$,.3s}<extra>liquidatable</extra>' },
-    { type: 'scatter', mode: 'lines', x, y: m.liquidatable_curve.map(c => c[k + 'bad_borrow_usd']), name: 'Bad-debt zone (LTV > 1/LIF)',
-      line: { color: danger, width: 2 }, hovertemplate: '%{y:$,.3s}<extra>bad-debt zone</extra>' },
+    { type: 'scatter', mode: 'lines', x, y, name: 'Liquidatable borrow', line: { color: css('--accent'), width: 2.5 }, fill: 'tozeroy', fillcolor: css('--band'),
+      customdata: y.map(usd), hovertemplate: '%{customdata}<extra>liquidatable</extra>' },
+    { type: 'scatter', mode: 'lines', x, y: bad, name: 'Past the bad-debt LTV', line: { color: css('--accent2'), width: 2 },
+      customdata: bad.map(usd), hovertemplate: '%{customdata}<extra>bad-debt zone</extra>' },
   ];
+  const ly = v => curveLogY ? Math.log10(v) : v;  // annotations and ranges take log10 units on a log axis; shapes take raw values
+  const top = Math.max(...y, cap.cex || 0, cap.dex || 0) * 1.08, lo = Math.min(...y.filter(v => v > 0), total || Infinity) / 2;
   const shapes = [], annotations = [];
-  // Labels sit at the left, above their line; in linear mode both lines hug zero so the upper one is shifted up.
-  const hline = (y, text, color, yshift) => {
-    if (y == null) return;
-    const yy = curveLogY ? Math.log10(y) : y;  // annotations take log10 units on a log axis; shapes take raw values
-    shapes.push({ type: 'line', x0: 0, x1: 1, xref: 'paper', yref: 'y', y0: y, y1: y, layer: 'above', line: { color, width: 1.5, dash: 'dash' } });
-    annotations.push({ x: 0.005, xref: 'paper', yref: 'y', y: yy, yshift, text: text + ' ' + usd(y), showarrow: false, xanchor: 'left', yanchor: 'bottom', font: { color, size: 11 } });
+  const hline = (v, text, yshift) => {
+    if (!v) return;
+    shapes.push({ type: 'line', x0: 0, x1: 1, xref: 'paper', yref: 'y', y0: v, y1: v, layer: 'above', line: { color: muted, width: 1.5, dash: 'dash' } });
+    annotations.push({ x: 0.995, xref: 'paper', yref: 'y', y: ly(v), yshift, text: text + ' ' + usd(v), showarrow: false, xanchor: 'right', yanchor: 'bottom', font: { color: muted, size: 11 } });
   };
-  hline(cap.cex, 'Coinbase bids within 4.38%', muted, curveLogY ? 0 : 16);
-  hline(cap.dex, 'DEX capacity at 4.38%', muted, 0);
+  hline(cap.cex, 'Coinbase bids within the bonus', curveLogY ? 0 : 16);  // in linear mode both lines hug zero, so the upper label is shifted up
+  hline(cap.dex, 'DEX capacity within the bonus', 0);
+  if (total) {
+    shapes.push({ type: 'rect', xref: 'paper', x0: 0, x1: 1, yref: 'y', y0: total, y1: top, fillcolor: css('--shade'), line: { width: 0 }, layer: 'below' });
+    annotations.push({ x: 0.005, xref: 'paper', y: 0.99, yref: 'paper', text: 'more than liquidators can sell', showarrow: false, xanchor: 'left', yanchor: 'top', font: { color: muted, size: 11 } });
+  }
+  if (d != null) {
+    const yd = y[x.findIndex(v => Math.abs(v - d) < 1e-9)];
+    traces.push({ type: 'scatter', mode: 'markers', x: [d], y: [yd], name: 'Distance to capacity', showlegend: false, marker: { color: css('--accent'), size: 10 }, hoverinfo: 'skip' });
+    annotations.push({ x: d, y: ly(yd), text: '-' + pct(d, 0) + ': ' + usd(yd), showarrow: true, arrowhead: 0, arrowcolor: muted, ax: 56, ay: curveLogY ? 36 : -36, font: { size: 11 } });
+  }
   const layout = baseLayout({
-    xaxis: { title: 'Instantaneous price drop', tickformat: '.0%', gridcolor: css('--grid'), color: muted },
-    yaxis: Object.assign({ title: 'Borrow USD', automargin: true, type: curveLogY ? 'log' : 'linear', rangemode: curveLogY ? 'normal' : 'tozero', gridcolor: css('--grid'), color: muted },
-      usdTicks(traces[0].y.concat(traces[1].y, [cap.cex, cap.dex]), curveLogY)),
+    xaxis: Object.assign({ title: 'Instantaneous price drop' }, pctTicks(x)),
+    yaxis: Object.assign({ title: 'Borrow USD', automargin: true, type: curveLogY ? 'log' : 'linear', range: [curveLogY ? ly(lo) : 0, ly(top)] }, usdTicks(y.concat(bad, [cap.cex, cap.dex]), curveLogY)),
     shapes, annotations,
   });
-  Plotly.react('chart-curve', traces, layout, PLOT_CONFIG);
+  plot('chart-curve', traces, layout, ['Price drop', 'Liquidatable', 'Past bad-debt LTV'], c.map((p, i) => [(p.drop ? '-' : '') + pct(p.drop, 0), usd(y[i]), usd(bad[i])]));
 }
 
 function renderLiq(m) {
-  const days = m.liquidations_daily;
-  const muted = css('--muted'), accent = css('--accent');
-  const top = days.slice().sort((a, b) => b.repaid_usd - a.repaid_usd).slice(0, 5);
-  const traces = [{
-    type: 'bar', x: days.map(d => d.day), y: days.map(d => d.repaid_usd), name: 'Repaid USD', marker: { color: accent },
-    customdata: days.map(d => d.n), hovertemplate: '%{y:$,.3s} (%{customdata} liquidations)<extra></extra>',
-  }];
+  const since = liqRange === 'all' ? '' : new Date(Date.now() - RANGES[liqRange] * 864e5).toISOString().slice(0, 10);
+  const days = m.liquidations_daily.filter(d => d.day >= since);
+  const muted = css('--muted');
+  buttons('liq-range-buttons', Object.keys(RANGES), liqRange, k => { liqRange = k; renderLiq(DATA.markets[market]); });
+  const hover = days.map(d => usd(d.repaid_usd) + ' (' + num(d.n) + ' liquidations)');
+  const traces = [{ type: 'bar', x: days.map(d => d.day), y: days.map(d => d.repaid_usd), name: 'Repaid USD', marker: { color: css('--accent') }, customdata: hover, hovertemplate: '%{customdata}<extra></extra>' }];
+  // Each lived event is named at its largest day, when that day is in range.
+  const peaks = EVENTS.map(([name, lo, hi]) => [name, days.filter(d => d.day >= lo && d.day <= hi).sort((a, b) => b.repaid_usd - a.repaid_usd)[0]]).filter(([, d]) => d);
   const layout = baseLayout({
-    showlegend: false,
-    xaxis: { type: 'date', gridcolor: css('--grid'), color: muted },
-    yaxis: Object.assign({ title: 'Repaid USD', gridcolor: css('--grid'), color: muted }, usdTicks(traces[0].y, false)),
-    annotations: top.map(d => ({ x: d.day, y: d.repaid_usd, text: d.day + ' ' + usd(d.repaid_usd), showarrow: true, arrowhead: 0, arrowcolor: muted, ax: 0, ay: -28, font: { size: 10, color: muted } })),
+    xaxis: { type: 'date' },
+    yaxis: Object.assign({ title: 'Repaid USD' }, usdTicks(traces[0].y, false)),
+    annotations: peaks.map(([name, d]) => ({ x: d.day, y: d.repaid_usd, text: name + ' ' + usd(d.repaid_usd), showarrow: true, arrowhead: 0, arrowcolor: muted, ax: 0, ay: -28, font: { size: 11, color: muted } })),
   });
-  Plotly.react('chart-liq', traces, layout, PLOT_CONFIG);
+  plot('chart-liq', traces, layout, ['Day', 'Repaid', 'Liquidations'], days.map((d, i) => [d.day, usd(d.repaid_usd), num(d.n)]));
+}
+
+// history.csv: utc_ts, market, then numbers; an empty cell is null.
+async function loadHistory() {
+  const text = await get('history.csv');
+  if (!text) return [];
+  const [head, ...lines] = text.trim().split('\n');
+  const cols = head.split(',');
+  return lines.map(l => {
+    const v = l.split(','), o = {};
+    cols.forEach((c, i) => o[c] = i < 2 ? v[i] : (v[i] === '' || v[i] == null ? null : +v[i]));
+    return o;
+  });
+}
+
+// Three small multiples for the selected market, one series each, as stacked subplots sharing the time axis.
+function renderTrend() {
+  const el = document.getElementById('chart-trend');
+  if (HIST == null) return;  // still loading
+  const rows = HIST.filter(r => r.market === market);
+  if (!rows.length) { el.textContent = 'not available'; return; }
+  const x = rows.map(r => r.utc_ts);
+  const series = [['book_ltv', 'Book LTV', v => pct(v), pctTicks], ['distance_to_capacity', 'Distance to capacity', v => v == null ? '> 70%' : pct(v, 0), pctTicks], ['liq_20', 'Liquidatable at -20%', usd, usdTicks]];
+  const traces = series.map(([k, name, f], i) => {
+    const y = rows.map(r => r[k]);
+    return { type: 'scatter', mode: 'lines+markers', x, y, name, yaxis: 'y' + (i ? i + 1 : ''), line: { color: css('--accent'), width: 2 }, marker: { size: 5 },
+      customdata: y.map(f), hovertemplate: '%{customdata}<extra>' + name + '</extra>' };
+  });
+  const layout = baseLayout({ grid: { rows: 3, columns: 1, pattern: 'coupled', ygap: 0.18 }, showlegend: false, xaxis: { type: 'date' } });
+  series.forEach(([k, name, f, tk], i) => {
+    const sfx = i ? i + 1 : '';
+    layout['yaxis' + sfx] = axis(Object.assign({ title: { text: name, font: { size: 11 } }, automargin: true, rangemode: 'tozero' }, tk(traces[i].y.filter(v => v != null))));
+  });
+  plot(el, traces, layout, ['Time (UTC)', 'Book LTV', 'Distance to capacity', 'Liquidatable at -20%'],
+    rows.map((r, i) => [r.utc_ts.slice(0, 16).replace('T', ' '), traces[0].customdata[i], traces[1].customdata[i], traces[2].customdata[i]]));
 }
 
 function renderBorrowers(m) {
@@ -295,10 +383,10 @@ function renderLiquidators(m) {
 
 async function loadBacktest() {
   if (BT) return BT;
-  const r = await fetch('../data/backtest.json');
-  if (!r.ok) return null;
+  const text = await get('backtest.json');
+  if (!text) return null;
   // json.dump writes the unlimited-capital rows as Infinity, which JSON.parse rejects; 1e999 parses to Infinity.
-  BT = JSON.parse((await r.text()).replace(/\bInfinity\b/g, '1e999'));
+  BT = JSON.parse(text.replace(/\bInfinity\b/g, '1e999'));
   const d = BT.defaults, c = BT.calibrated || {};
   const grid = BT.runs.filter(r => r.book === BT.latest_book);
   const counts = {};
@@ -329,16 +417,16 @@ function pickCap(rows) {
   return rows.find(r => r.cap === 0.75) || rows.find(r => r.cap === 0.60) || null;
 }
 
+// Sequential scale, surface to accent; cells carry their number.
 function heat(el, rowLabels, colLabels, z, xtitle) {
-  const muted = css('--muted');
-  const flat = z.flat().filter(v => v != null);
-  const traces = [{ type: 'heatmap', x: colLabels, y: rowLabels, z, text: z.map(row => row.map(musd)), texttemplate: '%{text}',
-    textfont: { size: 12 }, colorscale: [[0, css('--card')], [1, css('--danger')]], zmin: 0, zmax: Math.max(...flat, 1), showscale: false,
+  const flat = z.flat().filter(v => v != null), text = z.map(row => row.map(musd));
+  const traces = [{ type: 'heatmap', x: colLabels, y: rowLabels, z, text, texttemplate: '%{text}',
+    textfont: { size: 12 }, colorscale: [[0, css('--card')], [1, css('--accent')]], zmin: 0, zmax: Math.max(...flat, 1), showscale: false,
     xgap: 2, ygap: 2, hovertemplate: '%{y} / %{x}: %{text}<extra></extra>' }];
-  const layout = baseLayout({ showlegend: false, hovermode: 'closest', margin: { l: 56, r: 12, t: 12, b: 48 },
-    xaxis: { title: xtitle || '', type: 'category', side: 'bottom', gridcolor: css('--grid'), color: muted },
-    yaxis: { title: 'LLTV', type: 'category', autorange: 'reversed', gridcolor: css('--grid'), color: muted } });
-  Plotly.react(el, traces, layout, PLOT_CONFIG);
+  const layout = baseLayout({ showlegend: false, hovermode: 'closest',
+    xaxis: { title: xtitle || '', type: 'category', side: 'bottom' },
+    yaxis: { title: 'LLTV', type: 'category', autorange: 'reversed' } });
+  plot(el, traces, layout, ['LLTV'].concat(colLabels), rowLabels.map((l, i) => [l].concat(text[i])));
 }
 
 function renderHeatmap(el, bt, mkt, scenario) {
@@ -358,46 +446,60 @@ function renderCapital(el, bt) {
 }
 
 function renderWarn(el, bt, mkt) {
-  const muted = css('--muted'), accent = css('--accent');
   const y = WINDOWS.map(w => { const r = pickCap(btRows(bt, { market: mkt, window: w, lltv: 0.86, scenario: 'AB', cex_cap_usd: bt.cexCap })); return r ? r.warn_minutes_p50 : null; });
-  const traces = [{ type: 'bar', x: WINDOWS, y: y.map(v => v == null ? null : v / 60), text: y.map(dur), textposition: 'outside', name: 'Warning time p50',
-    marker: { color: accent }, cliponaxis: false, hovertemplate: '%{text}<extra></extra>' }];
-  const layout = baseLayout({ showlegend: false, hovermode: 'closest', margin: { l: 56, r: 12, t: 24, b: 48 },
-    xaxis: { type: 'category', gridcolor: css('--grid'), color: muted },
-    yaxis: { title: 'Hours', gridcolor: css('--grid'), color: muted, rangemode: 'tozero' } });
-  Plotly.react(el, traces, layout, PLOT_CONFIG);
+  const text = y.map(dur);
+  const traces = [{ type: 'bar', x: WINDOWS, y: y.map(v => v == null ? null : v / 60), text, textposition: 'outside', name: 'Warning time p50',
+    marker: { color: css('--accent') }, cliponaxis: false, hovertemplate: '%{text}<extra></extra>' }];
+  const layout = baseLayout({ showlegend: false, hovermode: 'closest', xaxis: { type: 'category' }, yaxis: { title: 'Hours', rangemode: 'tozero' } });
+  plot(el, traces, layout, ['Path', 'Warning time (median)'], WINDOWS.map((w, i) => [w, text[i]]));
 }
 
-// Tile 3: cbBTC on March 2020, scenario AB, at today's terms (86% / 75%). Bridge from the dashboard to the writeup.
+// The grid row for a market at today's terms: its live LLTV (0.86 without summary.json), scenario AB, max draw from pickCap.
+// over: defaults to replace, e.g. { hold_bars: 288 } for the held-a-day row.
+function todayRow(bt, mkt, w, over) {
+  const lltv = DATA && DATA.markets[mkt] ? DATA.markets[mkt].state.lltv : 0.86;
+  return pickCap(btRows(bt, { market: mkt, window: w, scenario: 'AB', lltv, cex_cap_usd: bt.cexCap }, over));
+}
+
+function lossCells(bt, mkt, w) {
+  const row = todayRow(bt, mkt, w), held = todayRow(bt, mkt, w, { hold_bars: 288 });
+  return row ? [usd(METRICS['Loss by end of path'](row)), usd(METRICS['Exposure at trough'](row)), held ? usd(METRICS['Loss by end of path'](held)) : 'not run'] : null;
+}
+
+// Tile 3: cbBTC on March 2020, scenario AB, at today's terms. Bridge from the dashboard to the writeup.
 function renderWorst(bt) {
   const el = document.getElementById('worst'), p = document.getElementById('worst-sentence');
-  const f = { market: 'cbBTC', window: 'Mar2020', scenario: 'AB', lltv: 0.86, cap: 0.75 };
-  const row = bt && btRows(bt, Object.assign({ cex_cap_usd: bt.cexCap }, f))[0];
-  if (!row) { el.innerHTML = ''; p.textContent = 'not available'; return; }
-  const held = btRows(bt, Object.assign({ cex_cap_usd: bt.cexCap }, f), { hold_bars: 288 })[0];
-  cards(el, [
-    ['Loss by end of path', usd(METRICS['Loss by end of path'](row))],
-    ['Exposure at trough', usd(METRICS['Exposure at trough'](row))],
-    ['Loss if held a day at the low', held ? usd(METRICS['Loss by end of path'](held)) : 'not run'],
-  ]);
+  const cells_ = bt && lossCells(bt, 'cbBTC', 'Mar2020');
+  if (!cells_) { el.innerHTML = ''; p.textContent = 'not available'; return; }
+  cards(el, [['Loss by end of path', cells_[0]], ['Exposure at trough', cells_[1]], ['Loss if held a day at the low', cells_[2]]]);
   p.innerHTML = "Today's cbBTC book replayed through March 2020 with liquidators selling on-chain and on exchanges (scenario AB): " +
     'what lenders lose by the end of the path, what sat underwater at the lowest print, and the loss if the low had held for a day. <a href="#stress">Stress test</a>';
+}
+
+// Six cells: the two paths that cost money, for the selected backtest market at today's terms.
+function renderSummary(bt) {
+  document.getElementById('bt-summary').innerHTML = '<tr><th>Path</th><th>Loss by end of path</th><th>Exposure at trough</th><th>Loss if held a day at the low</th></tr>' +
+    ['Mar2020', 'May2021'].map(w => '<tr><td>' + w + '</td>' + (lossCells(bt, btMarket, w) || ['-', '-', '-']).map(v => '<td>' + v + '</td>').join('') + '</tr>').join('');
 }
 
 async function renderBacktest() {
   const bt = await loadBacktest();
   const note = document.getElementById('bt-note');
   renderWorst(bt);
-  if (!bt) { note.textContent = 'failed to load ../data/backtest.json'; return; }
+  if (!bt) {
+    ['bt-note', 'bt-generated-at', 'bt-summary', 'chart-heat', 'chart-capital', 'chart-warn'].forEach(id => document.getElementById(id).textContent = 'not available');
+    return;
+  }
   const [markets, alts] = split([...new Set(bt.runs.filter(r => bt.base(r)).map(r => r.market))]);
   if (!markets.concat(alts).includes(btMarket)) btMarket = markets[0];
   const c = bt.calibrated || {};
   note.textContent = 'Grid rows at the fitted borrower response (' + pct(c.resp_share, 0) + ' within ' + c.react_min + ' min), depth multipliers DEX ' +
     bt.defaults.k_dex + ' / CEX ' + bt.defaults.k_cex + ', liquidator daily capital ' + usd(bt.cexCap) + '. Max draw 75%, or 60% where the LLTV is below 75%.';
-  stamp(document.getElementById('bt-generated-at'), new Date(bt.generated_at * 1000).toISOString().slice(0, 16).replace('T', ' ') + ' UTC, book ' + bt.latest_book, bt.generated_at * 1000);
+  stamp(document.getElementById('bt-generated-at'), 'book as of ' + bt.latest_book + ', run ' + new Date(bt.generated_at * 1000).toISOString().slice(0, 16).replace('T', ' ') + ' UTC', bt.generated_at * 1000);
   buttons('bt-market-buttons', markets, btMarket, k => { btMarket = k; renderBacktest(); }, alts);
   buttons('bt-scenario-buttons', ['A', 'AB', 'ABC'], btScenario, k => { btScenario = k; renderBacktest(); });
   buttons('bt-metric-buttons', Object.keys(METRICS), btMetric, k => { btMetric = k; renderBacktest(); });
+  renderSummary(bt);
   renderHeatmap('chart-heat', bt, btMarket, btScenario);
   renderCapital('chart-capital', bt);
   renderWarn('chart-warn', bt, btMarket);
@@ -409,32 +511,29 @@ function renderAll() {
   renderGauges();
   renderCards(m);
   renderLtv(m);
-  renderHf(m);
   renderCurve(m);
   renderLiq(m);
+  renderTrend();
   renderBorrowers(m);
   renderLiquidators(m);
 }
 
 async function main() {
   if (!document.getElementById('totals')) return;  // writeup.html loads this file for the backtest figures only
-  const r = await fetch('../data/summary.json');
-  if (!r.ok) {
-    document.getElementById('generated-at').textContent = 'failed to load ../data/summary.json (' + r.status + ')';
-    return;
-  }
-  DATA = await r.json();
+  if (window.matchMedia('(max-width: 700px)').matches) document.querySelectorAll('details.fold').forEach(d => d.open = false);  // tables fold on phones
+  const text = await get('summary.json');
+  if (!text) { document.getElementById('generated-at').textContent = 'not available'; return; }
+  DATA = JSON.parse(text);
   if (DATA.markets[location.hash.slice(1)]) market = location.hash.slice(1);  // #cbXRP deep link
   if (!DATA.markets[market]) market = Object.keys(DATA.markets)[0];
   document.getElementById('cb-only').onchange = e => { cbOnly = e.target.checked; renderAll(); };
   document.getElementById('log-y').onchange = e => { logY = e.target.checked; renderLtv(DATA.markets[market]); };
-  document.getElementById('chart-curve').insertAdjacentHTML('beforebegin',
-    '<p class="muted"><label class="toggle"><input type="checkbox" id="log-y-curve" checked> log y</label></p>');
   document.getElementById('log-y-curve').onchange = e => { curveLogY = e.target.checked; renderCurve(DATA.markets[market]); };
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { renderAll(); renderBacktest(); });
   renderHeader();
   renderAll();
   renderBacktest();
+  loadHistory().then(h => { HIST = h; renderTrend(); });
   if (DATA.markets[location.hash.slice(1)]) document.getElementById('book').scrollIntoView();  // the market anchor has no element of its own
 }
 

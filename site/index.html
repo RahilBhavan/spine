@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Spine: Coinbase's on-chain loan book on Base</title>
 <link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@2.35.2/plotly-cartesian.min.js"></script>
 </head>
 <body>
 <header>
@@ -72,24 +72,18 @@
   <h3 id="market-title">Market</h3>
   <div id="market-cards" class="cards"></div>
 
-  <div class="row2">
   <div class="fig">
     <h3>LTV distribution</h3>
-    <p class="muted">Borrow USD per 2% LTV bin. Dashed lines: <abbr title="Liquidation loan-to-value">LLTV</abbr> (liquidation) and 1/<abbr title="Liquidation incentive factor, 1 plus the liquidation bonus">LIF</abbr> (bad debt).
+    <p class="muted">Borrow USD per 2% LTV bin; the tooltip carries the number of positions. Dashed lines: the <abbr title="Liquidation loan-to-value">LLTV</abbr> where liquidation starts and the LTV past which seized collateral no longer covers the debt (bad debt).
       <label class="toggle"><input type="checkbox" id="log-y"> log y</label></p>
     <div id="chart-ltv" class="chart" aria-label="LTV distribution"></div>
-  </div>
-  <div class="fig">
-    <h3>Health factor</h3>
-    <p class="muted">Share of borrow USD whose <abbr title="LLTV divided by the position's LTV">health factor</abbr> is below each threshold. Liquidation at 1.0.</p>
-    <div id="chart-hf" class="chart" aria-label="Health factor"></div>
-  </div>
+    <p id="ltv-stat" class="muted"></p>
   </div>
 
-  <div class="fig">
-    <h3>Top 25 borrowers</h3>
+  <details class="fold" open>
+    <summary>Top 25 borrowers</summary>
     <div class="scroll-x"><table id="borrowers"></table></div>
-  </div>
+  </details>
 </section>
 
 <section id="liquidations">
@@ -97,48 +91,58 @@
   <p class="lede">How much debt a price drop would put up for liquidation, what liquidators can absorb, and what they have cleared before.</p>
   <div class="fig">
     <h3>Liquidatable borrow vs price drop</h3>
-    <p class="muted">Borrow that crosses <abbr title="Liquidation loan-to-value">LLTV</abbr> at each instantaneous price drop, against what liquidators can sell today at 4.38% slippage (the liquidation bonus). Where the curve crosses the <abbr title="How much collateral liquidators can sell within the bonus in one step">capacity</abbr> lines, the book outruns its liquidators.</p>
+    <p class="muted">Borrow that crosses <abbr title="Liquidation loan-to-value">LLTV</abbr> at each instantaneous price drop. The second series is the part of it already past the bad-debt LTV, where the seized collateral no longer covers the debt plus the bonus. Dashed lines: what Coinbase bids and DEX pools would absorb today within the liquidation bonus. The shaded region starts at the stressed total of the two (the <abbr title="How much collateral liquidators can sell within the bonus in one step">capacity</abbr>); the dot marks the drop at which the book first outruns it.
+      <label class="toggle"><input type="checkbox" id="log-y-curve" checked> log y</label></p>
     <div id="chart-curve" class="chart" aria-label="Liquidatable borrow vs price drop"></div>
   </div>
 
   <div class="fig">
     <h3>Liquidation history</h3>
-    <p class="muted">Daily repaid USD, all time. Top 5 days annotated.</p>
+    <p class="muted">Daily repaid USD. The three crashes the book has lived through are named.</p>
+    <div class="controls"><div id="liq-range-buttons" class="buttons"></div></div>
     <div id="chart-liq" class="chart" aria-label="Liquidation history"></div>
   </div>
 
   <div class="fig">
-    <h3>Top 10 liquidators (all time, by repaid USD)</h3>
-    <div class="scroll-x"><table id="liquidators"></table></div>
+    <h3>Trend</h3>
+    <p class="muted">Each snapshot since the tracker started: book LTV, distance to capacity and borrow liquidatable at a 20% drop, for the selected market.</p>
+    <div id="chart-trend" class="chart chart-tall" aria-label="Trend"></div>
   </div>
+
+  <details class="fold" open>
+    <summary>Top 10 liquidators (all time, by repaid USD)</summary>
+    <div class="scroll-x"><table id="liquidators"></table></div>
+  </details>
 </section>
 
 <section id="stress">
-  <h2>Stress test</h2>
+  <h2>Stress test <small id="bt-generated-at" class="muted">loading</small></h2>
   <p class="lede">Today's book replayed through seven historical crashes to see how much lenders would lose.</p>
-  <div class="controls">
-    <div id="bt-market-buttons" class="buttons"></div>
-    <div id="bt-scenario-buttons" class="buttons"></div>
-    <div id="bt-metric-buttons" class="buttons"></div>
+  <div class="controls"><div id="bt-market-buttons" class="buttons"></div></div>
+
+  <div class="fig">
+    <h3>The two paths that cost money, at today's terms</h3>
+    <p class="muted">Today's <abbr title="Every open position in the market at today's prices">book</abbr> at its current LLTV, liquidators selling on-chain and on exchanges (scenario AB): what lenders lose by the end of the path, what sat underwater at the lowest print, and the loss if the low had held for a day.</p>
+    <div class="scroll-x"><table id="bt-summary"></table></div>
   </div>
-  <p id="bt-note" class="muted"></p>
-  <p class="muted">Backtest run <span id="bt-generated-at">loading</span></p>
 
   <div class="fig">
     <h3>Bad debt by LLTV and crash path</h3>
-    <p class="muted">Today's <abbr title="Every open position in the market at today's prices">book</abbr> replayed through each historical path (realized plus unrealized bad debt). <abbr title="A: on-chain bots only; AB: plus exchange-hedged liquidators; ABC: plus Coinbase redeeming cbBTC 1:1">Scenario</abbr> A: on-chain bots only; AB: plus liquidators selling on Coinbase and Kraken; ABC: plus Coinbase redeeming cbBTC 1:1.</p>
+    <div class="controls"><div id="bt-scenario-buttons" class="buttons"></div><span class="explain">A: on-chain bots only. AB: plus exchange-hedged liquidators (what we observe). ABC: plus a Coinbase backstop (hypothetical).</span></div>
+    <div class="controls"><div id="bt-metric-buttons" class="buttons"></div><span class="explain">Loss: realized by the end of the path. Exposure: underwater at the lowest print.</span></div>
     <div id="chart-heat" class="chart" aria-label="Bad debt by LLTV and crash path"></div>
+    <p id="bt-note" class="muted"></p>
   </div>
 
   <div class="fig">
     <h3>Liquidator capital, cbBTC on March 2020 (AB)</h3>
-    <p class="muted">Bad debt when the rolling 24-hour cap on exchange-hedged liquidators is raised from the largest day the book has seen.</p>
+    <p class="muted">How much liquidator capital would have to exist for the March 2020 path to leave nothing exposed. Bad debt as the daily cap on exchange-hedged liquidators rises from the largest day the book has seen (1x).</p>
     <div id="chart-capital" class="chart chart-short" aria-label="Liquidator capital, cbBTC on March 2020 (AB)"></div>
   </div>
 
   <div class="fig">
     <h3>Warning time</h3>
-    <p class="muted">Median time a liquidated position spends between 80% and 86% LTV before crossing, at 86% / 75%, scenario AB. The borrower-warning flow needs hours; March 2020 gave 80 minutes.</p>
+    <p class="muted">How long a position that ended up liquidated spent between 80% and 86% LTV before crossing, median, at today's terms (scenario AB). A borrower warning needs hours; the March 2020 bar is the one to read.</p>
     <div id="chart-warn" class="chart chart-short" aria-label="Warning time"></div>
   </div>
 </section>
