@@ -129,7 +129,18 @@ RiskDAO's SmartLTV formula (LTV = exp(−c·σ/√(l/d)) − β, with l the liqu
 
 The rule: **1 − LLTV must cover the worst move over the time it takes to clear the queue, plus the liquidation bonus, plus one oracle interval.** Basel's SCO60.29 says the same thing in regulator language: assess the liquidation period and downturn liquidity depth before recognizing crypto collateral.
 
-**cbBTC.** On a March 2020 path the queue takes two days to clear at the median with the capital liquidators brought on Feb 5 2026, and BTC fell 58% peak to trough over that week. No LLTV covers that: 77% still leaves 8.4% of supply underwater at the low. What does: a backstop liquidator that can redeem cbBTC and sell BTC on Coinbase's own book (the ABC column: 0.8% realized at 86%, zero at 77%, nothing left unserved). Only Coinbase can be that liquidator, nothing public says it is, and USDC suppliers are lending as if the answer were known; then the LLTV, where 80% costs 0.3% realized and 9.0% exposed on the worst path and is clean everywhere else. The origination cap follows from section 5: 66% at 80% LLTV on the full history, 70% if only the post-2022 regime counts. Comparators: Aave sets cbBTC on Base at a 78% liquidation threshold; Ledn liquidates at 80%; Unchained at 83% with a 24-hour cure period.
+**cbBTC.** On a March 2020 path the queue takes two days to clear at the median with the capital liquidators brought on Feb 5 2026, and BTC fell 58% peak to trough over that week. No LLTV covers that: 77% still leaves 8.4% of supply underwater at the low. What does: a backstop liquidator that can redeem cbBTC and sell BTC on Coinbase's own book (the ABC column: 0.8% realized at 86%, zero at 77%, nothing left unserved). Only Coinbase can be that liquidator, nothing public says it is, and USDC suppliers are lending as if the answer were known; then the LLTV, where 80% costs 0.3% realized and 9.0% exposed on the worst path and is clean everywhere else. The origination cap follows from section 5: 66% at 80% LLTV on the full history, 70% if only the post-2022 regime counts. Comparators, in the same three numbers (how much you can draw, where the warning starts, where you are liquidated):
+
+| Lender | Max draw | Warning / margin call | Liquidation | Penalty | Cure period |
+|---|---|---|---|---|---|
+| Coinbase on Morpho (cbBTC, today) | 75% | 80% (model's warning zone) | 86% | 4.38% bonus | none; bots act in seconds |
+| Coinbase on Morpho (recommended) | 66-70% | 80% pre-liquidation band | 80% | 6.38% at 80% (Morpho's LIF rises as LLTV falls) | pre-liquidation drains the queue on the slide |
+| Aave v3 on Base (cbBTC) | 73% | none | 78% | 7.5% | none |
+| Ledn | 50% | 70% | 80% | undisclosed | margin call, no fixed window |
+| Unchained | 40-50% | 67% | 83% | undisclosed | 24 hours |
+| SALT | 70% | 75% | 83.33% | undisclosed | margin call |
+
+Coinbase's 86% is the highest liquidation line in the set and its 11-point gap from draw to liquidation is the narrowest after SALT; every comparator that lends at a similar line either liquidates at a wider penalty (Aave) or gives itself a human cure window (Unchained), which is the TradFi form of the pre-liquidation band above. Sources in `research/sources_prior_art.md`.
 
 **Pre-liquidation, whichever LLTV is chosen.** Morpho supports pre-liquidation contracts: a band (say 80-86% LTV) where positions can be partially closed at a small bonus (1-2%) before the hard line. On a slow slide it drains the queue while capacity is idle. It costs borrowers less than a 4.38% liquidation and it is the on-chain form of the margin call Coinbase already sends.
 
