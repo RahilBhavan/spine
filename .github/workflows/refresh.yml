@@ -40,7 +40,7 @@ jobs:
       - name: stage site
         run: |
           mkdir -p _site/site _site/data
-          cp site/* _site/site/ && cp data/summary.json _site/data/
+          cp site/* _site/site/ && cp data/summary.json data/history.csv _site/data/
           cp data/backtest.json data/calibration.json _site/data/ 2>/dev/null || true
           cp PLAN.md WRITEUP.md _site/
           printf '<meta http-equiv="refresh" content="0; url=site/">' > _site/index.html
