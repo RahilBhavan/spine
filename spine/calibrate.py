@@ -9,7 +9,7 @@ Run: .venv/bin/python -m spine.calibrate <window> [--max-seconds N]   one window
 The latency step fetches one Morpho history per borrower (cached in data/cache/history_*.json); when the
 time budget runs out it exits 0 with "partial", rerun until it prints "complete"."""
 import bisect, json, time, datetime
-from spine.api import graphql, rpc, MARKETS, CHAIN, load, save, day_ts, budget, argv_max_seconds, row_ts, row_block, row_price
+from spine.api import graphql, rpc, MARKETS, CHAIN, COINBASE_LIQUIDATORS, load, save, day_ts, budget, argv_max_seconds, row_ts, row_block, row_price
 from spine.fetch_oracle import WINDOWS
 
 CALIB_MARKETS = ('cbBTC', 'WETH')  # markets with a Chainlink path in data/oracle/
@@ -177,7 +177,8 @@ def latency_one(r, h, oracle, decimals):
 
 
 def latency(market, rows, oracle, decimals, within_budget):
-    """(stats on last crossing, stats on first eligible), or None when the history fetch ran out of budget."""
+    """(stats on last crossing, stats on first eligible, per-liquidation results with their liquidator),
+    or None when the history fetch ran out of budget."""
     if len(rows) > CAP:
         rows = [rows[i * len(rows) // CAP] for i in range(CAP)]
     need = {}
@@ -192,7 +193,7 @@ def latency(market, rows, oracle, decimals, within_budget):
         if isinstance(res, str):
             excluded[res] = excluded.get(res, 0) + 1
             continue
-        ok.append(res)
+        ok.append(dict(res, liquidator=r['liquidator'].lower()))
         full += res['full']
     n = len(ok)
 
@@ -206,19 +207,26 @@ def latency(market, rows, oracle, decimals, within_budget):
                                  repaid_frac_p50=pct(frac, .5)),
                     p50=pct(xs, .5), p90=pct(xs, .9), p99=pct(xs, .99),
                     within={str(s): sum(x <= s for x in xs) / n if n else None for s in (2, 60, 300, 1800)})
-    return stats('last'), stats('first')
+    return stats('last'), stats('first'), ok
 
 
-def liquidators(rows):
+def liquidators(rows, ok):
+    """Top 10 by repaid USD. ok: latency() results, for the per-address reaction-time median."""
     by = {}
     for r in rows:
-        d = by.setdefault(r['liquidator'].lower(), dict(address=r['liquidator'], repaid_usd=0, count=0))
+        d = by.setdefault(r['liquidator'].lower(), dict(address=r['liquidator'], repaid_usd=0, seized_usd=0, count=0))
         d['repaid_usd'] += r['repaid_usd']
+        d['seized_usd'] += r['seized_usd']
         d['count'] += 1
     total = sum(d['repaid_usd'] for d in by.values())
     top = sorted(by.values(), key=lambda d: -d['repaid_usd'])[:10]
     for d in top:
+        a = d['address'].lower()
         d['share'] = d['repaid_usd'] / total if total else None
+        d['gross_bonus_usd'] = d['seized_usd'] - d['repaid_usd']  # ponytail: gas not subtracted; tx receipts (eth_getTransactionReceipt) for net profit
+        lat = [x['last'] for x in ok if x['liquidator'] == a]
+        d['latency_p50'] = pct(lat, .5) if len(lat) >= 5 else None
+        d['coinbase_affiliated'] = a in COINBASE_LIQUIDATORS
         time.sleep(0.25)
         d['is_contract'] = rpc('eth_getCode', [d['address'], 'latest']) != '0x'
     return dict(distinct=len(by), top=top)
@@ -238,9 +246,9 @@ def run_window(window, max_seconds):
         lat = latency(market, rows, oracle, dec, within_budget)
         if lat is None:
             return False
-        lat, lat_first = lat
+        lat, lat_first, ok = lat
         out[market] = dict(volume=vol, daily=daily, peaks=peaks, bonus=bonus(rows), latency=lat,
-                           latency_first_eligible=lat_first, liquidators=liquidators(rows))
+                           latency_first_eligible=lat_first, liquidators=liquidators(rows, ok))
         print('%s %-5s n=%d repaid=$%.1fM bonus_p50=%.4f latency n=%d p50=%s excluded=%s' % (
             window, market, vol['n'], vol['repaid_usd'] / 1e6, out[market]['bonus']['p50'], lat['n'], lat['p50'], lat['excluded']))
     save('cache/calib_%s' % window, out)
@@ -280,6 +288,26 @@ def propose(days, windows):
     return {k: v for k, v in names.items() if k not in windows}
 
 
+def leaderboard(wins):
+    """Every window's top-10 liquidators merged by address across markets and windows; top 20 by repaid USD."""
+    by, lats = {}, {}
+    for w, ms in wins.items():
+        for r in ms.values():
+            for t in (r or {}).get('liquidators', {}).get('top', []):
+                a = t['address'].lower()
+                d = by.setdefault(a, dict(address=t['address'], count=0, repaid_usd=0, seized_usd=0, gross_bonus_usd=0, windows=set(),
+                                          is_contract=t['is_contract'], coinbase_affiliated=t['coinbase_affiliated']))
+                for k in ('count', 'repaid_usd', 'seized_usd', 'gross_bonus_usd'):
+                    d[k] += t[k]
+                d['windows'].add(w)
+                if t['latency_p50'] is not None:
+                    lats.setdefault(a, []).append(t['latency_p50'])
+    for a, d in by.items():
+        d['windows'] = sorted(d['windows'])
+        d['latency_p50'] = pct(lats.get(a, []), .5)
+    return sorted(by.values(), key=lambda d: -d['repaid_usd'])[:20]
+
+
 def assemble():
     wins = {w: load('cache/calib_%s' % w) for w in WINDOWS}
     pc = lambda x: '%.2f%%' % (100 * x) if x is not None else '-'
@@ -301,7 +329,9 @@ def assemble():
         assert abs(ms['cbBTC']['bonus']['p50'] - 0.0438) < 0.005, (w, ms['cbBTC']['bonus']['p50'])
     for w in ('Feb2026', 'Jun2026a'):
         assert wins[w]['cbBTC']['latency']['n'] >= 100, (w, wins[w]['cbBTC']['latency']['n'])
-    save('calibration', dict(generated_at=int(time.time()), windows=wins), indent=1)
+    board = leaderboard(wins)
+    assert 10 <= len(board) <= 20 and all(x['repaid_usd'] >= y['repaid_usd'] for x, y in zip(board, board[1:])), len(board)
+    save('calibration', dict(generated_at=int(time.time()), windows=wins, leaderboard=board), indent=1)
     print('\nok: data/calibration.json')
 
 

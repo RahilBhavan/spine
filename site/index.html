@@ -113,6 +113,11 @@
     <summary>Top 10 liquidators (all time, by repaid USD)</summary>
     <div class="scroll-x"><table id="liquidators"></table></div>
   </details>
+  <details class="fold">
+    <summary>Liquidator leaderboard (stress windows)</summary>
+    <p class="muted">Top-10 liquidators of each stress window, merged across cbBTC and WETH. Gross bonus is seized minus repaid, before gas. Latency: median seconds from the oracle crossing to the liquidation, where the address has at least 5 measured events.</p>
+    <div class="scroll-x"><table id="leaderboard"></table></div>
+  </details>
 </section>
 
 <section id="stress">

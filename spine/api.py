@@ -24,6 +24,7 @@ MARKETS = {
     'JitoSOL': dict(id='0x09276541cfecb6920a80679a1deced4dde3ae64bf5fc2c9c1f9c21e0c152e1a5', lltv=0.625, decimals=9,  cb_product='SOL-USD',  feed='SOL', max_draw=0.55),
 }
 LOAN_DECIMALS = 6  # USDC
+COINBASE_LIQUIDATORS = frozenset()  # lowercase addresses; none found as of 2026-09-19, see research/self_liquidation.md
 
 
 def lif(lltv):

@@ -374,6 +374,21 @@ function renderLiquidators(m) {
       '</td><td>' + usd(l.repaid_usd) + '</td><td>' + pct(l.share) + '</td></tr>').join('');
 }
 
+// Merged stress-window leaderboard from data/calibration.json; market-independent, so rendered once from main().
+async function renderLeaderboard() {
+  const el = document.getElementById('leaderboard');
+  const text = await get('calibration.json');
+  const rows = text && JSON.parse(text).leaderboard;
+  if (!rows) { el.innerHTML = '<tr><td class="muted">not available</td></tr>'; return; }
+  const yn = b => b ? 'yes' : 'no';
+  el.innerHTML =
+    '<tr><th>#</th><th>Liquidator</th><th>Windows</th><th>Liquidations</th><th>Repaid</th><th>Gross bonus</th><th>Latency p50</th><th>Contract</th><th>Coinbase-affiliated</th></tr>' +
+    rows.map((l, i) =>
+      '<tr><td>' + (i + 1) + '</td><td>' + link(l.address) + '</td><td>' + l.windows.join(', ') + '</td><td>' + num(l.count) +
+      '</td><td>' + usd(l.repaid_usd) + '</td><td>' + usd(l.gross_bonus_usd) + '</td><td>' + (l.latency_p50 == null ? '-' : l.latency_p50 + ' s') +
+      '</td><td>' + yn(l.is_contract) + '</td><td>' + yn(l.coinbase_affiliated) + '</td></tr>').join('');
+}
+
 // ---- Backtest (data/backtest.json). Also used by writeup.html, which loads this file and calls renderHeatmap / renderWarn.
 
 async function loadBacktest() {
@@ -528,6 +543,7 @@ async function main() {
   renderHeader();
   renderAll();
   renderBacktest();
+  renderLeaderboard();
   loadHistory().then(h => { HIST = h; renderTrend(); });
   if (DATA.markets[location.hash.slice(1)]) document.getElementById('book').scrollIntoView();  // the market anchor has no element of its own
 }
