@@ -38,6 +38,7 @@ Setup: `uv venv .venv && uv pip install numpy pytest`. The positions files are n
 .venv/bin/python -m spine.tag_coinbase         # Coinbase Smart Wallet tags via Multicall3
 .venv/bin/python -m spine.fetch_prices         # Coinbase 5m candles for 7 crash windows (cached)
 .venv/bin/python -m spine.fetch_depth          # CEX L2 depth + DEX quoter capacity (~3 min)
+.venv/bin/python -m spine.fetch_vaults         # which vaults fund each market: V1 from the API, V2 on-chain (~40s)
 .venv/bin/python -m spine.summarize            # -> data/summary.json for the site
 .venv/bin/python -m http.server 8000           # then open http://localhost:8000/site/
 ```

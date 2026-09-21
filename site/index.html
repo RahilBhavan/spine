@@ -131,6 +131,12 @@
     <div class="scroll-x"><table id="bt-summary"></table></div>
   </div>
 
+  <details class="fold">
+    <summary>Who carries a loss</summary>
+    <p class="muted">The vaults funding the selected market, largest first, and their cut of the worst modeled path (March 2020, scenario AB, the row above). Morpho socializes bad debt pro rata to suppliers, so each vault's cut is its share of market supply; the last column sets the held-a-day loss against the vault's total assets. Other suppliers are wallets supplying the market directly.</p>
+    <div class="scroll-x"><table id="bt-vaults"></table></div>
+  </details>
+
   <div class="fig">
     <h3>Bad debt by LLTV and crash path</h3>
     <div class="controls"><div id="bt-scenario-buttons" class="buttons"></div><span class="explain">A: on-chain bots only. AB: plus exchange-hedged liquidators (what we observe). ABC: plus a Coinbase backstop (hypothetical).</span></div>

@@ -4,7 +4,10 @@ Status 2026-09-20: Phases A-E, G and H done. Phase F: F1 and F3 done (repo publi
 F2 done (WRITEUP.md changelog section), F4 drafted in `research/outreach.md` (forum post and thread; the Dune mirror
 is not drafted, it needs an account and queries this repo cannot check). E1.3 alt replays landed as G2.3. G1.3's
 history rewrite done 2026-09-20 (`git filter-repo` on `data/positions_*.json`, force-pushed; clones from before
-that date must re-clone). What is left is the "Later" list below.
+that date must re-clone). The "Later" list landed the same day: liquidator leaderboard (`calibration.json` leaderboard,
+Liquidations section), supplier vault exposure (`spine/fetch_vaults.py`, "Who carries a loss" in Stress test), Chainlink lag replay
+(`spine/oracle_lag.py`, writeup section 7), alert as a GitHub issue from the hourly job (`spine/alert.py`), and the Aave/TradFi
+table in writeup section 6. Nothing planned beyond keeping the live parts live.
 
 Status 2026-09-19: Phase G (pipeline, model, code fixes) planned below. Status 2026-09-18: Phases A-E done (E1 item 3, alt-asset replays, deferred; item 6 lands as
 `calibrate --since` plus `data/windows.json`). The partial-liquidation model changed the

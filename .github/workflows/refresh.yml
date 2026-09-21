@@ -18,12 +18,13 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - run: pip install numpy
-      - name: fetch live data (positions, liquidations, tags, depth) and summarize
+      - name: fetch live data (positions, liquidations, tags, depth, vaults) and summarize
         run: |
           python -m spine.fetch_positions
           python -m spine.fetch_liquidations
           python -m spine.tag_coinbase
           python -m spine.fetch_depth
+          python -m spine.fetch_vaults
           python -m spine.summarize
           python -m spine.history
           python -m spine.render_writeup
@@ -43,7 +44,7 @@ jobs:
         run: |
           git config user.name spine-bot
           git config user.email spine-bot@users.noreply.github.com
-          git add data/liquidations_*.json data/coinbase_wallets.json data/depth.json data/summary.json data/history.csv site/writeup.html data/backtest.json
+          git add data/liquidations_*.json data/coinbase_wallets.json data/depth.json data/vaults.json data/summary.json data/history.csv site/writeup.html data/backtest.json
           git diff --cached --quiet || git commit -qm "data: hourly snapshot $(date -u +%FT%H:%MZ)"
           git pull --rebase origin main
           git push
@@ -51,7 +52,7 @@ jobs:
         run: |
           mkdir -p _site/site _site/data
           cp site/* _site/site/ && cp data/summary.json data/history.csv _site/data/
-          cp data/backtest.json data/calibration.json _site/data/ 2>/dev/null || true
+          cp data/backtest.json data/calibration.json data/vaults.json _site/data/ 2>/dev/null || true
           cp PLAN.md WRITEUP.md _site/
           printf '<meta http-equiv="refresh" content="0; url=site/">' > _site/index.html
       - uses: actions/upload-pages-artifact@v3

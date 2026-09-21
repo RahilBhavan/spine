@@ -59,3 +59,11 @@ def test_oracle_lag():
         for asset, s in assets.items():
             assert keys <= set(s), (w, asset, keys - set(s))
             assert 0 <= s['deviation']['p50'] <= 0.02, (w, asset)
+
+
+def test_vaults():
+    d = need('vaults')
+    for m, v in d['markets'].items():
+        assert v['supply_usd'] >= 0 and isinstance(v['vaults'], list) and v['vaults'], m
+        assert all(x['supplied_usd'] >= 0 for x in v['vaults']), m
+        assert sum(x['share'] for x in v['vaults']) <= 1.02, m

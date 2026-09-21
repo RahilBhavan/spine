@@ -2,6 +2,7 @@
 
 let DATA = null;
 let BT = null;  // backtest.json, feeds the Stress test section and the worst-path tile
+let VAULTS;  // vaults.json, feeds the "Who carries a loss" table; undefined until fetched, null when missing
 let market = 'cbBTC';
 let cbOnly = false;
 let logY = false;
@@ -492,10 +493,32 @@ function renderSummary(bt) {
     ['Mar2020', 'May2021'].map(w => '<tr><td>' + w + '</td>' + (lossCells(bt, btMarket, w) || ['-', '-', '-']).map(v => '<td>' + v + '</td>').join('') + '</tr>').join('');
 }
 
+async function loadVaults() {
+  if (VAULTS === undefined) VAULTS = JSON.parse(await get('vaults.json'));  // JSON.parse(null) is null
+  return VAULTS;
+}
+
+// Who carries a loss: the selected market's vaults (top 10 plus direct suppliers) with their pro-rata cut of the same Mar2020 AB row renderSummary shows.
+function renderVaults(vaults, bt) {
+  const el = document.getElementById('bt-vaults');
+  const m = vaults && vaults.markets[btMarket];
+  if (!m) { el.innerHTML = '<tr><td class="muted">not available</td></tr>'; return; }
+  const row = bt && todayRow(bt, btMarket, 'Mar2020'), held = bt && todayRow(bt, btMarket, 'Mar2020', { hold_bars: 288 });
+  const loss = [row && METRICS['Loss by end of path'](row), row && METRICS['Exposure at trough'](row), held && METRICS['Loss by end of path'](held)];
+  const rows = m.vaults.filter(v => v.kind !== 'direct').slice(0, 10).concat(m.vaults.filter(v => v.kind === 'direct'));
+  const name = v => v.name.replace(/[<&]/g, c => c === '<' ? '&lt;' : '&amp;');
+  const cell = v => v.address ? '<a href="https://app.morpho.org/base/vault/' + v.address + '" target="_blank" rel="noopener">' + name(v) + '</a>' : name(v);
+  el.innerHTML = '<tr><th>Vault</th><th>Kind</th><th>Supplied to market</th><th>Share</th><th>Loss by end of path</th><th>Exposure at trough</th><th>Held a day</th><th>Held a day, % of vault</th></tr>' +
+    rows.map(v => '<tr><td>' + cell(v) + '</td><td>' + (v.address ? v.kind.toUpperCase() : '-') + '</td><td>' + usd(v.supplied_usd) + '</td><td>' + pct(v.share) + '</td>' +
+      loss.map(x => '<td>' + (x == null ? '-' : usd(x * v.share)) + '</td>').join('') +
+      '<td>' + (loss[2] != null && v.vault_total_usd ? pct(loss[2] * v.share / v.vault_total_usd, 2) : '-') + '</td></tr>').join('');
+}
+
 async function renderBacktest() {
   const bt = await loadBacktest();
   const note = document.getElementById('bt-note');
   renderWorst(bt);
+  renderVaults(await loadVaults(), bt);
   if (!bt) {
     ['bt-note', 'bt-generated-at', 'bt-summary', 'chart-heat', 'chart-capital', 'chart-warn'].forEach(id => document.getElementById(id).textContent = 'not available');
     return;
