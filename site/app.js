@@ -125,19 +125,41 @@ function tableView(el, columns, rows) {
       b.setAttribute('aria-pressed', on);
       el.hidden = on;
       t.parentElement.hidden = !on;
-      if (!on) Plotly.Plots.resize(el);  // it was laid out at zero width while hidden
+      if (!on && DRAWN.has(el)) Plotly.Plots.resize(el);  // it was laid out at zero width while hidden
     };
   }
   t.innerHTML = '<tr>' + columns.map(c => '<th>' + c + '</th>').join('') + '</tr>' +
     rows.map(r => '<tr>' + r.map(v => '<td>' + v + '</td>').join('') + '</tr>').join('');
 }
 
+// Charts draw when they first come near the viewport, and Plotly (1.3 MB) loads then, not with the page; after that, on every call.
+const PLOTLY_SRC = 'https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@2.35.2/plotly-cartesian.min.js';
+let plotlyLoad = null;
+function loadPlotly() {
+  return plotlyLoad ||= new Promise((ok, fail) => {
+    const s = document.createElement('script');
+    s.src = PLOTLY_SRC; s.onload = ok; s.onerror = () => { banner(PLOTLY_SRC); fail(); };
+    document.head.append(s);
+  });
+}
+const DRAWN = new WeakSet(), PENDING = new Map();
+const NEAR = new IntersectionObserver(es => es.forEach(e => {
+  if (!e.isIntersecting) return;
+  NEAR.unobserve(e.target);
+  loadPlotly().then(() => {  // plot() calls made while loading update PENDING; the latest one draws
+    DRAWN.add(e.target);
+    Plotly.react(e.target, ...PENDING.get(e.target));
+    PENDING.delete(e.target);
+  });
+}), { rootMargin: '400px' });
+
 // Every chart goes through here: legend only with two or more series, and the table view gets the same rows.
 function plot(id, traces, layout, columns, rows) {
   const el = typeof id === 'string' ? document.getElementById(id) : id;
   if (layout.showlegend == null) layout.showlegend = traces.length > 1;
   if (!layout.showlegend) layout.margin.b = 48;  // no legend row; automargin still grows it for the tick labels and title
-  Plotly.react(el, traces, layout, PLOT_CONFIG);
+  if (DRAWN.has(el)) Plotly.react(el, traces, layout, PLOT_CONFIG);
+  else { if (!PENDING.has(el)) NEAR.observe(el); PENDING.set(el, [traces, layout, PLOT_CONFIG]); }
   tableView(el, columns, rows);
 }
 
@@ -169,6 +191,9 @@ function stamp(el, text, ms) {
 function renderHeader() {
   const t = DATA.totals;
   stamp(document.getElementById('generated-at'), DATA.generated_at.replace('T', ' ').replace('+00:00', ' UTC'), Date.parse(DATA.generated_at));
+  const ageH = (Date.now() - Date.parse(DATA.generated_at)) / 36e5;  // past 12 h, say so in words, not just a red stamp
+  if (ageH > 12) document.getElementById('generated-at').parentElement.insertAdjacentHTML('afterend',
+    '<p class="muted notice" role="status">Data last refreshed ' + Math.round(ageH) + ' hours ago; the refresh job runs on GitHub\'s best-effort schedule.</p>');
   document.getElementById('hero-borrow').textContent = usd(t.borrow_usd);
   cards(document.getElementById('totals'), [
     ['Collateral', usd(t.collateral_usd)],
@@ -411,7 +436,9 @@ async function loadBacktest() {
 }
 
 function btRows(bt, f, over) {
-  return bt.runs.filter(r => bt.base(r, over) && Object.keys(f).every(k => r[k] === f[k]));
+  const key = JSON.stringify(over || {});  // the base filter runs once per override, not once per heatmap cell
+  const base = (bt.baseRows ||= {})[key] ||= bt.runs.filter(r => bt.base(r, over));
+  return base.filter(r => Object.keys(f).every(k => r[k] === f[k]));
 }
 
 let btMetric = 'Loss by end of path';

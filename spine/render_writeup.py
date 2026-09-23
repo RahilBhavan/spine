@@ -17,9 +17,18 @@ TEMPLATE = '''<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Spine: haircut writeup</title>
+<title>Spine writeup: what haircut should Coinbase take?</title>
+<meta name="description" content="Seven crash replays of Coinbase's Morpho loan book: on a March 2020 path, liquidator capital, not the LLTV, is what binds.">
+<meta property="og:title" content="Spine writeup: what haircut should Coinbase take?">
+<meta property="og:description" content="Seven crash replays of Coinbase's Morpho loan book: on a March 2020 path, liquidator capital, not the LLTV, is what binds.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://rahilbhavan.github.io/spine/site/writeup.html">
+<meta property="og:image" content="https://rahilbhavan.github.io/spine/social-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://rahilbhavan.github.io/spine/site/writeup.html">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230f172a'/><text x='32' y='42' text-anchor='middle' font-family='Arial,sans-serif' font-size='28' font-weight='700' fill='%2338bdf8'>SP</text></svg>">
 <link rel="stylesheet" href="style.css">
-<script src="https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@2.35.2/plotly-cartesian.min.js"></script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
 <style>
   .prose { max-width: 860px; margin: 0 auto; }
   .prose .tablewrap { overflow-x: auto; margin: 1em 0; }
@@ -36,6 +45,7 @@ TEMPLATE = '''<!doctype html>
   nav.top a { margin-right: 1em; }
   nav.toc { background: var(--card); padding: 0.75em 1em; border-radius: 6px; margin: 1em 0; }
   nav.toc ol { margin: 0.25em 0 0; padding-left: 1.5em; } nav.toc p { margin: 0; }
+  nav.toc a { display: inline-block; min-height: 24px; }
 </style>
 </head>
 <body>
@@ -46,9 +56,9 @@ TEMPLATE = '''<!doctype html>
   </article>
   <footer class="muted">Independent analysis from public on-chain data. Not affiliated with or endorsed by Coinbase or Morpho.</footer>
 </main>
-<script src="app.js"></script>
+<script src="app.js" defer></script>
 <script>
-loadBacktest().then(bt => { if (bt) { renderHeatmap('fig-heat', bt, 'cbBTC', 'AB'); renderWarn('fig-warn', bt, 'cbBTC'); } });
+addEventListener('DOMContentLoaded', () => loadBacktest().then(bt => { if (bt) { renderHeatmap('fig-heat', bt, 'cbBTC', 'AB'); renderWarn('fig-warn', bt, 'cbBTC'); } }));
 </script>
 </body>
 </html>
