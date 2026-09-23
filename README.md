@@ -3,7 +3,7 @@
 [![refresh](https://github.com/RahilBhavan/spine/actions/workflows/refresh.yml/badge.svg)](https://github.com/RahilBhavan/spine/actions/workflows/refresh.yml)
 [![ci](https://github.com/RahilBhavan/spine/actions/workflows/ci.yml/badge.svg)](https://github.com/RahilBhavan/spine/actions/workflows/ci.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-**Live dashboard: [rahilbhavan.github.io/spine](https://rahilbhavan.github.io/spine)** (refreshes hourly)
+**Live dashboard: [rahilbhavan.github.io/spine](https://rahilbhavan.github.io/spine)** (refreshes roughly hourly; GitHub cron is best-effort)
 
 Live risk dashboard and haircut backtest over Coinbase's on-chain loan book (Morpho Blue on Base).
 
@@ -43,7 +43,7 @@ Setup: `uv venv .venv && uv pip install numpy pytest`. The positions files are n
 .venv/bin/python -m http.server 8000           # then open http://localhost:8000/site/
 ```
 
-Stress-test pipeline (slow, chunked; every script takes `--max-seconds` and resumes):
+Stress-test pipeline (slow, chunked; `fetch_oracle`, `calibrate`, `rebuild_book` and `backtest` take `--max-seconds` and resume):
 
 ```
 .venv/bin/python -m spine.fetch_oracle                     # Chainlink AnswerUpdated paths for the lived events
@@ -52,7 +52,7 @@ Stress-test pipeline (slow, chunked; every script takes `--max-seconds` and resu
 .venv/bin/python -m spine.backtest calib && .venv/bin/python -m spine.backtest grid --market cbBTC   # etc.
 ```
 
-Fetchers are stdlib only; `backtest.py` needs numpy. The GitHub Actions workflow refreshes the live data hourly and deploys to Pages.
+Fetchers are stdlib only; `backtest.py` needs numpy. The GitHub Actions workflow refreshes the live data roughly hourly (GitHub cron is best-effort) and deploys to Pages.
 The hourly job also opens a GitHub issue (`spine.alert`) when any market's distance to capacity is 10% or under; closing the issue acknowledges it, and a new one opens on the next hour the condition holds.
 
 ## Citing or reusing
