@@ -4,7 +4,7 @@
 
 ## The short version
 
-Coinbase lends USDC against cbBTC and ETH on Morpho (Base) at an 86% liquidation LTV with a 4.38% liquidation bonus. The book is $1.41B of debt against $2.86B of cbBTC, 39,000 positions, 97.5% of it Coinbase Smart Wallets. It has been through three real stress events (Oct 2025, Feb 2026, Jun 2026), cleared $256M of liquidations in the four stress weeks alone, and taken zero bad debt.
+Coinbase's app routes USDC loans against cbBTC and ETH to Morpho markets on Base, funded by Morpho vault suppliers, at an 86% liquidation LTV with a 4.38% liquidation bonus. The book is $1.41B of debt against $2.86B of cbBTC, 39,000 positions, 97.5% of it Coinbase Smart Wallets. It has been through three real stress events (Oct 2025, Feb 2026, Jun 2026), cleared $256M of liquidations in the four stress weeks alone, and taken zero bad debt.
 
 That record is real and it is also not the test. The lived events gave borrowers hours to days of warning before liquidation; March 2020 gave 25 minutes. Replaying today's book through seven crash paths, with liquidators and borrowers behaving the way the lived events show they behave, two numbers matter for each path: the loss that is realized by the end of the path, and the exposure at the lowest print, meaning how much of the book is underwater with no liquidator able to act. The first is what lenders lost; the second is what they were exposed to, and it becomes the first if the price does not bounce.
 

@@ -5,11 +5,13 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 **Live dashboard: [rahilbhavan.github.io/spine](https://rahilbhavan.github.io/spine)** (refreshes roughly hourly; GitHub cron is best-effort)
 
-Live risk dashboard and haircut backtest over Coinbase's on-chain loan book (Morpho Blue on Base).
+Live risk dashboard and haircut backtest over the Morpho Blue markets on Base behind Coinbase's app loans.
+
+Independent analysis from public on-chain data. Not affiliated with or endorsed by Coinbase or Morpho.
 
 ## What it answers
 
-Coinbase lends USDC against cbBTC and ETH on Morpho at an 86% liquidation LTV. The book is about $1.4B of debt against $2.9B of cbBTC across 39,000 positions, 97.5% of it Coinbase Smart Wallets. It has cleared $256M of liquidations across three real stress events with zero bad debt. Spine asks what happens on a path those events never tested: March 2020, where borrowers got 25 minutes of warning instead of hours.
+Coinbase's app routes USDC loans against cbBTC and ETH to Morpho markets on Base, funded by Morpho vault suppliers, at an 86% liquidation LTV. Bad debt falls on those suppliers, not on Coinbase's balance sheet. As of 2026-09-19 the book was about $1.4B of debt against $2.9B of cbBTC across 39,000 positions (see the live dashboard for current figures), 97.5% of it Coinbase Smart Wallets. It has cleared $256M of liquidations across three real stress events with zero bad debt. Spine asks what happens on a path those events never tested: March 2020, where borrowers got 25 minutes of warning instead of hours.
 
 The answer, from replaying today's book through seven historical crash paths with liquidator and borrower behavior calibrated on the lived events:
 

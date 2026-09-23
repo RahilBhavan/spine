@@ -44,6 +44,7 @@ TEMPLATE = '''<!doctype html>
   <article id="doc">
 @@BODY@@
   </article>
+  <footer class="muted">Independent analysis from public on-chain data. Not affiliated with or endorsed by Coinbase or Morpho.</footer>
 </main>
 <script src="app.js"></script>
 <script>
