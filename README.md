@@ -5,6 +5,8 @@
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 **Live dashboard: [rahilbhavan.github.io/spine](https://rahilbhavan.github.io/spine)** (refreshes roughly hourly; GitHub cron is best-effort)
 
+[![Spine dashboard: $1.6B borrowed across nine Morpho markets on Base, the cbBTC distance-to-capacity gauge, the worst modeled crash path, and the cbBTC market cards](docs/screenshot.png)](https://rahilbhavan.github.io/spine/site/)
+
 Live risk dashboard and haircut backtest over the Morpho Blue markets on Base behind Coinbase's app loans.
 
 Independent analysis from public on-chain data. Not affiliated with or endorsed by Coinbase or Morpho.
@@ -61,3 +63,10 @@ The hourly job also opens a GitHub issue (`spine.alert`) when any market's dista
 ## Citing or reusing
 
 MIT licensed. If you use the calibration numbers (liquidator latency, full-close rate, daily capacity) or the borrower-response fit, cite the writeup by date; the data snapshot in `data/` is what the tables were printed from. Issues and pull requests are welcome, especially historical order-book depth for the crash windows, which is the least-known input.
+
+## Related projects
+
+- [mara-credit-case](https://github.com/RahilBhavan/mara-credit-case): a credit committee case on a $5M secured revolver to MARA Holdings.
+- [coin-revenue-bridge](https://github.com/RahilBhavan/coin-revenue-bridge): a Q3 to Q4 2024 Coinbase consumer revenue bridge from SEC filings.
+- [x402-exception-desk](https://github.com/RahilBhavan/x402-exception-desk): a synthetic x402 payment exception desk.
+- All four projects: [rahilbhavan.com/crypto-finance](https://rahilbhavan.com/crypto-finance).
