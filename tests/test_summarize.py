@@ -41,7 +41,7 @@ def test_distance_to_capacity():
     c = curve()
     assert distance_to_capacity(c, 50.0) == 0.0
     assert distance_to_capacity(c, 100.0) == 0.07  # the 0.80 position crosses at 0.80 / 0.93 > lltv
-    assert distance_to_capacity(c, 0) is None and distance_to_capacity(c, None) is None
+    assert distance_to_capacity(c, 0) == 0.0 and distance_to_capacity(c, None) == 0.0  # no depth data reads as worst case
     assert distance_to_capacity(c, TOTAL) is None and distance_to_capacity(c, 1e9) is None
 
 

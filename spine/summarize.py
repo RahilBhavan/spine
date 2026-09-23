@@ -57,8 +57,9 @@ def capacity_ab(depth):
 
 
 def distance_to_capacity(curve, cap):
-    """Smallest price drop at which liquidatable borrow exceeds cap; None if it never does within DROPS."""
-    return next((c['drop'] for c in curve if c['borrow_usd'] > cap), None) if cap else None
+    """Smallest price drop at which liquidatable borrow exceeds cap; None if it never does within DROPS.
+    Zero or missing capacity (no depth data) is 0.0, the worst case, so the gauge goes red and the alert fires."""
+    return next((c['drop'] for c in curve if c['borrow_usd'] > cap), None) if cap else 0.0
 
 
 def hf_cdf(pos):
