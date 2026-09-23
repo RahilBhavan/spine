@@ -18,6 +18,8 @@ jobs:
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
       - run: pip install numpy
+      - name: restore the latest generated data from the data branch (first run falls back to main's snapshot)
+        run: git fetch -q --depth 1 origin data && git checkout FETCH_HEAD -- data || echo "no data branch yet; starting from main's snapshot"
       - name: fetch live data (positions, liquidations, tags, depth, vaults) and summarize
         run: |
           python -m spine.fetch_positions
@@ -40,14 +42,15 @@ jobs:
       - name: backtest (incremental; a model failure leaves a warning and a stale Backtest tab, not a dead dashboard)
         continue-on-error: true
         run: python -m spine.backtest --max-seconds 600
-      - name: commit snapshot
+      - name: publish snapshot (data branch is one orphan commit, force-pushed each run, so main gets only human commits)
         run: |
           git config user.name spine-bot
           git config user.email spine-bot@users.noreply.github.com
+          git checkout -q --orphan data
+          git rm -rqf --cached .
           git add data/liquidations_*.json data/coinbase_wallets.json data/depth.json data/vaults.json data/summary.json data/history.csv site/writeup.html data/backtest.json
-          git diff --cached --quiet || git commit -qm "data: hourly snapshot $(date -u +%FT%H:%MZ)"
-          git pull --rebase origin main
-          git push
+          git commit -qm "data: snapshot $(date -u +%FT%H:%MZ)"
+          git push -qf origin data
       - name: stage site
         run: |
           mkdir -p _site/site _site/data

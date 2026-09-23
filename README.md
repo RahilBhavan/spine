@@ -55,6 +55,7 @@ Stress-test pipeline (slow, chunked; `fetch_oracle`, `calibrate`, `rebuild_book`
 ```
 
 Fetchers are stdlib only; `backtest.py` needs numpy. The GitHub Actions workflow refreshes the live data roughly hourly (GitHub cron is best-effort) and deploys to Pages.
+`main` holds one frozen snapshot of the generated files in `data/` so a fresh clone renders and tests pass. The live site and the `data` branch (a single commit, replaced each run) hold the latest data.
 The hourly job also opens a GitHub issue (`spine.alert`) when any market's distance to capacity is 10% or under; closing the issue acknowledges it, and a new one opens on the next hour the condition holds.
 
 ## Citing or reusing

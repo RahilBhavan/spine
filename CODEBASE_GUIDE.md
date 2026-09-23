@@ -190,9 +190,9 @@ One technical debt item is explicit in current code: Python's JSON writer emits 
 
 ### Workflows
 
-CI installs Python 3.12, NumPy, and pytest and runs the suite. The hourly refresh runs the live pipeline, advances the resumable backtest, commits selected generated artifacts, stages a minimal `_site`, and deploys GitHub Pages.
+CI installs Python 3.12, NumPy, and pytest and runs the suite. The hourly refresh runs the live pipeline, advances the resumable backtest, force-pushes the generated artifacts to the `data` branch as one orphan commit, stages a minimal `_site`, and deploys GitHub Pages. Each run starts by restoring `data/` from that branch, so appending files (history.csv, liquidations, the wallet cache, backtest.json) carry over. `main` keeps one frozen snapshot and gets only human commits.
 
-This architecture makes the repository itself the data store and audit log. The benefit is exceptional transparency and zero infrastructure. The costs are repository growth, push races, and coupling publication health to refresh/model health; Phase G in `ROADMAP.md` records planned mitigations.
+This architecture makes the repository itself the data store with zero infrastructure. The `data` branch keeps only the latest state, so the repository does not grow per run; the cost is no per-run audit trail in git, and publication health stays coupled to refresh/model health.
 
 ## 5. Why the project looks this way
 
@@ -292,7 +292,6 @@ After editing:
 - The oracle model for counterfactual events is a simple lag over candle lows.
 - A static liquidation service rank does not re-rank after partial repayments.
 - Coinbase affiliation detects known Smart Wallet implementations, not organizational ownership of every address.
-- Static Git-backed data publication will become awkward if snapshots continue to grow quickly.
 - The browser's `Infinity` repair is a compatibility workaround rather than a clean data contract.
 - The dashboard covers alt markets more confidently than the backtest does; missing DEX venues and shorter price histories weaken alt conclusions.
 - Unknown: which planned Phase G changes in the uncommitted `ROADMAP.md` the owner intends to implement and in what review units.
