@@ -37,7 +37,7 @@ rather than at the cliff, then 80% LLTV with a 66-70% origination cap. WETH to 7
 Alts: keep 62.5% but cap each book at what Coinbase's own order book can absorb; cbXRP is already past that
 cap.
 
-Full argument, tables and limitations: https://rahilbhavan.github.io/spine/writeup.html. The model is two
+Full argument, tables and limitations: https://rahilbhavan.github.io/spine/site/writeup.html. The model is two
 parameters fit on three events and the capital figure is a floor, not an estimate; section 7 lists what it does
 not capture. Corrections welcome, ideally as issues on the repo.
 
@@ -69,4 +69,4 @@ path leaves $158M (10% of supply) underwater at the trough.
 
 5/ Cutting the LLTV does little to that number (77%: still 8.4%). A backstop liquidator does (0.8%). Public
 data, open code, hourly dashboard: https://rahilbhavan.github.io/spine/. Writeup with everything it does not
-capture: https://rahilbhavan.github.io/spine/writeup.html
+capture: https://rahilbhavan.github.io/spine/site/writeup.html
