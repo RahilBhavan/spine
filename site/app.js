@@ -23,7 +23,7 @@ const GAUGE_BANDS = [[0.10, 'red', '▲', 'tight'], [0.20, 'amber', '◆', 'watc
 const PHONE = window.matchMedia('(max-width: 700px)').matches;  // read once; the layout rules in style.css switch at the same width
 
 function band(d) {
-  return d == null ? GAUGE_BANDS[2] : GAUGE_BANDS.find(([lim]) => d < lim);
+  return d == null ? GAUGE_BANDS[2] : GAUGE_BANDS.find(([lim]) => d <= lim);
 }
 
 function mark(d) {
