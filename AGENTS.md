@@ -4,7 +4,7 @@
 
 Spine measures liquidation risk in Coinbase-linked Morpho Blue markets on Base. It fetches public market data, reconstructs historical books, calibrates a liquidation model, replays crash paths, and publishes a static dashboard and writeup.
 
-Start with `CODEBASE_GUIDE.md` for the system tour and `.t3/CONTEXT.md` for task routing. `PLAN.md` is the original product/model specification; `ROADMAP.md` records later corrections and planned work; `CONTRIBUTING.md` is the coding standard.
+Start with `CODEBASE_GUIDE.md` for the system tour. `PLAN.md` is the original product/model specification; `ROADMAP.md` records later corrections and planned work; `CONTRIBUTING.md` is the coding standard.
 
 ## Commands
 
@@ -12,7 +12,7 @@ Start with `CODEBASE_GUIDE.md` for the system tour and `.t3/CONTEXT.md` for task
 - Tests: `.venv/bin/python -m pytest -q tests`
 - Live summary from existing inputs: `.venv/bin/python -m spine.summarize`
 - Serve the static site from the repository root: `.venv/bin/python -m http.server 8000`
-- Full data and model commands are sourced in `.t3/references/commands.md`.
+- Full data and model commands are listed in `README.md`.
 
 ## Working constraints
 
@@ -26,5 +26,5 @@ Start with `CODEBASE_GUIDE.md` for the system tour and `.t3/CONTEXT.md` for task
 
 ## Verification
 
-Use `.t3/references/verification.md`. At minimum, run the narrowest relevant self-check plus `.venv/bin/python -m pytest -q tests` for model or data-contract changes. Report commands, exit status, and skipped checks.
+At minimum, run the narrowest relevant self-check plus `.venv/bin/python -m pytest -q tests` for model or data-contract changes. Report commands, exit status, and skipped checks.
 
