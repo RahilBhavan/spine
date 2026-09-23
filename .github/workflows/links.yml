@@ -1,0 +1,30 @@
+name: links
+on:
+  schedule:
+    - cron: '23 6 * * 1'   # weekly, Monday
+  workflow_dispatch:
+permissions:
+  contents: read
+  issues: write
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - id: lychee
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: >-
+            --no-progress --max-retries 3
+            --exclude '^https?://(localhost|127\.0\.0\.1)'
+            --exclude '^https?://(www\.)?(twitter|x|linkedin)\.com'
+            --exclude '^https://cdn\.jsdelivr\.net'
+            --exclude-path data
+            '*.md' 'research/*.md' 'site/*.html' index.html
+          fail: false
+      - name: open an issue when links are broken
+        if: steps.lychee.outputs.exit_code != 0
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh issue create --title "Broken links $(date -u +%F)" --body-file lychee/out.md
