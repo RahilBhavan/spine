@@ -1,7 +1,7 @@
 """Aggregate data/*.json into data/summary.json so the site never loads the raw positions files.
 Run: .venv/bin/python -m spine.summarize"""
-import sys, datetime, collections
-from spine.api import MARKETS, lif, load, save
+import os, sys, datetime, collections
+from spine.api import MARKETS, data_path, lif, load, save
 
 BIN = 0.02
 DROPS = [round(d * 0.01, 2) for d in range(0, 71)]
@@ -128,6 +128,9 @@ def summarize_market(name, m, wallets, depth):
 
 
 def build():
+    missing = [f'positions_{n}' for n in MARKETS if not os.path.exists(data_path(f'positions_{n}'))]
+    if missing:  # fail before anything is written; a partial summary.json would overwrite the tracked one
+        sys.exit('summarize: missing data/%s.json; run .venv/bin/python -m spine.fetch_positions first' % '.json, data/'.join(missing))
     wallets, depth = load('coinbase_wallets') or {}, load('depth')
     markets = {n: s for n, m in MARKETS.items() if (s := summarize_market(n, m, wallets, depth))}
     borrow = sum(s['state']['borrow_usd'] for s in markets.values())

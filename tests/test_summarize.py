@@ -2,6 +2,7 @@
 Run: .venv/bin/python -m pytest -q tests"""
 import pytest
 from spine.api import lif
+from spine import summarize
 from spine.summarize import DROPS, HF_STEPS, distance_to_capacity, hf_cdf, liquidatable_curve, ltv_hist, report
 
 LLTV = 0.86
@@ -64,3 +65,10 @@ def test_report_warns_without_check():
     report(out)
     with pytest.raises(AssertionError):
         report(out, check=True)
+
+
+def test_build_without_positions_exits_before_writing(monkeypatch, tmp_path):
+    monkeypatch.setattr(summarize, 'data_path', lambda name: str(tmp_path / (name + '.json')))
+    with pytest.raises(SystemExit, match='fetch_positions'):
+        summarize.build()
+    assert not list(tmp_path.iterdir())
