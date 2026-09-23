@@ -13,7 +13,7 @@
 - Morpho: whitelisted LLTV list, no published quantitative rule; LIF formula only. https://docs.morpho.org/learn/concepts/liquidation/
 - Chaos Labs methodology: VaR = p99 of 24h protocol loss from underwater accounts; maximize E[profit]/VaR s.t. VaR <= K; GARCH(1,1) paths; agent-based liquidators with simulated DEX slippage; stressed VaR for black swans. https://chaoslabs.xyz/resources/chaos_aave_risk_param_methodology.pdf
 - Chaos WBTC LT cut 78 -> 73-76%: https://governance.aave.com/t/arfc-chaos-labs-risk-parameter-updates-wbtc-parameter-adjustments/19118
-- Aave cbBTC Base: 73% LTV / 78% LT / 7.5% penalty. https://app.aave.com/reserve-overview/?underlyingAsset=0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf&marketName=proto_base_v3 ; Llama Risk note https://www.llamarisk.com/research/2024-09-13T16:07:47.000Z ; Aave risk doc https://github.com/aave/risk-v3/blob/main/asset-risk/risk-parameters.md
+- Aave cbBTC Base: 73% LTV / 78% LT / 7.5% penalty. https://app.aave.com/reserve-overview/?underlyingAsset=0xcbb7c0000ab88b473b1f5afd9ef808440eed33bf&marketName=proto_base_v3 ; Llama Risk note https://web.archive.org/web/20250911152740/https://www.llamarisk.com/research/2024-09-13T16%3A07%3A47.000Z (archived) ; Aave risk doc https://github.com/aave/risk-v3/blob/main/asset-risk/risk-parameters.md
 - Gauntlet methodology (inputs only): https://www.gauntlet.xyz/resources/under-the-hood-unpacking-our-morpho-vault-curation-methodology
 - RiskDAO SmartLTV: LTV = exp(-c*sigma/sqrt(l/d)) - beta; c calibrated 1.17 (Jan 2020), 2.58 (Feb 2021), 5.99 (Mar 2020). https://docs.bprotocol.org/risk-oracle/smartltv-formula
 
