@@ -136,25 +136,35 @@ def build():
     return dict(generated_at=datetime.datetime.now(datetime.UTC).isoformat(timespec='seconds'), markets=markets, totals=totals)
 
 
-if __name__ == '__main__':
-    check = '--check' in sys.argv  # level asserts only; the cron runs without it
-    out = build()
-    save('summary', out, separators=(',', ':'))
+def report(out, check=False):
+    """Print the headline numbers. Level checks (market-dependent) only warn unless check, so a crash never stops the cron before the alert."""
     m = out['markets']['cbBTC']
     st, curve = m['state'], {c['drop']: c for c in m['liquidatable_curve']}
-    hist_sum = sum(b['borrow_usd'] for b in m['ltv_hist'])
-    assert abs(hist_sum - st['borrow_usd']) / st['borrow_usd'] < 0.005, (hist_sum, st['borrow_usd'])
-    above = sum(b['borrow_usd'] for b in m['ltv_hist'] if b['lo'] >= st['lltv'] - 1e-9)
-    assert curve[0.0]['borrow_usd'] <= above + 1, (curve[0.0]['borrow_usd'], above)
-    if check:
-        assert 150e6 < curve[0.3]['borrow_usd'] < 500e6, curve[0.3]['borrow_usd']
     print('markets: %d, total borrow $%.0fM, positions %d, coinbase share %.1f%%' % (
         len(out['markets']), out['totals']['borrow_usd'] / 1e6, out['totals']['n_positions'], 100 * out['totals']['coinbase_share_borrow']))
     print('cbBTC borrow $%.0fM, price $%.0f, n=%d, cb share %.1f%%' % (st['borrow_usd'] / 1e6, st['price'], st['n_positions'], 100 * st['coinbase_share_borrow']))
     print('cbBTC liquidatable at 0/-10/-20/-30%%: $%.1fM / $%.1fM / $%.1fM / $%.1fM' % tuple(curve[d]['borrow_usd'] / 1e6 for d in (0.0, 0.1, 0.2, 0.3)))
     print('cbBTC bad-debt zone at -30%%: $%.1fM' % (curve[0.3]['bad_borrow_usd'] / 1e6))
-    print('cbBTC capacity at 4.38%%: dex $%.1fM, coinbase $%.1fM' % (m['depth']['dex_capacity_usd']['4.38'] / 1e6, m['depth']['coinbase']['bid_depth_usd']['4.38'] / 1e6))
-    assert m['hf_cdf'][0]['share'] == 0 and 0 < m['hf_cdf'][-1]['share'] <= 1 and len(m['hf_cdf']) == 40
-    assert st['distance_to_capacity'] is None or curve[st['distance_to_capacity']]['borrow_usd'] > st['capacity_ab_usd'] >= curve[round(max(0.0, st['distance_to_capacity'] - 0.01), 2)]['borrow_usd']
+    print('cbBTC capacity at 4.38%%: dex $%.1fM, coinbase $%.1fM' % (m['depth'].get('dex_capacity_usd', {}).get('4.38', 0.0) / 1e6,
+                                                                 m['depth'].get('coinbase', {}).get('bid_depth_usd', {}).get('4.38', 0.0) / 1e6))
     print('distance to AB capacity: ' + ', '.join('%s %s (cap $%.1fM)' % (n, 'none' if s['state']['distance_to_capacity'] is None else '-%.0f%%' % (100 * s['state']['distance_to_capacity']), s['state']['capacity_ab_usd'] / 1e6)
                                                 for n, s in out['markets'].items()))
+    above = sum(b['borrow_usd'] for b in m['ltv_hist'] if b['lo'] >= st['lltv'] - 1e-9)
+    assert curve[0.0]['borrow_usd'] <= above + 1, (curve[0.0]['borrow_usd'], above)
+    assert len(m['hf_cdf']) == 40 and all(0 <= r['share'] <= 1 for r in m['hf_cdf'])
+    d, cap = st['distance_to_capacity'], st['capacity_ab_usd']
+    assert d is None or not cap or curve[d]['borrow_usd'] > cap >= curve[round(max(0.0, d - 0.01), 2)]['borrow_usd']
+    hist_sum = sum(b['borrow_usd'] for b in m['ltv_hist'])
+    for what, ok in (('ltv_hist within 0.5%% of market borrow ($%.1fM vs $%.1fM)' % (hist_sum / 1e6, st['borrow_usd'] / 1e6), abs(hist_sum - st['borrow_usd']) <= 0.005 * st['borrow_usd']),
+                     ('no borrow below HF 1 (share %.4f)' % m['hf_cdf'][0]['share'], m['hf_cdf'][0]['share'] == 0),
+                     ('some borrow below HF 3', m['hf_cdf'][-1]['share'] > 0),
+                     ('liquidatable at -30%% in $150M-$500M ($%.1fM)' % (curve[0.3]['borrow_usd'] / 1e6), 150e6 < curve[0.3]['borrow_usd'] < 500e6)):
+        assert ok or not check, what
+        if not ok:
+            print('warning: expected ' + what)
+
+
+if __name__ == '__main__':
+    out = build()
+    save('summary', out, separators=(',', ':'))
+    report(out, check='--check' in sys.argv)  # level asserts only under --check; the cron runs without it

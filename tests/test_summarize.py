@@ -1,7 +1,8 @@
 """Invariants of spine.summarize's per-market aggregates on five synthetic positions (ROADMAP Phase G3).
 Run: .venv/bin/python -m pytest -q tests"""
+import pytest
 from spine.api import lif
-from spine.summarize import DROPS, HF_STEPS, distance_to_capacity, hf_cdf, liquidatable_curve, ltv_hist
+from spine.summarize import DROPS, HF_STEPS, distance_to_capacity, hf_cdf, liquidatable_curve, ltv_hist, report
 
 LLTV = 0.86
 # same keys summarize_market builds: two Coinbase, one over LLTV, one with zero collateral (ltv 1.0, as summarize_market sets it), one healthy
@@ -52,3 +53,14 @@ def test_hf_cdf():
     assert s[0] == 0 and s[-1] == 1.0 and all(x <= y for x, y in zip(s, s[1:]))
     hp[0]['health_factor'] = None
     assert hf_cdf(hp)[-1]['share'] == (TOTAL - hp[0]['borrow_usd']) / TOTAL
+
+
+def test_report_warns_without_check():
+    c = curve()  # POS has the 0.90 position at HF < 1, as in a crash; depth is empty, as when depth.json is missing
+    state = dict(borrow_usd=TOTAL, price=1.0, n_positions=len(POS), coinbase_share_borrow=0.5, lltv=LLTV,
+                 capacity_ab_usd=0.0, distance_to_capacity=distance_to_capacity(c, 0.0))
+    out = dict(markets=dict(cbBTC=dict(state=state, ltv_hist=ltv_hist(POS), liquidatable_curve=c, hf_cdf=hf_cdf(POS), depth={})),
+               totals=dict(borrow_usd=TOTAL, n_positions=len(POS), coinbase_share_borrow=0.5))
+    report(out)
+    with pytest.raises(AssertionError):
+        report(out, check=True)
