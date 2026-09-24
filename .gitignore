@@ -4,5 +4,3 @@ __pycache__/
 *.pyc
 data/cache/
 data/positions_*.json
-.claude/
-.t3/
