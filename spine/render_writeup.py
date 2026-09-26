@@ -22,10 +22,10 @@ TEMPLATE = '''<!doctype html>
 <meta property="og:title" content="Spine writeup: what haircut should Coinbase take?">
 <meta property="og:description" content="Seven crash replays of Coinbase's Morpho loan book: on a March 2020 path, liquidator capital, not the LLTV, is what binds.">
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://rahilbhavan.github.io/spine/site/writeup.html">
-<meta property="og:image" content="https://rahilbhavan.github.io/spine/social-card.png">
+<meta property="og:url" content="https://spine.rahilbhavan.com/site/writeup.html">
+<meta property="og:image" content="https://spine.rahilbhavan.com/docs/social-card.png">
 <meta name="twitter:card" content="summary_large_image">
-<link rel="canonical" href="https://rahilbhavan.github.io/spine/site/writeup.html">
+<link rel="canonical" href="https://spine.rahilbhavan.com/site/writeup.html">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230f172a'/><text x='32' y='42' text-anchor='middle' font-family='Arial,sans-serif' font-size='28' font-weight='700' fill='%2338bdf8'>SP</text></svg>">
 <link rel="stylesheet" href="style.css">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">

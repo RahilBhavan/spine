@@ -3,9 +3,9 @@
 [![refresh](https://github.com/RahilBhavan/spine/actions/workflows/refresh.yml/badge.svg)](https://github.com/RahilBhavan/spine/actions/workflows/refresh.yml)
 [![ci](https://github.com/RahilBhavan/spine/actions/workflows/ci.yml/badge.svg)](https://github.com/RahilBhavan/spine/actions/workflows/ci.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-**Live dashboard: [rahilbhavan.github.io/spine](https://rahilbhavan.github.io/spine)** (refreshes roughly hourly; GitHub cron is best-effort)
+**Live dashboard: [spine.rahilbhavan.com](https://spine.rahilbhavan.com)** (refreshes roughly hourly; GitHub cron is best-effort)
 
-[![Spine dashboard: $1.6B borrowed across nine Morpho markets on Base, the cbBTC distance-to-capacity gauge, the worst modeled crash path, and the cbBTC market cards](docs/screenshot.png)](https://rahilbhavan.github.io/spine/site/)
+[![Spine dashboard: $1.6B borrowed across nine Morpho markets on Base, the cbBTC distance-to-capacity gauge, the worst modeled crash path, and the cbBTC market cards](docs/screenshot.png)](https://spine.rahilbhavan.com/site/)
 
 Live risk dashboard and haircut backtest over the Morpho Blue markets on Base behind Coinbase's app loans.
 
@@ -56,7 +56,7 @@ Stress-test pipeline (slow, chunked; `fetch_oracle`, `calibrate`, `rebuild_book`
 .venv/bin/python -m spine.backtest calib && .venv/bin/python -m spine.backtest grid --market cbBTC   # etc.
 ```
 
-Fetchers are stdlib only; `backtest.py` needs numpy. The GitHub Actions workflow refreshes the live data roughly hourly (GitHub cron is best-effort) and deploys to Pages.
+Fetchers are stdlib only; `backtest.py` needs numpy. The GitHub Actions workflow refreshes the live data roughly hourly (GitHub cron is best-effort) and deploys to Pages. It also publishes the static site and generated data on the `data` branch, which Vercel serves at `spine.rahilbhavan.com`.
 `main` holds one frozen snapshot of the generated files in `data/` so a fresh clone renders and tests pass. The live site and the `data` branch (a single commit, replaced each run) hold the latest data.
 The hourly job also opens a GitHub issue (`spine.alert`) when any market's distance to capacity is 10% or under; closing the issue acknowledges it, and a new one opens on the next hour the condition holds.
 

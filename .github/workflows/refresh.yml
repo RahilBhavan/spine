@@ -48,7 +48,8 @@ jobs:
           git config user.email spine-bot@users.noreply.github.com
           git checkout -q --orphan data
           git rm -rqf --cached .
-          git add data/liquidations_*.json data/coinbase_wallets.json data/depth.json data/vaults.json data/summary.json data/history.csv site/writeup.html data/backtest.json
+          git add data/liquidations_*.json data/coinbase_wallets.json data/depth.json data/vaults.json data/summary.json data/history.csv data/calibration.json data/backtest.json
+          git add index.html site/ docs/social-card.png
           git commit -qm "data: snapshot $(date -u +%FT%H:%MZ)"
           git push -qf origin data
       - name: stage site
