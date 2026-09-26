@@ -59,7 +59,7 @@ jobs:
           cp data/backtest.json data/calibration.json data/vaults.json _site/data/ 2>/dev/null || true
           cp PLAN.md WRITEUP.md _site/
           cp index.html docs/social-card.png _site/   # root redirect with link-preview tags; og:image points at /spine/social-card.png
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with: { path: _site }
   deploy:
     needs: refresh
