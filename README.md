@@ -3,17 +3,30 @@
 [![refresh](https://github.com/RahilBhavan/spine/actions/workflows/refresh.yml/badge.svg)](https://github.com/RahilBhavan/spine/actions/workflows/refresh.yml)
 [![ci](https://github.com/RahilBhavan/spine/actions/workflows/ci.yml/badge.svg)](https://github.com/RahilBhavan/spine/actions/workflows/ci.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+
+Live risk dashboard and liquidation backtest for the nine Morpho Blue markets on Base behind Coinbase's app loans.
+
 **Live dashboard: [spine.rahilbhavan.com](https://spine.rahilbhavan.com)** (refreshes roughly hourly; GitHub cron is best-effort)
 
 [![Spine dashboard: $1.6B borrowed across nine Morpho markets on Base, the cbBTC distance-to-capacity gauge, the worst modeled crash path, and the cbBTC market cards](docs/screenshot.png)](https://spine.rahilbhavan.com/site/)
 
-Live risk dashboard and haircut backtest over the Morpho Blue markets on Base behind Coinbase's app loans.
+## Results
+
+- Tracks $1.63B of borrowing across 68,772 positions in nine Morpho markets on Base, 97.5% of it from Coinbase Smart Wallets (committed snapshot in `data/summary.json`, 2026-09-23 UTC; the live site shows current figures).
+- Replays rebuilt historical loan books through seven crash paths at five-minute resolution: 5,372 backtest runs saved in `data/backtest.json`.
+- Calibrated on three real cbBTC stress events, the model reproduces realized liquidation volume at 0.85-0.99x (Oct 2025 0.95x, Feb 2026 0.99x, Jun 2026 0.85x). Held-out WETH events come in at 1.58x and 0.85x.
+- On the March 2020 path at today's 86% liquidation LTV: about $9M realized loss, but $158M (10% of supply) underwater and unserved at the trough. Liquidator capital, not the haircut, is what binds.
+- 18 pytest tests. An hourly job opens a GitHub issue when any market's distance to liquidation capacity is 10% or less.
+
+**How it works:** stdlib Python fetchers read Morpho positions and liquidations, Chainlink oracle updates, Coinbase 5-minute candles and CEX/DEX depth; `spine.summarize` writes `data/summary.json` for a static dashboard, and a numpy backtest replays historical books through crash paths with liquidator and borrower behavior calibrated on the real events.
+
+**Run the tests:** `uv venv .venv && uv pip install numpy pytest && .venv/bin/python -m pytest -q tests`
 
 Independent analysis from public on-chain data. Not affiliated with or endorsed by Coinbase or Morpho.
 
 ## What it answers
 
-Coinbase's app routes USDC loans against cbBTC and ETH to Morpho markets on Base, funded by Morpho vault suppliers, at an 86% liquidation LTV. Bad debt falls on those suppliers, not on Coinbase's balance sheet. As of 2026-09-19 the book was about $1.4B of debt against $2.9B of cbBTC across 39,000 positions (see the live dashboard for current figures), 97.5% of it Coinbase Smart Wallets. It has cleared $256M of liquidations across three real stress events with zero bad debt. Spine asks what happens on a path those events never tested: March 2020, where borrowers got 25 minutes of warning instead of hours.
+Coinbase's app routes USDC loans against cbBTC and ETH to Morpho markets on Base, funded by Morpho vault suppliers, at an 86% liquidation LTV. Bad debt falls on those suppliers, not on Coinbase's balance sheet. As of 2026-09-19 the cbBTC market alone held about $1.4B of debt against $2.9B of cbBTC across 39,000 positions (see the live dashboard for current figures), 97.5% of it Coinbase Smart Wallets. It has cleared $256M of liquidations across three real stress events with zero bad debt. Spine asks what happens on a path those events never tested: March 2020, where borrowers got 25 minutes of warning instead of hours.
 
 The answer, from replaying today's book through seven historical crash paths with liquidator and borrower behavior calibrated on the lived events:
 
