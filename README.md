@@ -1,85 +1,122 @@
-# Spine
+# Spine: liquidator capital, not the LLTV, binds when Coinbase's Morpho loan book meets a fast crash
 
-[![refresh](https://github.com/RahilBhavan/spine/actions/workflows/refresh.yml/badge.svg)](https://github.com/RahilBhavan/spine/actions/workflows/refresh.yml)
 [![ci](https://github.com/RahilBhavan/spine/actions/workflows/ci.yml/badge.svg)](https://github.com/RahilBhavan/spine/actions/workflows/ci.yml)
+[![refresh](https://github.com/RahilBhavan/spine/actions/workflows/refresh.yml/badge.svg)](https://github.com/RahilBhavan/spine/actions/workflows/refresh.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Live risk dashboard and liquidation backtest for the nine Morpho Blue markets on Base behind Coinbase's app loans.
+**Live:** https://spine.rahilbhavan.com
 
-**Live dashboard: [spine.rahilbhavan.com](https://spine.rahilbhavan.com)** (refreshes roughly hourly; GitHub cron is best-effort)
+[![Spine dashboard on 2026-09-23: $1.6B borrowed across nine Morpho markets on Base, cbBTC 11% from its liquidation capacity, and a worst modeled path of $9.2M lost and $158M exposed at the trough](docs/screenshot.png)](https://spine.rahilbhavan.com/site/)
 
-[![Spine dashboard: $1.6B borrowed across nine Morpho markets on Base, the cbBTC distance-to-capacity gauge, the worst modeled crash path, and the cbBTC market cards](docs/screenshot.png)](https://spine.rahilbhavan.com/site/)
+Spine is a risk dashboard and liquidation backtest for the nine Morpho Blue markets on Base that fund the USDC loans in Coinbase's app. Python fetchers read positions, liquidations, Chainlink oracle updates, Coinbase 5-minute candles and CEX and DEX depth from public endpoints. The pipeline writes `data/summary.json` for a static dashboard. A numpy backtest replays rebuilt historical loan books through seven crash paths and recommends a liquidation LTV (LLTV) and maximum draw for each collateral.
 
 ## Results
 
-- Tracks $1.63B of borrowing across 68,772 positions in nine Morpho markets on Base, 97.5% of it from Coinbase Smart Wallets (committed snapshot in `data/summary.json`, 2026-09-23 UTC; the live site shows current figures).
-- Replays rebuilt historical loan books through seven crash paths at five-minute resolution: 5,372 backtest runs saved in `data/backtest.json`.
-- Calibrated on three real cbBTC stress events, the model reproduces realized liquidation volume at 0.85-0.99x (Oct 2025 0.95x, Feb 2026 0.99x, Jun 2026 0.85x). Held-out WETH events come in at 1.58x and 0.85x.
-- On the March 2020 path at today's 86% liquidation LTV: about $9M realized loss, but $158M (10% of supply) underwater and unserved at the trough. Liquidator capital, not the haircut, is what binds.
-- 18 pytest tests. An hourly job opens a GitHub issue when any market's distance to liquidation capacity is 10% or less.
+The headline: on a March 2020 path, losses depend on how much capital liquidators can deploy in a day. Cutting the haircut or the LLTV changes little.
 
-**How it works:** stdlib Python fetchers read Morpho positions and liquidations, Chainlink oracle updates, Coinbase 5-minute candles and CEX/DEX depth; `spine.summarize` writes `data/summary.json` for a static dashboard, and a numpy backtest replays historical books through crash paths with liquidator and borrower behavior calibrated on the real events.
+- **Book.** $1.63B borrowed against $3.66B of collateral across 68,772 positions in nine markets. Coinbase Smart Wallets hold 97.5% of the borrowing. Source: `data/summary.json`, snapshot 2026-09-23 19:05 UTC. The live site shows current figures.
+- **Track record.** The cbBTC market cleared $256M of liquidations in the four stress weeks of three events (Oct 2025, Feb 2026, Jun 2026) with zero bad debt. Source: `WRITEUP.md`.
+- **Calibration.** Fitted on those three cbBTC events, the model reproduces realized liquidation volume at 0.85–0.99x (Oct 2025 0.95x, Feb 2026 0.99x, Jun 2026 0.85x). Held-out WETH events come in at 1.58x and 0.85x. Source: `data/backtest.json`, key `calibrated.ratios`.
+- **Stress replay.** 5,372 saved backtest runs over seven crash windows at 5-minute resolution. Source: `data/backtest.json` and `data/prices/index.json`.
+- **March 2020 at today's 86% LLTV.** $9.2M realized loss (0.6% of supply), but $158.4M (10.0% of supply) underwater and unserved at the trough. A 77% LLTV leaves 8.4% exposed. Tripled liquidator capital leaves 6.2%. A Coinbase backstop liquidator leaves 0.8%. Source: `WRITEUP.md`.
 
-**Run the tests:** `uv venv .venv && uv pip install numpy pytest && .venv/bin/python -m pytest -q tests`
+Recommended parameters, from [WRITEUP.md](WRITEUP.md):
 
-Independent analysis from public on-chain data. Not affiliated with or endorsed by Coinbase or Morpho.
-
-## What it answers
-
-Coinbase's app routes USDC loans against cbBTC and ETH to Morpho markets on Base, funded by Morpho vault suppliers, at an 86% liquidation LTV. Bad debt falls on those suppliers, not on Coinbase's balance sheet. As of 2026-09-19 the cbBTC market alone held about $1.4B of debt against $2.9B of cbBTC across 39,000 positions (see the live dashboard for current figures), 97.5% of it Coinbase Smart Wallets. It has cleared $256M of liquidations across three real stress events with zero bad debt. Spine asks what happens on a path those events never tested: March 2020, where borrowers got 25 minutes of warning instead of hours.
-
-The answer, from replaying today's book through seven historical crash paths with liquidator and borrower behavior calibrated on the lived events:
-
-| Collateral | Today | Recommended | Why |
+| Collateral | Today (LLTV / max draw) | Recommended | Why |
 |---|---|---|---|
-| cbBTC | 86% LLTV / 75% max draw | A committed backstop liquidator first; then 80% / 66-70% | March 2020 at 86%: $9M realized loss but $158M (10% of supply) underwater and unserved at the trough. Liquidator capital, not the haircut, is what binds |
-| WETH | 86% / 75% | 77% / 70% | ETH gaps more than the 4.38% bonus inside five minutes; at 86% three of seven paths leave bad debt |
-| Alts | 62.5% / 55% | 62.5%, max draw 47%, per-asset book cap | No on-chain venue on Base; every seized unit must clear through Coinbase's own book |
+| cbBTC | 86% / 75% | A committed backstop liquidator first, then 80% / 66–70% | Liquidator capital binds on the March 2020 path. At 80% every other path is clean. |
+| WETH | 86% / 75% | 77% / 70% | ETH gaps more than the 4.38% liquidation bonus inside five minutes. At 86%, three of seven paths leave bad debt. |
+| cbXRP, SOL, cbDOGE, cbADA, cbLTC, JitoSOL | 62.5% / 55% | 62.5%, max draw 47%, per-asset book cap | No on-chain venue on Base, so every seized unit clears through Coinbase's own order book. |
 
-Full argument, every number reproducible from a script in this repo: [WRITEUP.md](WRITEUP.md). The writeup's changelog shows how the headline moved as the model was corrected, which is the part to read if you want to check the work.
+[WRITEUP.md](WRITEUP.md) has the full argument. Its changelog shows how the headline moved as the model was corrected.
 
-## How it is built
+## How it works
 
-- **Dashboard**: `site/index.html` (LTV distribution, liquidatable-vs-capacity curve, liquidation history, per market).
-- **Writeup**: `WRITEUP.md` (argued haircuts per asset), rendered at `site/writeup.html`.
-- **Plan and research**: `PLAN.md`, `research/`. Next steps: `ROADMAP.md`.
-- **Codebase guide**: `CODEBASE_GUIDE.md` (architecture, design rationale, module tour, and a four-pass learning plan).
+- Fetchers in `spine/` (`fetch_positions`, `fetch_liquidations`, `tag_coinbase`, `fetch_prices`, `fetch_depth`, `fetch_vaults`, `fetch_oracle`) read the Morpho API, Base RPC, Coinbase Exchange and Chainlink logs. They use only the standard library.
+- `spine/summarize.py` writes `data/summary.json`. `site/index.html` and `site/app.js` render it with no build step.
+- `spine/calibrate.py` measures liquidator latency, bonus and throughput on the real events. `spine/rebuild_book.py` rebuilds historical books from on-chain events.
+- `spine/backtest.py` (numpy) replays books through the crash paths with fitted borrower response and liquidator capacity. `spine/writeup_tables.py` prints the tables in `WRITEUP.md`.
+- `.github/workflows/refresh.yml` is scheduled hourly (GitHub runs it best-effort). It refreshes the data, advances the backtest, publishes to the `data` branch and GitHub Pages, and runs `spine/alert.py`. The alert opens a GitHub issue when any market is within 10% of its liquidation capacity. Vercel serves the `data` branch at the live URL.
 
-## Run
+[CODEBASE_GUIDE.md](CODEBASE_GUIDE.md) explains the architecture module by module.
 
-Setup: `uv venv .venv && uv pip install numpy pytest`. The positions files are not committed: on a fresh clone, `fetch_positions` must run first.
+## Run it
 
+Prerequisites: Python 3.12 or later and [uv](https://docs.astral.sh/uv/). No API keys. Every endpoint is public.
+
+Install and test:
+
+```bash
+uv venv .venv && uv pip install numpy pytest
+.venv/bin/python -m pytest -q tests
 ```
-.venv/bin/python -m spine.fetch_positions      # all positions, 9 markets (~90s)
-.venv/bin/python -m spine.fetch_liquidations   # every liquidation (~60s first run, incremental after)
+
+Observed on 2026-10-21: `18 passed`. The tests run against the frozen snapshot in `data/`, with no network.
+
+Rebuild the dashboard data. The positions files are not committed, so run `fetch_positions` first on a fresh clone. These commands overwrite files in `data/`.
+
+```bash
+.venv/bin/python -m spine.fetch_positions      # all positions, 9 markets (3 min 43 s on 2026-10-21)
+.venv/bin/python -m spine.fetch_liquidations   # every liquidation (incremental after the first run)
 .venv/bin/python -m spine.tag_coinbase         # Coinbase Smart Wallet tags via Multicall3
-.venv/bin/python -m spine.fetch_prices         # Coinbase 5m candles for 7 crash windows (cached)
-.venv/bin/python -m spine.fetch_depth          # CEX L2 depth + DEX quoter capacity (~3 min)
-.venv/bin/python -m spine.fetch_vaults         # which vaults fund each market: V1 from the API, V2 on-chain (~40s)
-.venv/bin/python -m spine.summarize            # -> data/summary.json for the site
-.venv/bin/python -m http.server 8000           # then open http://localhost:8000/site/
+.venv/bin/python -m spine.fetch_prices         # Coinbase 5-minute candles for 7 crash windows (cached)
+.venv/bin/python -m spine.fetch_depth          # CEX L2 depth and DEX quoter capacity
+.venv/bin/python -m spine.fetch_vaults         # vaults that fund each market
+.venv/bin/python -m spine.summarize            # writes data/summary.json
+.venv/bin/python -m http.server 8000           # open http://localhost:8000/site/
 ```
 
-Stress-test pipeline (slow, chunked; `fetch_oracle`, `calibrate`, `rebuild_book` and `backtest` take `--max-seconds` and resume):
+Run the stress-test pipeline. It is slow. `fetch_oracle`, `calibrate`, `rebuild_book` and `backtest` take `--max-seconds N`, save progress to `data/cache/` and resume on the next run.
 
+```bash
+.venv/bin/python -m spine.fetch_oracle                   # Chainlink AnswerUpdated paths for the real events
+.venv/bin/python -m spine.calibrate                      # realized latency, bonus and throughput
+.venv/bin/python -m spine.rebuild_book cbBTC 2026-02-03 2026-06-01 2025-10-09
+.venv/bin/python -m spine.backtest calib
+.venv/bin/python -m spine.backtest grid --market cbBTC
 ```
-.venv/bin/python -m spine.fetch_oracle                     # Chainlink AnswerUpdated paths for the lived events
-.venv/bin/python -m spine.calibrate Feb2026; ... ; .venv/bin/python -m spine.calibrate   # realized latency/bonus/throughput
-.venv/bin/python -m spine.rebuild_book cbBTC 2026-02-03 2026-06-01 2025-10-09      # historical books from events
-.venv/bin/python -m spine.backtest calib && .venv/bin/python -m spine.backtest grid --market cbBTC   # etc.
-```
 
-Fetchers are stdlib only; `backtest.py` needs numpy. The GitHub Actions workflow refreshes the live data roughly hourly (GitHub cron is best-effort) and deploys to Pages. It also publishes the static site and generated data on the `data` branch, which Vercel serves at `spine.rahilbhavan.com`.
-`main` holds one frozen snapshot of the generated files in `data/` so a fresh clone renders and tests pass. The live site and the `data` branch (a single commit, replaced each run) hold the latest data.
-The hourly job also opens a GitHub issue (`spine.alert`) when any market's distance to capacity is 10% or under; closing the issue acknowledges it, and a new one opens on the next hour the condition holds.
+## Repository layout
 
-## Citing or reusing
+- `spine/`: fetchers, summarizer, calibration, book rebuild, backtest, alert and writeup renderer.
+- `tests/`: pytest checks for the summarizer, backtest, alert and committed data.
+- `data/`: one frozen snapshot of the generated data, so a fresh clone renders and tests pass. The `data` branch holds the latest.
+- `site/`: the static dashboard and `writeup.html`, rendered from `WRITEUP.md`.
+- `research/`: source sweeps, the self-liquidation check, outreach drafts and `crash_table.py`.
+- `docs/`: the dashboard screenshot and the social card.
+- `.github/workflows/`: `ci.yml` (tests), `refresh.yml` (hourly data) and `links.yml` (weekly link check).
 
-MIT licensed. If you use the calibration numbers (liquidator latency, full-close rate, daily capacity) or the borrower-response fit, cite the writeup by date; the data snapshot in `data/` is what the tables were printed from. Issues and pull requests are welcome, especially historical order-book depth for the crash windows, which is the least-known input.
+## Documentation
 
-## Related projects
+- [WRITEUP.md](WRITEUP.md): the long-form argument for each haircut, with every table and its changelog.
+- [CODEBASE_GUIDE.md](CODEBASE_GUIDE.md): architecture, design choices, a module tour and a reading plan.
+- [PLAN.md](PLAN.md): the original specification and recorded decisions, from 2026-09-15.
+- [ROADMAP.md](ROADMAP.md): later corrections and unfinished work.
+- [CONTRIBUTING.md](CONTRIBUTING.md): the code, data and review rules the repository follows.
+- [CHANGELOG.md](CHANGELOG.md): release notes.
+- [research/](research/): sources for markets, crashes, depth and prior art.
+- [docs/screenshot.png](docs/screenshot.png): the dashboard on 2026-09-23.
 
-- [mara-credit-case](https://github.com/RahilBhavan/mara-credit-case): a credit committee case on a $5M secured revolver to MARA Holdings.
-- [coin-revenue-bridge](https://github.com/RahilBhavan/coin-revenue-bridge): a Q3 to Q4 2024 Coinbase consumer revenue bridge from SEC filings.
-- [x402-exception-desk](https://github.com/RahilBhavan/x402-exception-desk): a synthetic x402 payment exception desk.
-- All four projects: [rahilbhavan.com/crypto-finance](https://rahilbhavan.com/crypto-finance).
+## Sources
+
+- Morpho Blue API (`blue-api.morpho.org`) and Base RPC: positions, liquidations, vaults and Coinbase Smart Wallet tags.
+- Chainlink `AnswerUpdated` logs on Base: oracle paths for the real stress events.
+- Coinbase Exchange: 5-minute candles for seven crash windows from March 2020 to June 2026, and L2 order-book depth.
+- Aerodrome and Uniswap quoters on Base: on-chain liquidation capacity.
+
+`main` holds one frozen snapshot from 2026-09-23. The hourly job replaces the `data` branch with a single new commit each run. Every table in `WRITEUP.md` is printed by a script from the files in `data/`. If you reuse the calibration numbers, cite the writeup by date.
+
+## Scope and limits
+
+- Independent analysis from public on-chain data. Not affiliated with or endorsed by Coinbase or Morpho.
+- Research, not risk advice. The recommendations are model outputs.
+- The borrower-response fit has two parameters on three events. `WRITEUP.md` says this deserves modest confidence.
+- Historical order-book depth for the crash windows is the least-known input.
+- The busiest liquidation day was not a binding day, so it sets a floor on liquidator capacity, not an estimate.
+- Numbers in this README come from the 2026-09-23 snapshot. A fresh fetch gives different live figures.
+
+## License
+
+MIT. See [LICENSE](LICENSE). The license covers this project's code, not third-party data from Morpho, Chainlink or Coinbase.
+
+Part of [Rahil Bhavan's projects](https://github.com/RahilBhavan).
