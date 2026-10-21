@@ -221,7 +221,7 @@ above; `reviewer` verifies before the next phase starts.
   86% at the trough but only $151M was liquidated: borrowers cured ~70%. Frozen-book replays
   overstate liquidations 2-3x on every lived event. Final form: a responsive share of wallets
   (deterministic hash) repays to LLTV-12pp after a reaction delay in the LLTV-6pp warning zone.
-  Fit (share 0.7, delay 120 min) reproduces Oct 2025 / Feb 2026 / Jun 2026 within 15%.
+  Fit (share 0.7, delay 120 min) reproduces Oct 2025 / Feb 2026 / Jun 2026 at 0.85–0.99x.
 - Phase 4 acceptance changed accordingly: "AB within 25% of realized" is checked on the rebuilt
   historical books with borrower response, not on today's book.
 - Realized bad debt is $0.07 across nine markets (rounding dust), not exactly zero.
