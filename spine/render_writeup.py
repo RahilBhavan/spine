@@ -50,12 +50,13 @@ TEMPLATE = '''<!doctype html>
 </head>
 <body>
 <main class="prose">
-  <nav class="top"><a href="./">Dashboard</a><a href="writeup.html">Writeup</a><a href="../PLAN.md">Plan</a></nav>
+  <nav class="top"><a href="./">Dashboard</a><a href="writeup.html">Writeup</a><a href="../PLAN.md">Plan</a><span class="muted">Data as of <span id="data-age">loading</span></span></nav>
   <article id="doc">
 @@BODY@@
   </article>
   <footer class="muted">Independent analysis from public on-chain data. Not affiliated with or endorsed by Coinbase or Morpho.</footer>
 </main>
+<script src="charts.js" defer></script>
 <script src="app.js" defer></script>
 <script>
 addEventListener('DOMContentLoaded', () => loadBacktest().then(bt => { if (bt) { renderHeatmap('fig-heat', bt, 'cbBTC', 'AB'); renderWarn('fig-warn', bt, 'cbBTC'); } }));

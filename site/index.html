@@ -19,7 +19,7 @@
 <body>
 <header>
   <h1>Spine: Coinbase's on-chain loan book on Base</h1>
-  <p class="muted">Independent analysis, not affiliated with Coinbase. USDC lent against cbBTC, ETH and six alts on Morpho Blue. Snapshot <span id="generated-at">loading</span></p>
+  <p class="muted">Independent analysis, not affiliated with Coinbase. USDC lent against cbBTC, ETH and six alts on Morpho Blue. Data as of <span id="data-age">loading</span></p>
   <details id="glossary">
     <summary>What the words mean</summary>
     <dl>
@@ -38,9 +38,11 @@
 <nav class="sections" aria-label="Sections">
   <ul>
     <li><a href="#now">Now</a></li>
+    <li><a href="#check">Check a loan</a></li>
     <li><a href="#book">Book</a></li>
     <li><a href="#liquidations">Liquidations</a></li>
     <li><a href="#stress">Stress test</a></li>
+    <li><a href="#base">All Base markets</a></li>
     <li><a href="writeup.html">Writeup</a></li>
   </ul>
 </nav>
@@ -69,6 +71,18 @@
       <p id="worst-sentence" class="muted">loading</p>
     </div>
   </div>
+</section>
+
+<section id="check">
+  <h2>Check a loan</h2>
+  <p class="lede">Paste a Base address to see, for each of its loans in the markets on this page, the price at which it gets liquidated, how far the price can fall before that, and what the worst replayed crash would do to it.</p>
+  <form id="check-form" class="controls" autocomplete="off">
+    <label for="check-address" class="sr-only">Base address</label>
+    <input id="check-address" name="address" type="text" spellcheck="false" placeholder="0x… Base address" required>
+    <button type="submit">Check</button>
+  </form>
+  <p class="muted">Your browser asks Morpho's public API directly; no key, and nothing passes through this site. The liquidation price comes from Morpho's health factor, which uses the market's oracle. The crash paths are the backtest's seven, applied to this one position as it stands, with no top-up or repayment.</p>
+  <div id="check-result" aria-live="polite"></div>
 </section>
 
 <section id="book">
@@ -166,6 +180,18 @@
     <div id="chart-warn" class="chart chart-short" role="figure" aria-label="Warning time"></div>
   </div>
 </section>
+
+<section id="base">
+  <h2>All Base markets</h2>
+  <p class="lede">Every Morpho Blue market on Base with more than $10M borrowed, not only Coinbase's. Market-level numbers from Morpho's API, refreshed with the rest of the page; the charts above cover Coinbase's nine markets only.</p>
+  <p id="base-stat" class="muted"></p>
+  <div class="scroll-x"><table id="base-listed"></table></div>
+  <details class="fold">
+    <summary id="base-unlisted-summary">Markets Morpho does not list</summary>
+    <p class="muted">Markets Morpho's app does not list, with the warnings its API attaches. Most lend real USDC against a token Morpho cannot price, so their collateral value and LTV are unknown; their size is what borrowers drew, not what backs it.</p>
+    <div class="scroll-x"><table id="base-unlisted"></table></div>
+  </details>
+</section>
 </main>
 
 <footer class="muted">
@@ -173,6 +199,7 @@
   Sources: Morpho API (positions, liquidations), Coinbase Exchange and Kraken order books, Base RPC (wallet tagging), Aerodrome/Uniswap quoters (DEX depth).
   <a href="writeup.html">Writeup: what haircut should Coinbase take?</a> · <a href="../PLAN.md">Plan</a>
 </footer>
+<script src="charts.js" defer></script>
 <script src="app.js" defer></script>
 </body>
 </html>

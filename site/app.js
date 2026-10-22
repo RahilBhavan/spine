@@ -72,97 +72,6 @@ function dur(min) {
   return (min / 1440).toFixed(1) + ' d';
 }
 
-// Every axis: solid hairline grid one shade off the surface, no zero line, margins grow to fit long tick labels and the title.
-function axis(extra) {
-  return Object.assign({ gridcolor: css('--grid'), gridwidth: 1, zeroline: false, color: css('--muted'), automargin: true }, extra || {});
-}
-
-function baseLayout(extra) {
-  extra = extra || {};
-  return Object.assign({
-    paper_bgcolor: 'rgba(0,0,0,0)',
-    plot_bgcolor: 'rgba(0,0,0,0)',
-    font: { color: css('--fg'), family: 'inherit', size: 12 },
-    margin: { l: 64, r: 16, t: 28, b: 80 },  // bottom holds the tick labels, the axis title and a one-row legend
-    legend: { orientation: 'h', yref: 'container', y: 0, yanchor: 'bottom', x: 0 },
-    hovermode: 'x unified',
-  }, extra, { xaxis: axis(extra.xaxis), yaxis: axis(extra.yaxis) });
-}
-
-const PLOT_CONFIG = { displayModeBar: false, responsive: true };
-
-// Explicit ticks through our own formatters: Plotly's SI format prints 1.4G, we want $1.4B.
-function ticks(values, fmt, log) {
-  const pos = values.filter(v => v > 0);
-  const max = Math.max(...pos, 1e-9);
-  const vals = [];
-  if (log) {
-    const hi = Math.ceil(Math.log10(max));
-    const lo = Math.max(Math.floor(Math.log10(Math.min(...pos))), hi - 6);
-    for (let e = lo; e <= hi; e++) vals.push(10 ** e);
-  } else {
-    const raw = max / 5, p = 10 ** Math.floor(Math.log10(raw));
-    const step = [1, 2, 2.5, 5, 10].map(k => k * p).find(v => v >= raw);
-    for (let v = 0; v <= max + step * 0.999; v += step) vals.push(v);
-  }
-  return { tickmode: 'array', tickvals: vals, ticktext: vals.map(fmt) };
-}
-
-function pctTicks(values) {
-  return ticks(values, v => pct(v, Math.abs(v * 100 - Math.round(v * 100)) > 1e-9 ? 1 : 0), false);
-}
-
-// One "table" toggle per chart (aria-pressed): swaps the plot for the same numbers as a plain table.
-function tableView(el, columns, rows) {
-  let t = document.getElementById(el.id + '-table');
-  if (!t) {
-    el.insertAdjacentHTML('beforebegin', '<button type="button" class="table-toggle" aria-pressed="false" aria-controls="' + el.id + '-table">table</button>');
-    el.insertAdjacentHTML('afterend', '<div class="scroll-x" hidden><table id="' + el.id + '-table"></table></div>');
-    t = document.getElementById(el.id + '-table');
-    const b = el.previousElementSibling;
-    b.onclick = () => {
-      const on = b.getAttribute('aria-pressed') !== 'true';
-      b.setAttribute('aria-pressed', on);
-      el.hidden = on;
-      t.parentElement.hidden = !on;
-      if (!on && DRAWN.has(el)) Plotly.Plots.resize(el);  // it was laid out at zero width while hidden
-    };
-  }
-  t.innerHTML = '<tr>' + columns.map(c => '<th>' + c + '</th>').join('') + '</tr>' +
-    rows.map(r => '<tr>' + r.map(v => '<td>' + v + '</td>').join('') + '</tr>').join('');
-}
-
-// Charts draw when they first come near the viewport, and Plotly (1.3 MB) loads then, not with the page; after that, on every call.
-const PLOTLY_SRC = 'https://cdn.jsdelivr.net/npm/plotly.js-cartesian-dist-min@2.35.2/plotly-cartesian.min.js';
-let plotlyLoad = null;
-function loadPlotly() {
-  return plotlyLoad ||= new Promise((ok, fail) => {
-    const s = document.createElement('script');
-    s.src = PLOTLY_SRC; s.onload = ok; s.onerror = () => { banner(PLOTLY_SRC); fail(); };
-    document.head.append(s);
-  });
-}
-const DRAWN = new WeakSet(), PENDING = new Map();
-const NEAR = new IntersectionObserver(es => es.forEach(e => {
-  if (!e.isIntersecting) return;
-  NEAR.unobserve(e.target);
-  loadPlotly().then(() => {  // plot() calls made while loading update PENDING; the latest one draws
-    DRAWN.add(e.target);
-    Plotly.react(e.target, ...PENDING.get(e.target));
-    PENDING.delete(e.target);
-  });
-}), { rootMargin: '400px' });
-
-// Every chart goes through here: legend only with two or more series, and the table view gets the same rows.
-function plot(id, traces, layout, columns, rows) {
-  const el = typeof id === 'string' ? document.getElementById(id) : id;
-  if (layout.showlegend == null) layout.showlegend = traces.length > 1;
-  if (!layout.showlegend) layout.margin.b = 48;  // no legend row; automargin still grows it for the tick labels and title
-  if (DRAWN.has(el)) Plotly.react(el, traces, layout, PLOT_CONFIG);
-  else { if (!PENDING.has(el)) NEAR.observe(el); PENDING.set(el, [traces, layout, PLOT_CONFIG]); }
-  tableView(el, columns, rows);
-}
-
 // One red banner at the top naming every file that failed to load.
 function banner(file) {
   let b = document.getElementById('banner');
@@ -181,19 +90,40 @@ async function get(file) {
   return null;
 }
 
-// Timestamp into el; past 8 h it turns red (class stale) so a dead cron shows on the page.
+const STALE_HOURS = 3;  // the refresh is hourly: three missed runs is a dead cron, not GitHub's schedule jitter
+
+// Timestamp into el; past STALE_HOURS it turns red (class stale) so a dead cron shows on the page.
 function stamp(el, text, ms) {
   el.textContent = text;
-  el.classList.toggle('stale', (Date.now() - ms) / 36e5 > 8);
+  el.classList.toggle('stale', (Date.now() - ms) / 36e5 > STALE_HOURS);
+}
+
+function utc(ms) {
+  return new Date(ms).toISOString().slice(0, 16).replace('T', ' ') + ' UTC';
+}
+
+function ago(ms) {
+  const m = Math.max(0, (Date.now() - ms) / 6e4);
+  return m < 90 ? Math.round(m) + ' min' : m < 2880 ? (m / 60).toFixed(m < 600 ? 1 : 0) + ' h' : (m / 1440).toFixed(1) + ' days';
+}
+
+// Data age on every page (#data-age: dashboard header, writeup nav) and a banner while the newest snapshot is past STALE_HOURS.
+// main() reruns it every minute, so a tab left open goes stale too.
+function renderFreshness(iso) {
+  const ms = Date.parse(iso), stale = (Date.now() - ms) / 36e5 > STALE_HOURS, el = document.getElementById('data-age');
+  if (el) stamp(el, utc(ms) + ' (' + ago(ms) + ' ago)', ms);
+  let b = document.getElementById('stale-banner');
+  if (!stale) { if (b) b.remove(); return; }
+  if (!b) {
+    document.body.insertAdjacentHTML('afterbegin', '<p id="stale-banner" class="banner" role="alert"></p>');
+    b = document.getElementById('stale-banner');
+  }
+  b.textContent = 'Stale data: the newest snapshot is ' + ago(ms) + ' old (' + utc(ms) + '). The hourly refresh has not landed since, so every number on this page is as of then.';
 }
 
 // Tile 1: the book. Large number is borrow; the rest as small cards.
 function renderHeader() {
   const t = DATA.totals;
-  stamp(document.getElementById('generated-at'), DATA.generated_at.replace('T', ' ').replace('+00:00', ' UTC'), Date.parse(DATA.generated_at));
-  const ageH = (Date.now() - Date.parse(DATA.generated_at)) / 36e5;  // past 12 h, say so in words, not just a red stamp
-  if (ageH > 12) document.getElementById('generated-at').parentElement.insertAdjacentHTML('afterend',
-    '<p class="muted notice" role="status">Data last refreshed ' + Math.round(ageH) + ' hours ago; the refresh job runs on GitHub\'s best-effort schedule.</p>');
   document.getElementById('hero-borrow').textContent = usd(t.borrow_usd);
   cards(document.getElementById('totals'), [
     ['Collateral', usd(t.collateral_usd)],
@@ -417,8 +347,12 @@ async function renderLeaderboard() {
 
 // ---- Backtest (data/backtest.json). Also used by writeup.html, which loads this file and calls renderHeatmap / renderWarn.
 
-async function loadBacktest() {
-  if (BT) return BT;
+let btLoad = null;
+function loadBacktest() {  // one fetch of the 5 MB file however many sections ask for it at once
+  return btLoad ||= fetchBacktest();
+}
+
+async function fetchBacktest() {
   const text = await get('backtest.json');
   if (!text) return null;
   // json.dump writes the unlimited-capital rows as Infinity, which JSON.parse rejects; 1e999 parses to Infinity.
@@ -453,18 +387,6 @@ function badDebt(r) {
 // Row at max draw 0.75, or 0.60 for the LLTVs below 0.75 where the grid has no 0.75 column.
 function pickCap(rows) {
   return rows.find(r => r.cap === 0.75) || rows.find(r => r.cap === 0.60) || null;
-}
-
-// Sequential scale, surface to accent; cells carry their number.
-function heat(el, rowLabels, colLabels, z, xtitle) {
-  const flat = z.flat().filter(v => v != null), text = z.map(row => row.map(usd));
-  const traces = [{ type: 'heatmap', x: colLabels, y: rowLabels, z, text, texttemplate: '%{text}',
-    textfont: { size: PHONE ? 9 : 12 }, colorscale: [[0, css('--card')], [1, css('--accent')]], zmin: 0, zmax: Math.max(...flat, 1), showscale: false,
-    xgap: 2, ygap: 2, hovertemplate: '%{y} / %{x}: %{text}<extra></extra>' }];
-  const layout = baseLayout({ showlegend: false, hovermode: 'closest',
-    xaxis: { title: xtitle || '', type: 'category', side: 'bottom' },
-    yaxis: { title: { text: 'LLTV', standoff: 12 }, type: 'category', autorange: 'reversed' } });  // Plotly puts a category axis title flush against its tick labels without an explicit standoff
-  plot(el, traces, layout, ['LLTV'].concat(colLabels), rowLabels.map((l, i) => [l].concat(text[i])));
 }
 
 function renderHeatmap(el, bt, mkt, scenario) {
@@ -565,6 +487,132 @@ async function renderBacktest() {
   renderWarn('chart-warn', bt, btMarket);
 }
 
+// ---- Check a loan: one address's positions, read live from Morpho's public API (CORS-open, no key) in the visitor's browser.
+
+const MORPHO_API = 'https://blue-api.morpho.org/graphql';
+const POSITIONS_Q = 'query($u:[String!],$m:[String!]){marketPositions(first:100,where:{chainId_in:[8453],userAddress_in:$u,marketUniqueKey_in:$m}){items{' +
+  'healthFactor market{marketId lltv collateralAsset{symbol decimals price{usd}} loanAsset{symbol}} state{collateral borrowAssets borrowAssetsUsd collateralUsd}}}}';
+
+function esc(s) {
+  return String(s == null ? '' : s).replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' })[c]);
+}
+
+function marketName(m) {
+  return m.tracked || esc(m.collateral) + ' / ' + esc(m.loan) + ' ' + pct(m.lltv);
+}
+
+// {market id: name} for every market on the page: Coinbase's nine plus the Base list.
+function knownMarkets() {
+  const out = {};
+  (DATA.base_markets ? DATA.base_markets.markets : []).forEach(m => out[m.id.toLowerCase()] = marketName(m));
+  Object.entries(DATA.markets).forEach(([k, m]) => { if (m.state.market_id) out[m.state.market_id.toLowerCase()] = k; });
+  return out;
+}
+
+// One position at the oracle price: Morpho's health factor is LLTV / LTV, so the price can fall 1 - 1/HF before liquidation.
+// drops: {path: peak-to-trough fall} from summary.json, present for Coinbase's nine only.
+function loanRisk(p, drops) {
+  const s = p.state, a = p.market.collateralAsset, lltv = Number(p.market.lltv) / 1e18;
+  const debt = s.borrowAssetsUsd || 0, coll = s.collateralUsd || 0, units = Number(s.collateral) / 10 ** a.decimals;
+  const hf = p.healthFactor != null ? p.healthFactor : debt && coll ? lltv * coll / debt : null;
+  const price = units && coll ? coll / units : a.price && a.price.usd;
+  const r = { debt, coll, units, lltv, hf, price, ltv: hf ? lltv / hf : null, badLtv: 1 / Math.min(1.15, 1 / (0.3 * lltv + 0.7)) };
+  r.buffer = hf ? 1 - 1 / hf : null;
+  r.liqPrice = hf && price ? price / hf : null;
+  if (drops && hf && Object.keys(drops).length) {
+    const paths = Object.entries(drops).sort((x, y) => y[1] - x[1]);
+    r.worst = paths[0];
+    r.troughLtv = r.ltv / (1 - r.worst[1]);
+    r.hit = paths.filter(([, d]) => d >= r.buffer).length;
+    r.paths = paths.length;
+  }
+  return r;
+}
+
+function price$(x) {
+  return x == null ? '-' : '$' + x.toLocaleString('en-US', { maximumFractionDigits: x < 10 ? 4 : x < 1000 ? 2 : 0 });
+}
+
+function worstText(r, mkt, bt) {
+  if (!r.worst) return r.debt ? 'No crash replay for this market.' : '-';
+  const [w, d] = r.worst;
+  const fate = r.buffer <= 0 ? 'Liquidatable already.' : d < r.buffer ? 'Survives the low with ' + pct(r.buffer - d, 0) + ' to spare.' :
+    'Liquidated on the way down' + (r.troughLtv > r.badLtv ? '; if liquidators miss it, its LTV at the low is ' + pct(r.troughLtv, 0) + ', past the ' + pct(r.badLtv) + ' bad-debt line.' : '; its collateral still covers the debt at the low.');
+  const cells = bt && lossCells(bt, mkt, w);
+  return w + ', ' + pct(d, 0) + ' peak to low. ' + fate + ' Liquidated on ' + r.hit + ' of ' + r.paths + ' paths.' +
+    (cells ? ' <span class="muted">Whole market on that path (scenario AB): ' + cells[0] + ' lost, ' + cells[1] + ' underwater at the low.</span>' : '');
+}
+
+async function checkLoan(raw) {
+  const out = document.getElementById('check-result'), addr = raw.trim();
+  if (!/^0x[0-9a-fA-F]{40}$/.test(addr)) {
+    out.innerHTML = '<p class="stale" role="alert">That is not a Base address: it should be 0x followed by 40 hex characters.</p>';
+    return;
+  }
+  history.replaceState(null, '', '?address=' + addr + location.hash);
+  out.innerHTML = '<p class="muted">Asking Morpho…</p>';
+  const known = knownMarkets();
+  if (!Object.keys(known).length) {  // a summary.json from before market ids were published: an empty filter would match every market
+    out.innerHTML = '<p class="muted">Not available until the next hourly refresh publishes the market list.</p>';
+    return;
+  }
+  let items;
+  try {
+    const r = await fetch(MORPHO_API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: POSITIONS_Q, variables: { u: [addr.toLowerCase()], m: Object.keys(known) } }) });
+    const j = await r.json();
+    if (j.errors) throw new Error(j.errors[0].message);
+    items = j.data.marketPositions.items.filter(p => Number(p.state.borrowAssets) > 0 || Number(p.state.collateral) > 0);
+  } catch (e) {
+    out.innerHTML = '<p class="stale" role="alert">Could not reach Morpho\'s API (' + esc(e.message) + '). Try again in a minute.</p>';
+    return;
+  }
+  if (!items.length) {
+    out.innerHTML = '<p class="empty">No loans or collateral for <code>' + short(addr) + '</code> in the ' + Object.keys(known).length +
+      ' markets on this page. It may borrow on another chain or in a smaller Morpho market; <a href="https://app.morpho.org/portfolio?user=' + addr + '" target="_blank" rel="noopener">Morpho\'s app</a> shows every market.</p>';
+    return;
+  }
+  const bt = await loadBacktest();
+  const rows = items.map(p => {
+    const id = p.market.marketId.toLowerCase(), mkt = DATA.markets[known[id]] ? known[id] : null;
+    return [p, known[id], mkt, loanRisk(p, mkt && DATA.markets[mkt].crash_drops)];
+  }).sort((x, y) => y[3].debt - x[3].debt);
+  out.innerHTML = '<p>' + rows.length + ' position' + (rows.length > 1 ? 's' : '') + ' for ' + link(addr) + ', live from Morpho.</p><div class="scroll-x"><table id="check-table">' +
+    '<tr><th>Market</th><th>Debt</th><th>Collateral</th><th>LTV / LLTV</th><th>Liquidation price</th><th>Buffer</th></tr>' +
+    rows.map(([p, name, mkt, r]) => {
+      const sym = esc(p.market.collateralAsset.symbol);
+      return '<tr class="pos"><td>' + name + (mkt ? '<span class="badge">Coinbase</span>' : '') + '</td><td>' + (r.debt ? usd(r.debt) + ' ' + esc(p.market.loanAsset.symbol) : 'none') +
+        '</td><td>' + r.units.toLocaleString('en-US', { maximumFractionDigits: 4 }) + ' ' + sym + ' (' + usd(r.coll) + ')</td>' +
+        '<td>' + (r.ltv == null ? '-' : pct(r.ltv)) + ' / ' + pct(r.lltv) + '</td>' +
+        '<td>' + (r.liqPrice == null ? '-' : price$(r.liqPrice) + ' <span class="muted">now ' + price$(r.price) + '</span>') + '</td>' +
+        '<td>' + (r.buffer == null ? '-' : mark(Math.max(r.buffer, 0)) + ' ' + (r.buffer <= 0 ? 'liquidatable now' : '-' + pct(r.buffer, 1))) + '</td>' +
+        '</tr><tr class="sub"><td colspan="6" class="wrap"><b>Worst replayed crash:</b> ' + worstText(r, mkt, bt) + '</td></tr>';
+    }).join('') + '</table></div>';
+}
+
+// ---- All Base markets above the threshold, from summary.json's base_markets (spine/fetch_markets.py).
+
+function renderBase() {
+  const bm = DATA.base_markets, stat = document.getElementById('base-stat');
+  if (!bm) { stat.textContent = 'Not available yet: the next hourly refresh adds this list.'; return; }
+  const listed = bm.markets.filter(m => m.listed), unlisted = bm.markets.filter(m => !m.listed);
+  const sum = ms => ms.reduce((a, m) => a + m.borrow_usd, 0), ours = bm.markets.filter(m => m.tracked);
+  stat.textContent = bm.markets.length + ' markets have more than ' + usd(bm.min_borrow_usd) + ' borrowed (' + usd(sum(bm.markets)) + '). Morpho lists ' + listed.length +
+    ' of them (' + usd(sum(listed)) + '), and Coinbase\'s ' + ours.length + ' above the line are ' + pct(sum(ours) / sum(listed), 0) + ' of that. ' +
+    'Coinbase\'s smaller alt markets sit under the line; the sections above cover them. Market list as of ' + utc(bm.fetched_at * 1000) + '.';
+  const cell = m => '<a href="https://app.morpho.org/base/market/' + m.id + '" target="_blank" rel="noopener">' + esc(m.collateral) + ' / ' + esc(m.loan) + '</a>' +
+    (m.tracked ? '<span class="badge">Coinbase</span>' : '');
+  const here = m => m.tracked ? '<a href="#book" data-k="' + m.tracked + '">' + m.tracked + ' charts</a>' : '-';
+  document.getElementById('base-listed').innerHTML = '<tr><th>Market</th><th>LLTV</th><th>Borrowed</th><th>Supplied</th><th>Utilization</th><th>Borrow APY</th><th>Collateral</th><th>Book LTV</th><th>On this page</th></tr>' +
+    listed.map(m => '<tr><td>' + cell(m) + '</td><td>' + pct(m.lltv) + '</td><td>' + usd(m.borrow_usd) + '</td><td>' + usd(m.supply_usd) + '</td><td>' + pct(m.utilization) +
+      '</td><td>' + pct(m.borrow_apy, 2) + '</td><td>' + usd(m.collateral_usd) + '</td><td>' + pct(m.book_ltv) + '</td><td>' + here(m) + '</td></tr>').join('');
+  document.getElementById('base-unlisted-summary').textContent = unlisted.length + ' markets Morpho does not list (' + usd(sum(unlisted)) + ' borrowed)';
+  document.getElementById('base-unlisted').innerHTML = '<tr><th>Market</th><th>LLTV</th><th>Borrowed</th><th>Utilization</th><th>Collateral value</th><th>Morpho warnings</th></tr>' +
+    unlisted.map(m => '<tr><td>' + cell(m) + '</td><td>' + pct(m.lltv) + '</td><td>' + usd(m.borrow_usd) + '</td><td>' + pct(m.utilization) + '</td><td>' +
+      (m.collateral_price_usd == null ? 'unpriced' : usd(m.collateral_usd)) + '</td><td class="wrap">' + esc(m.warnings.join(', ').replace(/_/g, ' ')) + '</td></tr>').join('');
+  document.querySelectorAll('#base-listed a[data-k]').forEach(a => a.onclick = () => { market = a.dataset.k; renderAll(); });
+}
+
 function renderAll() {
   const m = DATA.markets[market];
   renderButtons();
@@ -579,11 +627,15 @@ function renderAll() {
 }
 
 async function main() {
-  if (!document.getElementById('totals')) return;  // writeup.html loads this file for the backtest figures only
-  if (PHONE) document.querySelectorAll('details.fold').forEach(d => d.open = false);  // tables fold on phones
   const text = await get('summary.json');
-  if (!text) { document.getElementById('generated-at').textContent = 'not available'; return; }
-  DATA = JSON.parse(text);
+  if (text) {
+    DATA = JSON.parse(text);
+    renderFreshness(DATA.generated_at);
+    setInterval(() => renderFreshness(DATA.generated_at), 6e4);
+  }
+  if (!document.getElementById('totals')) return;  // writeup.html: the data age and stale banner; its own script draws the backtest figures
+  if (PHONE) document.querySelectorAll('details.fold').forEach(d => d.open = false);  // tables fold on phones
+  if (!DATA) { document.getElementById('data-age').textContent = 'not available'; return; }
   if (DATA.markets[location.hash.slice(1)]) market = location.hash.slice(1);  // #cbXRP deep link
   if (!DATA.markets[market]) market = Object.keys(DATA.markets)[0];
   document.getElementById('cb-only').onchange = e => { cbOnly = e.target.checked; renderAll(); };
@@ -594,6 +646,11 @@ async function main() {
   renderAll();
   renderBacktest();
   renderLeaderboard();
+  renderBase();
+  const form = document.getElementById('check-form'), input = document.getElementById('check-address');
+  form.onsubmit = e => { e.preventDefault(); checkLoan(input.value); };
+  const q = new URLSearchParams(location.search).get('address');  // ?address=0x… deep link, also what a check writes back to the URL
+  if (q) { input.value = q; checkLoan(q); }
   loadHistory().then(h => { HIST = h; renderTrend(); });
   if (DATA.markets[location.hash.slice(1)]) document.getElementById('book').scrollIntoView();  // the market anchor has no element of its own
 }

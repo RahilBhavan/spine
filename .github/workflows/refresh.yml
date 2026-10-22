@@ -21,13 +21,14 @@ jobs:
       - run: pip install numpy
       - name: restore the latest generated data from the data branch (first run falls back to main's snapshot)
         run: git fetch -q --depth 1 origin data && git checkout FETCH_HEAD -- data || echo "no data branch yet; starting from main's snapshot"
-      - name: fetch live data (positions, liquidations, tags, depth, vaults) and summarize
+      - name: fetch live data (positions, liquidations, tags, depth, vaults, Base market list) and summarize
         run: |
           python -m spine.fetch_positions
           python -m spine.fetch_liquidations
           python -m spine.tag_coinbase
           python -m spine.fetch_depth
           python -m spine.fetch_vaults
+          python -m spine.fetch_markets || echo "::warning::fetch_markets failed; the All Base markets table is absent this hour"
           python -m spine.summarize
           python -m spine.history
           python -m spine.render_writeup
