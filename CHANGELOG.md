@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased (Phase I, PR #10, 2026-10-24)
+
+- Check a loan: paste a Base address and the browser asks Morpho's public GraphQL (no key) for its positions in every market on the page. It shows liquidation price, buffer, and the worst backtest crash path applied to the position.
+- Freshness banner: data age on the dashboard and writeup, and a stale banner past 3 hours (`STALE_HOURS`), rechecked every minute. Replaces the 8 h stamp and 12 h notice.
+- All Base markets over $10M borrowed: `spine/fetch_markets.py` runs in the hourly refresh and folds market-level data into `summary.json` as `base_markets`. The page lists Morpho-listed markets and folds unlisted ones with Morpho's warnings. A fetch failure only drops the table.
+- `summary.json` gains per-market `crash_drops` and `state.market_id`; existing markets are otherwise identical on the same inputs.
+- Chart code split out of `site/app.js` into `site/charts.js`.
+- CI installs from `uv.lock` (`uv sync --locked --extra dev`).
+
 ## v1.1.0 (2026-09-23)
 
 - Refresh job publishes generated data to an orphan `data` branch, so `main` gets only human commits.
