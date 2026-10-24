@@ -180,7 +180,7 @@ This is an anti-corruption layer between research data and UI needs. Tests in `t
 
 ### `site/`: a static state machine
 
-`index.html` provides semantic containers and controls. `style.css` defines the visual system, responsive layout, dark mode, and risk colors. `app.js` owns UI state in a few module-level variables and rerenders with Plotly.
+`index.html` provides semantic containers and controls. `style.css` defines the visual system, responsive layout, dark mode, and risk colors. `app.js` owns UI state in a few module-level variables and rerenders with Plotly; `charts.js` holds the Plotly plumbing (axes, ticks, table view, lazy loading, heatmap) that the dashboard and writeup share.
 
 The live tab loads `summary.json`. The backtest tab lazily loads the much larger `backtest.json`, builds a predicate for default/fitted grid rows, and renders heatmaps for LLTV × crash path, liquidator capital, and warning time. Lazy loading keeps the default dashboard fast.
 

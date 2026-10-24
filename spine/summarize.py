@@ -2,6 +2,7 @@
 Run: .venv/bin/python -m spine.summarize"""
 import os, sys, datetime, collections
 from spine.api import MARKETS, data_path, lif, load, save
+from spine.fetch_prices import WINDOWS
 
 BIN = 0.02
 DROPS = [round(d * 0.01, 2) for d in range(0, 71)]
@@ -102,6 +103,26 @@ def depth_for(depth, name, product):
     return out
 
 
+def crash_drop(candles):
+    """Peak-to-trough fall of a replay path, as backtest.crash_path() builds it: the lowest low against the highest high before it."""
+    trough = min(range(len(candles)), key=lambda i: candles[i][3])
+    return 1 - candles[trough][3] / max(c[2] for c in candles[:trough + 1])
+
+
+def crash_drops(product):
+    """{window: peak-to-trough fall} for the backtest's crash paths that have a price file for this product; the loan check reads it."""
+    return {w: round(crash_drop(c), 4) for w, _, _ in WINDOWS if (c := load(f'prices/{w}_{product}'))}
+
+
+def base_markets(raw):
+    """data/base_markets.json (spine.fetch_markets) as the site reads it: every Base market over the threshold, with book LTV
+    where Morpho prices the collateral. None when the fetcher has not run, so summary.json keeps its old shape."""
+    if not raw:
+        return None
+    rows = [dict(m, book_ltv=m['borrow_usd'] / m['collateral_usd'] if m['collateral_usd'] else None) for m in raw['markets']]
+    return dict(fetched_at=raw['fetched_at'], min_borrow_usd=raw['min_borrow_usd'], markets=rows)
+
+
 def summarize_market(name, m, wallets, depth):
     raw = load(f'positions_{name}')
     if not raw:
@@ -115,7 +136,7 @@ def summarize_market(name, m, wallets, depth):
     borrow, cb_borrow = sum(p['borrow_usd'] for p in pos), sum(p['borrow_usd'] for p in pos if p['is_coinbase'])
     state = dict(borrow_usd=ms['borrowAssetsUsd'], collateral_usd=ms['collateralAssetsUsd'], supply_usd=ms['supplyAssetsUsd'],
                  utilization=ms['utilization'], borrow_apy=ms['borrowApy'], lltv=m['lltv'], lif=L, bad_debt_ltv=1 / L,
-                 price=coll_usd / units if units else None, n_positions=len(pos),
+                 price=coll_usd / units if units else None, n_positions=len(pos), market_id=m['id'],
                  coinbase_share_count=sum(p['is_coinbase'] for p in pos) / len(pos) if pos else 0,
                  coinbase_share_borrow=cb_borrow / borrow if borrow else 0)
     top = sorted(pos, key=lambda p: -p['borrow_usd'])[:25]
@@ -124,7 +145,7 @@ def summarize_market(name, m, wallets, depth):
     state['capacity_ab_usd'] = capacity_ab(dep)
     state['distance_to_capacity'] = distance_to_capacity(curve, state['capacity_ab_usd'])
     return dict(state=state, ltv_hist=ltv_hist(pos), liquidatable_curve=curve, hf_cdf=hf_cdf(pos),
-                top_borrowers=top, liquidations_daily=daily, liquidators_top=liqs, depth=dep)
+                top_borrowers=top, liquidations_daily=daily, liquidators_top=liqs, depth=dep, crash_drops=crash_drops(m['cb_product']))
 
 
 def build():
@@ -137,7 +158,10 @@ def build():
     totals = dict(borrow_usd=borrow, collateral_usd=sum(s['state']['collateral_usd'] for s in markets.values()),
                   n_positions=sum(s['state']['n_positions'] for s in markets.values()),
                   coinbase_share_borrow=sum(s['state']['borrow_usd'] * s['state']['coinbase_share_borrow'] for s in markets.values()) / borrow if borrow else 0)
-    return dict(generated_at=datetime.datetime.now(datetime.UTC).isoformat(timespec='seconds'), markets=markets, totals=totals)
+    out = dict(generated_at=datetime.datetime.now(datetime.UTC).isoformat(timespec='seconds'), markets=markets, totals=totals)
+    if (bm := base_markets(load('base_markets'))):
+        out['base_markets'] = bm
+    return out
 
 
 def report(out, check=False):
@@ -156,6 +180,11 @@ def report(out, check=False):
     above = sum(b['borrow_usd'] for b in m['ltv_hist'] if b['lo'] >= st['lltv'] - 1e-9)
     assert curve[0.0]['borrow_usd'] <= above + 1, (curve[0.0]['borrow_usd'], above)
     assert len(m['hf_cdf']) == 40 and all(0 <= r['share'] <= 1 for r in m['hf_cdf'])
+    assert all(0 < d < 1 for s in out['markets'].values() for d in s.get('crash_drops', {}).values())
+    if (bm := out.get('base_markets')):
+        print('Base markets >= $%.0fM borrowed: %d, $%.0fM, tracked here: %s' % (bm['min_borrow_usd'] / 1e6, len(bm['markets']),
+              sum(x['borrow_usd'] for x in bm['markets']) / 1e6, ', '.join(x['tracked'] for x in bm['markets'] if x['tracked'])))
+        assert {x['tracked'] for x in bm['markets']} - {None} <= set(MARKETS)
     d, cap = st['distance_to_capacity'], st['capacity_ab_usd']
     assert d is None or not cap or curve[d]['borrow_usd'] > cap >= curve[round(max(0.0, d - 0.01), 2)]['borrow_usd']
     hist_sum = sum(b['borrow_usd'] for b in m['ltv_hist'])

@@ -32,8 +32,8 @@ Recommended parameters, from [WRITEUP.md](WRITEUP.md):
 
 ## How it works
 
-- Fetchers in `spine/` (`fetch_positions`, `fetch_liquidations`, `tag_coinbase`, `fetch_prices`, `fetch_depth`, `fetch_vaults`, `fetch_oracle`) read the Morpho API, Base RPC, Coinbase Exchange and Chainlink logs. They use only the standard library.
-- `spine/summarize.py` writes `data/summary.json`. `site/index.html` and `site/app.js` render it with no build step.
+- Fetchers in `spine/` (`fetch_positions`, `fetch_liquidations`, `tag_coinbase`, `fetch_prices`, `fetch_depth`, `fetch_vaults`, `fetch_markets`, `fetch_oracle`) read the Morpho API, Base RPC, Coinbase Exchange and Chainlink logs. They use only the standard library.
+- `spine/summarize.py` writes `data/summary.json`. `site/index.html`, `site/charts.js` and `site/app.js` render it with no build step. The page's loan check reads one address's positions from Morpho's public API in the visitor's browser.
 - `spine/calibrate.py` measures liquidator latency, bonus and throughput on the real events. `spine/rebuild_book.py` rebuilds historical books from on-chain events.
 - `spine/backtest.py` (numpy) replays books through the crash paths with fitted borrower response and liquidator capacity. `spine/writeup_tables.py` prints the tables in `WRITEUP.md`.
 - `.github/workflows/refresh.yml` is scheduled hourly (GitHub runs it best-effort). It refreshes the data, advances the backtest, publishes to the `data` branch and GitHub Pages, and runs `spine/alert.py`. The alert opens a GitHub issue when any market is within 10% of its liquidation capacity. Vercel serves the `data` branch at the live URL.
@@ -62,6 +62,7 @@ Rebuild the dashboard data. The positions files are not committed, so run `fetch
 .venv/bin/python -m spine.fetch_prices         # Coinbase 5-minute candles for 7 crash windows (cached)
 .venv/bin/python -m spine.fetch_depth          # CEX L2 depth and DEX quoter capacity
 .venv/bin/python -m spine.fetch_vaults         # vaults that fund each market
+.venv/bin/python -m spine.fetch_markets        # every Base market over $10M borrowed (market level)
 .venv/bin/python -m spine.summarize            # writes data/summary.json
 .venv/bin/python -m http.server 8000           # open http://localhost:8000/site/
 ```

@@ -4,5 +4,6 @@ __pycache__/
 *.pyc
 data/cache/
 data/positions_*.json
+data/base_markets.json
 .vercel
 .env*

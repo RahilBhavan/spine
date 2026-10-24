@@ -18,7 +18,8 @@ Rules the code follows. Reviews cite this file.
 
 ## Site
 - Static files in `site/`, served from the repo root; no build step. Plotly from jsdelivr is the only external script. Colors as CSS variables on `:root` with a dark variant; phone width works.
-- The page reads `data/summary.json` and other `data/*.json`; it never loads the 39k-row position files.
+- The page reads `data/summary.json` and other `data/*.json`; it never loads the 39k-row position files. The one live call is the loan check: the visitor's browser posts one address to Morpho's public GraphQL (CORS-open, no key).
+- The page shows the data's age; past 3 h it shows a stale banner (`STALE_HOURS` in `site/app.js`).
 
 ## Process
 - One phase per pull request, named after the ROADMAP.md phase. Each phase has an acceptance check in PLAN.md or ROADMAP.md; paste its output in the PR.

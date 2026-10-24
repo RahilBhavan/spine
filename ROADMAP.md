@@ -366,3 +366,25 @@ glossary to do it, H0's sentences are not done.
 
 Effort: about two days. H0/H1/H6 can start now; H2-H5 after, since they render into H0's structure; H7 is
 independent and can run in parallel with either.
+
+## Phase I: Base grant upgrades (2026-10-22)
+
+1. **Freshness on every page.** The dashboard header and the writeup nav show the snapshot time and its age; past
+   3 h (`STALE_HOURS`) the stamp turns red and a banner says the numbers are as of the last refresh. Replaces the
+   8 h stamp and 12 h notice from G1.6. Rechecked every minute, so an open tab goes stale too.
+2. **Check a loan.** A section where a visitor pastes a Base address. The browser asks Morpho's public GraphQL for
+   that address's positions in every market on the page (no key, nothing via this site) and shows debt,
+   collateral, LTV / LLTV, liquidation price and buffer from Morpho's health factor, and the worst of the backtest's
+   crash paths applied to the position (peak-to-trough falls per path published in `summary.json` as
+   `crash_drops`, computed the way `backtest.crash_path()` builds the path), with the backtest's whole-market AB row
+   for that path. `?address=0x…` deep-links.
+3. **All Base markets over $10M borrowed.** `spine/fetch_markets.py` (one paged query, about a second) writes
+   `data/base_markets.json`; `summarize` folds it into `summary.json` as `base_markets`, and the page lists the
+   Morpho-listed markets with the Coinbase ones linked to their charts, and the unlisted ones folded with Morpho's
+   warnings. Scoped to market-level state: positions, depth and replays for the extra markets would multiply the
+   refresh and have no liquidation venue data to stand on. The nine Coinbase markets and every number for them are
+   unchanged (`summary.json` is identical apart from the new keys on the same inputs).
+
+Acceptance: `pytest -q tests` green; `summarize --check`, `fetch_markets --check`, `alert --check` pass; the banner
+appears for a snapshot 3.2 h old and not for one 2.9 h old on both pages; the loan check returns positions for real
+addresses from the positions files and an empty state for an address with none.

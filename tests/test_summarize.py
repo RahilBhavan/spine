@@ -3,7 +3,10 @@ Run: .venv/bin/python -m pytest -q tests"""
 import pytest
 from spine.api import lif
 from spine import summarize
-from spine.summarize import DROPS, HF_STEPS, distance_to_capacity, hf_cdf, liquidatable_curve, ltv_hist, report
+from spine.api import load
+from spine.backtest import crash_path
+from spine.fetch_prices import WINDOWS
+from spine.summarize import DROPS, HF_STEPS, base_markets, crash_drop, crash_drops, distance_to_capacity, hf_cdf, liquidatable_curve, ltv_hist, report
 
 LLTV = 0.86
 # same keys summarize_market builds: two Coinbase, one over LLTV, one with zero collateral (ltv 1.0, as summarize_market sets it), one healthy
@@ -72,3 +75,28 @@ def test_build_without_positions_exits_before_writing(monkeypatch, tmp_path):
     with pytest.raises(SystemExit, match='fetch_positions'):
         summarize.build()
     assert not list(tmp_path.iterdir())
+
+
+def test_crash_drop_peak_before_trough():
+    # [ts, open, high, low, close]: the 200 high comes after the trough, so the fall is measured from 120
+    c = [[0, 100, 100, 95, 100], [1, 100, 120, 110, 115], [2, 115, 115, 60, 70], [3, 70, 200, 70, 190]]
+    assert crash_drop(c) == 0.5
+
+
+def test_crash_drops_match_the_backtest_path():
+    for w, _, _ in WINDOWS:
+        c = load('prices/%s_BTC-USD' % w)
+        if c is None:
+            pytest.skip('data/prices absent')
+        path = crash_path(c, 1.0)
+        assert abs(crash_drop(c) - (1 - path.min())) < 1e-12, w
+    assert set(crash_drops('BTC-USD')) == {w for w, _, _ in WINDOWS}
+    assert 'Mar2020' not in crash_drops('SOL-USD')  # no SOL price file for 2020; the window is skipped, not zero
+
+
+def test_base_markets():
+    assert base_markets(None) is None
+    raw = dict(fetched_at=1, min_borrow_usd=1e7, markets=[dict(id='0xa', tracked='cbBTC', borrow_usd=2e7, collateral_usd=4e7),
+                                                          dict(id='0xb', tracked=None, borrow_usd=1e7, collateral_usd=0.0)])
+    rows = base_markets(raw)['markets']
+    assert [r['book_ltv'] for r in rows] == [0.5, None]  # unpriced collateral has no LTV, not an infinite one
