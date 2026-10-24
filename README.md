@@ -47,11 +47,11 @@ Prerequisites: Python 3.12 or later and [uv](https://docs.astral.sh/uv/). No API
 Install and test:
 
 ```bash
-uv venv .venv && uv pip install numpy pytest
+uv sync --extra dev
 .venv/bin/python -m pytest -q tests
 ```
 
-Observed on 2026-10-21: `18 passed`. The tests run against the frozen snapshot in `data/`, with no network.
+Observed on 2026-10-24: `21 passed`. `uv.lock` pins the dependencies. The tests run against the frozen snapshot in `data/`, with no network.
 
 Rebuild the dashboard data. The positions files are not committed, so run `fetch_positions` first on a fresh clone. These commands overwrite files in `data/`.
 

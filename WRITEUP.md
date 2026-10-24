@@ -4,6 +4,8 @@
 
 ## The short version
 
+> **Scope of the book figures.** The $1.41B of debt, $2.86B of collateral and 39,000 positions below are for the cbBTC/USDC market only, as of 2026-09-19 (the 2026-09-19 19:56 UTC snapshot reads $1.43B and 39,554 positions for cbBTC; the writeup text was written earlier that day). The README totals cover all nine markets and a later snapshot (2026-09-23 19:05 UTC: $1.63B borrowed, 68,772 positions, of which cbBTC is $1.46B and 40,075). The 97.5% Coinbase Smart Wallet share is the all-market borrow share; cbBTC alone reads 97.4%.
+
 Coinbase's app routes USDC loans against cbBTC and ETH to Morpho markets on Base, funded by Morpho vault suppliers, at an 86% liquidation LTV with a 4.38% liquidation bonus. The book is $1.41B of debt against $2.86B of cbBTC, 39,000 positions, 97.5% of it Coinbase Smart Wallets. It has been through three real stress events (Oct 2025, Feb 2026, Jun 2026), cleared $256M of liquidations in the four stress weeks alone, and taken zero bad debt.
 
 That record is real and it is also not the test. The lived events gave borrowers hours to days of warning before liquidation; March 2020 gave 25 minutes. Replaying today's book through seven crash paths, with liquidators and borrowers behaving the way the lived events show they behave, two numbers matter for each path: the loss that is realized by the end of the path, and the exposure at the lowest print, meaning how much of the book is underwater with no liquidator able to act. The first is what lenders lost; the second is what they were exposed to, and it becomes the first if the price does not bounce.
