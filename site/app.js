@@ -540,7 +540,7 @@ function worstText(r, mkt, bt) {
     'Liquidated on the way down' + (r.troughLtv > r.badLtv ? '; if liquidators miss it, its LTV at the low is ' + pct(r.troughLtv, 0) + ', past the ' + pct(r.badLtv) + ' bad-debt line.' : '; its collateral still covers the debt at the low.');
   const cells = bt && lossCells(bt, mkt, w);
   return w + ', ' + pct(d, 0) + ' peak to low. ' + fate + ' Liquidated on ' + r.hit + ' of ' + r.paths + ' paths.' +
-    (cells ? ' <span class="muted">Whole market on that path (scenario AB): ' + cells[0] + ' lost, ' + cells[1] + ' underwater at the low.</span>' : '');
+    (cells ? ' <span class="muted">Whole market on that path (scenario AB): loss by end of path ' + cells[0] + '; supply left unserved at the low, a separate measure, ' + cells[1] + '.</span>' : '');
 }
 
 async function checkLoan(raw) {

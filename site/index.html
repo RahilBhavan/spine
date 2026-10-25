@@ -150,7 +150,7 @@
 
   <div class="fig">
     <h3>The two paths that cost money, at today's terms</h3>
-    <p class="muted">Today's <abbr title="Every open position in the market at today's prices">book</abbr> at its current LLTV, liquidators selling on-chain and on exchanges (scenario AB): what lenders lose by the end of the path, what sat underwater at the lowest print, and the loss if the low had held for a day.</p>
+    <p class="muted">Today's <abbr title="Every open position in the market at today's prices">book</abbr> at its current LLTV, liquidators selling on-chain and on exchanges (scenario AB): three separate measures: the loss by the end of the path, the supply left unserved (underwater) at the lowest print, and the loss if the low had held for a day.</p>
     <div class="scroll-x"><table id="bt-summary"></table></div>
   </div>
 
@@ -163,7 +163,7 @@
   <div class="fig">
     <h3>Bad debt by LLTV and crash path</h3>
     <div class="controls"><div id="bt-scenario-buttons" class="buttons"></div><span class="explain">A: on-chain bots only. AB: plus exchange-hedged liquidators (what we observe). ABC: plus a Coinbase backstop (hypothetical).</span></div>
-    <div class="controls"><div id="bt-metric-buttons" class="buttons"></div><span class="explain">Loss: realized by the end of the path. Exposure: underwater at the lowest print.</span></div>
+    <div class="controls"><div id="bt-metric-buttons" class="buttons"></div><span class="explain">Loss: realized by the end of the path. Exposure: supply left unserved, underwater at the lowest print. Two separate measures; switch between them.</span></div>
     <div id="chart-heat" class="chart" role="figure" aria-label="Bad debt by LLTV and crash path"></div>
     <p id="bt-note" class="muted"></p>
   </div>
