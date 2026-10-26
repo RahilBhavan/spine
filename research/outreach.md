@@ -24,12 +24,13 @@ What the replay says:
 - Borrowers cure most of the at-risk debt when they get warning. On the Feb 2026 book $515M crossed 86% at the
   trough and $151M was liquidated. The lived events gave the median liquidated position 2-48 hours of warning
   between 80% and 86%. March 2020 would have given it 25 minutes.
-- On a March 2020 path at today's terms the realized loss is small ($9.2M, 0.6% of supply) but $158M (10% of
-  supply) sits underwater and unserved at the trough. Holding the low for one day before the same bounce turns
-  the realized figure into $38M.
-- The LLTV barely moves the second number (77% LLTV: 8.4% exposed). Liquidator capital does: the only
-  measurement of it is the $97M repaid on Feb 5 2026, a day when it did not bind. Tripling it takes trough
-  exposure to 6.2%; a backstop liquidator that can redeem cbBTC and sell on Coinbase's book takes it to 0.8%.
+- On a March 2020 path at today's terms, two separate measures: the realized loss by the end of the path is
+  $9.2M (0.6% of supply); the supply left unserved at the trough is $158M (10%). Holding the low for one day
+  before the same bounce turns the realized loss into $38M.
+- The LLTV barely moves the supply left unserved (77% LLTV: 8.4%). Liquidator capital does: the only
+  measurement of it is the $97M repaid on Feb 5 2026, a day when it did not bind. Tripling it takes the
+  unserved share to 6.2%; a backstop liquidator that can redeem cbBTC and sell on Coinbase's book leaves
+  $0 unserved and a $13.1M (0.8%) realized loss.
 
 What we would ask the market's owners to consider, in order: a committed backstop liquidator (only Coinbase can
 be one; nothing public says it is), a pre-liquidation band at 80-86% so the queue drains during the slide
@@ -65,8 +66,10 @@ in 25 minutes.
 
 4/ In that case only liquidators can save the lenders, and what binds is how much capital they can deploy in a
 day. The only measurement is Feb 5 2026: $97M repaid, on a day it did not bind. At that capacity a March 2020
-path leaves $158M (10% of supply) underwater at the trough.
+path leaves $158M (10% of supply) unserved at the trough. That is a separate measure from the realized
+loss.
 
-5/ Cutting the LLTV does little to that number (77%: still 8.4%). A backstop liquidator does (0.8%). Public
+5/ Cutting the LLTV does little to the unserved share (77%: still 8.4%). A backstop liquidator does: $0 unserved,
+with a $13.1M (0.8%) realized loss. Public
 data, open code, hourly dashboard: https://rahilbhavan.github.io/spine/. Writeup with everything it does not
 capture: https://rahilbhavan.github.io/spine/site/writeup.html

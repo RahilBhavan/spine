@@ -6,7 +6,7 @@
 
 **Live:** https://spine.rahilbhavan.com
 
-[![Spine dashboard on 2026-09-23: $1.6B borrowed across nine Morpho markets on Base, cbBTC 11% from its liquidation capacity, and a worst modeled path of $9.2M lost and $158M exposed at the trough](docs/screenshot.png)](https://spine.rahilbhavan.com/site/)
+[![Spine dashboard on 2026-09-23: $1.6B borrowed across nine Morpho markets on Base, cbBTC 11% from its liquidation capacity, and, as two separate measures on the worst modeled path, a $9.2M loss by the end of the path and $158M left unserved at the trough](docs/screenshot.png)](https://spine.rahilbhavan.com/site/)
 
 Spine is a risk dashboard and liquidation backtest for the nine Morpho Blue markets on Base that fund the USDC loans in Coinbase's app. Python fetchers read positions, liquidations, Chainlink oracle updates, Coinbase 5-minute candles and CEX and DEX depth from public endpoints. The pipeline writes `data/summary.json` for a static dashboard. A numpy backtest replays rebuilt historical loan books through seven crash paths and recommends a liquidation LTV (LLTV) and maximum draw for each collateral.
 
@@ -18,7 +18,10 @@ The headline: on a March 2020 path, losses depend on how much capital liquidator
 - **Track record.** The cbBTC market cleared $256M of liquidations in the four stress weeks of three events (Oct 2025, Feb 2026, Jun 2026) with zero bad debt. Source: `WRITEUP.md`.
 - **Calibration.** Fitted on those three cbBTC events, the model reproduces realized liquidation volume at 0.85–0.99x (Oct 2025 0.95x, Feb 2026 0.99x, Jun 2026 0.85x). Held-out WETH events come in at 1.58x and 0.85x. Source: `data/backtest.json`, key `calibrated.ratios`.
 - **Stress replay.** 5,372 saved backtest runs over seven crash windows at 5-minute resolution. Source: `data/backtest.json` and `data/prices/index.json`.
-- **March 2020 at today's 86% LLTV.** $9.2M realized loss (0.6% of supply), but $158.4M (10.0% of supply) underwater and unserved at the trough. A 77% LLTV leaves 8.4% exposed. Tripled liquidator capital leaves 6.2%. A Coinbase backstop liquidator leaves 0.8%. Source: `WRITEUP.md`.
+- **Replay book.** The replay ran on the cbBTC/USDC market's loan book as of 2026-09-19, the date of `WRITEUP.md` (`latest_book` in `data/backtest.json`). All percentages of supply below are of that book's $1.58B of USDC supplied. The Book figures above are a different, later snapshot (2026-09-23, all nine markets).
+- **March 2020 at today's 86% LLTV, loss by end of path.** $9.2M (0.6% of supply) realized, because BTC bounced and the queue was served above water on the way back up. Source: `WRITEUP.md`.
+- **March 2020 at today's 86% LLTV, supply left unserved at the trough.** $158.4M (10.0% of supply) sat underwater with no liquidator able to act at the lowest print. This is a separate measure, taken at a different moment. A 77% LLTV leaves 8.4% unserved. Tripled liquidator capital leaves 6.2%. Source: `WRITEUP.md`.
+- **March 2020 with a Coinbase backstop liquidator.** $0 left unserved and $13.1M (0.8%) realized loss. Source: `WRITEUP.md`.
 
 Recommended parameters, from [WRITEUP.md](WRITEUP.md):
 
