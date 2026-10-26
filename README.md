@@ -38,7 +38,7 @@ Recommended parameters, from [WRITEUP.md](WRITEUP.md):
 - Fetchers in `spine/` (`fetch_positions`, `fetch_liquidations`, `tag_coinbase`, `fetch_prices`, `fetch_depth`, `fetch_vaults`, `fetch_markets`, `fetch_oracle`) read the Morpho API, Base RPC, Coinbase Exchange and Chainlink logs. They use only the standard library.
 - `spine/summarize.py` writes `data/summary.json`. `site/index.html`, `site/charts.js` and `site/app.js` render it with no build step. The page's loan check reads one address's positions from Morpho's public API in the visitor's browser.
 - `spine/calibrate.py` measures liquidator latency, bonus and throughput on the real events. `spine/rebuild_book.py` rebuilds historical books from on-chain events.
-- `spine/backtest.py` (numpy) replays books through the crash paths with fitted borrower response and liquidator capacity. `spine/writeup_tables.py` prints the tables in `WRITEUP.md`.
+- `spine/backtest.py` (numpy) replays books through the crash paths with fitted borrower response and liquidator capacity. `spine/writeup_tables.py` prints the tables in `WRITEUP.md`. `spine/stress_grid.py` writes the crash path x LLTV x liquidator capital grid to `data/stress_grid.csv`.
 - `.github/workflows/refresh.yml` is scheduled hourly (GitHub runs it best-effort). It refreshes the data, advances the backtest, publishes to the `data` branch and GitHub Pages, and runs `spine/alert.py`. The alert opens a GitHub issue when any market is within 10% of its liquidation capacity. Vercel serves the `data` branch at the live URL.
 
 [CODEBASE_GUIDE.md](CODEBASE_GUIDE.md) explains the architecture module by module.

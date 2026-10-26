@@ -97,7 +97,10 @@ def simulate(book, path, params):
     A liquidation event repays just enough to bring the position back to close_target LTV (bots size to what restores health,
     not to zero): r = (debt - target*coll*p) / (1 - target*LIF); it is a full close when r >= debt or the position is underwater
     (debt * LIF > coll * p). close_target >= 1 means always close in full. Partially served positions re-enter the queue if
-    still over lltv. full_share = events that closed the position / events."""
+    still over lltv. full_share = events that closed the position / events.
+    first_bind: the limit at the first step with a queue the step could not serve in full ('depth' = per-step replenishing
+    capacity, 'capital' = the Tier B rolling-24h cap was what set Tier B that step, 'oracle_gap' = no bonus left); None if the
+    queue was always served. capital_bind_step: first such step where the capital cap was the limit (-1 never). Steps from path start."""
     coll, debt = book[0].astype(float).copy(), book[1].astype(float).copy()
     lltv, L, (base_a, base_b), cure, wg = params['lltv'], lif(params['lltv']), params['base_eff'], params['cure'], params['warn_gap']
     cap_b, tau, fb = params['cex_cap_usd'], params['close_target'], params['full_below_usd']
@@ -117,12 +120,15 @@ def simulate(book, path, params):
     trough, trough_expo = int(np.argmin(oracle)), 0.0
     g = np.exp(-params['beta'] * np.abs(path / lagged(path, min(HOUR_BARS, len(path))) - 1) / 0.05)  # depth multiplier
     n_events = n_full = 0
+    first_bind, first_bind_step, capital_bind_step = None, -1, -1  # first step the queue went unserved, and which limit did it
     for t, (p, pm, gt) in enumerate(zip(oracle.tolist(), path.tolist(), g.tolist())):
         used_b -= ring[t % DAY_STEPS]  # step t - DAY_STEPS rolls off before this step's cap check: the window is exactly DAY_STEPS bars
         ring[t % DAY_STEPS] = 0.0
         ba, bb = base_a * gt, base_b * gt
         avail_a = min(ba, avail_a + params['r'] * ba)
-        avail_b = min(bb, avail_b + params['r'] * bb, max(0.0, cap_b - used_b))
+        room = max(0.0, cap_b - used_b)
+        cap_limits = room < min(bb, avail_b + params['r'] * bb)  # the rolling-24h capital cap, not depth, sets Tier B this step
+        avail_b = min(bb, avail_b + params['r'] * bb, room)
         avail, ub = avail_a + avail_b, 0.0
         kw = int(np.searchsorted(neg_p_liq, -p * (lltv - wg) / lltv))  # prefix that can be queued or warned
         step_seized, f = 0.0, pm / p  # f converts oracle-valued seizure to market-valued depth consumed
@@ -157,7 +163,8 @@ def simulate(book, path, params):
             q_total = float((sz * m).sum())
             max_q = max(max_q, float((np.minimum(debt[:kw] * L, coll[:kw] * p) * m).sum()))
             if L * f <= 1:  # market already below oracle by more than the bonus: no one liquidates at a loss
-                pass
+                if first_bind is None:
+                    first_bind, first_bind_step = 'oracle_gap', t
             elif avail >= q_total * f:  # everything clears this step; order is irrelevant
                 close = m & full_ev
                 part = m & ~close
@@ -172,6 +179,10 @@ def simulate(book, path, params):
                 coll[:kw] *= ~close
                 step_seized = q_total
             else:
+                if first_bind is None:
+                    first_bind, first_bind_step = ('capital' if cap_limits else 'depth'), t
+                if cap_limits and capital_bind_step < 0:
+                    capital_bind_step = t
                 for s0 in range(0, n, 1024):
                     idx = by_debt[s0:s0 + 1024]
                     idx = idx[inq[idx]]
@@ -218,7 +229,8 @@ def simulate(book, path, params):
                 bad_debt_pct_supply=float(100 * (realized + unrealized) / supply), max_queue_usd=float(max_q),
                 queue_minutes_p50=float(np.percentile(q, 50)) if len(q) else None, queue_minutes_p95=float(np.percentile(q, 95)) if len(q) else None,
                 warn_minutes_p50=float(np.percentile(wt, 50)) if len(wt) else None,
-                peak_step_liquidated_usd=float(peak_step), steps=len(path))
+                peak_step_liquidated_usd=float(peak_step), steps=len(path),
+                first_bind=first_bind, first_bind_step=first_bind_step, capital_bind_step=capital_bind_step)
 
 
 def lagged(lows, lag):

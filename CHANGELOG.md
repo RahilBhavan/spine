@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased (stress grid)
+
+- `spine/stress_grid.py` replays the cbBTC book on all seven crash paths across four LLTVs and five liquidator-capital levels and writes `data/stress_grid.csv` (one row per cell, with the loan book date). Underwater-and-unserved at the trough and realized loss are separate columns; `binds_first` records the first limit that left a queue unserved. Summary in `WRITEUP.md` section 4b.
+- `backtest.simulate` returns `first_bind`, `first_bind_step` and `capital_bind_step`. Existing outputs are unchanged (identical on all 140 grid cells).
+
 ## Unreleased (Phase I, PR #10, 2026-10-24)
 
 - Check a loan: paste a Base address and the browser asks Morpho's public GraphQL (no key) for its positions in every market on the page. It shows liquidation price, buffer, and the worst backtest crash path applied to the position.

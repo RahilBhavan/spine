@@ -117,6 +117,91 @@ Whether bots trim positions instead of closing them (trim to 74%, which on Morph
 
 WETH at 86% / 75%: March 2020 $0.93-1.1M, May 2021 $0.25M, Aug 2024 $0.15M of loss across scenarios (about 1.1% of that market's $94M supply at worst), because ETH gaps more than 4.38% inside five minutes and a backstop that liquidates everything instantly realizes the gap. At 80%, $0.13-0.21M on March 2020 and $0.02M on May 2021; at 77%, every path is clean under every scenario.
 
+## 4b. Stress grid: crash path x LLTV x liquidator capital
+
+*Every figure in this section comes from `python -m spine.stress_grid`, which writes `data/stress_grid.csv` (140 rows: seven paths x four LLTVs x five capital levels), and the tables are printed by `python -m spine.stress_grid --table`. Each row carries its book date in the first column. The loan book is the cbBTC/USDC book fetched on **2026-10-22** (supply $1,780M, 42,678 positions with debt); depth is the 2026-09-23 snapshot in `data/depth.json`; the borrower response is the stored fit (70% responsive, 2 h) and the scenario is AB. This is a later book than the one section 4 ran on (2026-09-19, $1.58B supply), so the March 2020 / 86% cell reads differently here, not because the model changed.*
+
+The cbBTC book is replayed on all seven paths at LLTV 86%, 80% and 77% (draw cap 75%) and 70% (cap 60%, as in the LLTV grid in section 4), against five levels of liquidator capital: the Tier B rolling-24h cap at 0.5x, 1x, 3x and 10x the most collateral seized in one day ($101.1M, Feb 5 2026), and unlimited, where only depth limits. Two measures stay in separate columns and are never added or compared as one number:
+
+- **Underwater and unserved at trough**: debt still alive and underwater at the lowest oracle print, plus the shortfall already realized by then (the "exposure at trough" of section 4). What the lenders are exposed to if the price does not bounce.
+- **Realized loss**: shortfall realized on liquidations by the end of the replayed path, after the historical bounce. Shortfall still underwater at the end of the path is not in this column; it is in the CSV as `underwater_at_end_usd` (zero in every cell of the tables below).
+
+Percentages are of the book's supply. **Binds first** is the limit at the first five-minute step, counted from the start of the path (the pre-trough peak), where the queue could not be served in full: *depth* is the per-step replenishing DEX and CEX capacity, *capital* is the Tier B rolling-24h cap setting that step's capacity, *oracle gap* is the market already below the oracle by more than the liquidation bonus so nobody liquidates at a profit, *none* is a queue served in full at every step. "Capital cap from N h" is the first such step where the cap was the limit. It is a chronological marker, not a share of the loss: depth binds first in most cells (capacity refills 20% of its base per step), and the capital cap matters later.
+
+| Book date | Crash path | LLTV / cap | Liquidator capital per day | Underwater and unserved at trough | Realized loss | Binds first |
+|---|---|---|---|---|---|---|
+| 2026-10-22 | Mar 2020 | 86% / 75% | $50.5M (0.5x) | $227.3M (12.8%) | $27.1M (1.5%) | oracle gap at 114.0 h; capital cap from 114.8 h |
+| 2026-10-22 | Mar 2020 | 86% / 75% | $101.1M (1x) | $213.2M (12.0%) | $22.4M (1.3%) | oracle gap at 114.0 h; capital cap from 115.8 h |
+| 2026-10-22 | Mar 2020 | 86% / 75% | $303.3M (3x) | $154.5M (8.7%) | $8.4M (0.5%) | oracle gap at 114.0 h; capital cap from 120.1 h |
+| 2026-10-22 | Mar 2020 | 86% / 75% | $1011.0M (10x) | $66.2M (3.7%) | $2.7M (0.2%) | oracle gap at 114.0 h |
+| 2026-10-22 | Mar 2020 | 86% / 75% | unlimited | $66.2M (3.7%) | $2.7M (0.2%) | oracle gap at 114.0 h |
+| 2026-10-22 | Mar 2020 | 80% / 75% | $50.5M (0.5x) | $199.6M (11.2%) | $15.5M (0.9%) | depth at 0.2 h; capital cap from 114.2 h |
+| 2026-10-22 | Mar 2020 | 80% / 75% | $101.1M (1x) | $186.5M (10.5%) | $9.4M (0.5%) | depth at 0.2 h; capital cap from 115.2 h |
+| 2026-10-22 | Mar 2020 | 80% / 75% | $303.3M (3x) | $137.5M (7.7%) | $3.7M (0.2%) | depth at 0.2 h; capital cap from 119.0 h |
+| 2026-10-22 | Mar 2020 | 80% / 75% | $1011.0M (10x) | $31.6M (1.8%) | $0.67M (0.0%) | depth at 0.2 h; capital cap from 133.2 h |
+| 2026-10-22 | Mar 2020 | 80% / 75% | unlimited | $31.6M (1.8%) | $0.67M (0.0%) | depth at 0.2 h |
+| 2026-10-22 | Mar 2020 | 77% / 75% | $50.5M (0.5x) | $178.3M (10.0%) | $9.1M (0.5%) | depth at 0.2 h; capital cap from 0.7 h |
+| 2026-10-22 | Mar 2020 | 77% / 75% | $101.1M (1x) | $166.1M (9.3%) | $4.2M (0.2%) | depth at 0.2 h; capital cap from 115.2 h |
+| 2026-10-22 | Mar 2020 | 77% / 75% | $303.3M (3x) | $123.5M (6.9%) | $1.3M (0.1%) | depth at 0.2 h; capital cap from 118.7 h |
+| 2026-10-22 | Mar 2020 | 77% / 75% | $1011.0M (10x) | $16.6M (0.9%) | $0.25M (0.0%) | depth at 0.2 h; capital cap from 132.4 h |
+| 2026-10-22 | Mar 2020 | 77% / 75% | unlimited | $16.6M (0.9%) | $0.25M (0.0%) | depth at 0.2 h |
+| 2026-10-22 | Mar 2020 | 70% / 60% | $50.5M (0.5x) | $50.2M (2.8%) | $0.01M (0.0%) | depth at 114.1 h; capital cap from 114.3 h |
+| 2026-10-22 | Mar 2020 | 70% / 60% | $101.1M (1x) | $46.8M (2.6%) | $0.02M (0.0%) | depth at 114.1 h; capital cap from 115.1 h |
+| 2026-10-22 | Mar 2020 | 70% / 60% | $303.3M (3x) | $19.1M (1.1%) | 0 | depth at 114.1 h; capital cap from 118.2 h |
+| 2026-10-22 | Mar 2020 | 70% / 60% | $1011.0M (10x) | $2.2M (0.1%) | 0 | depth at 114.1 h |
+| 2026-10-22 | Mar 2020 | 70% / 60% | unlimited | $2.2M (0.1%) | 0 | depth at 114.1 h |
+| 2026-10-22 | May 2021 | 86% / 75% | $50.5M (0.5x) | $24.1M (1.4%) | 0 | oracle gap at 67.9 h; capital cap from 68.5 h |
+| 2026-10-22 | May 2021 | 86% / 75% | $101.1M (1x) | $20.1M (1.1%) | 0 | oracle gap at 67.9 h; capital cap from 224.7 h |
+| 2026-10-22 | May 2021 | 86% / 75% | $303.3M (3x) | $18.6M (1.0%) | $0.10M (0.0%) | oracle gap at 67.9 h |
+| 2026-10-22 | May 2021 | 86% / 75% | $1011.0M (10x) | $18.6M (1.0%) | $0.10M (0.0%) | oracle gap at 67.9 h |
+| 2026-10-22 | May 2021 | 86% / 75% | unlimited | $18.6M (1.0%) | $0.10M (0.0%) | oracle gap at 67.9 h |
+| 2026-10-22 | May 2021 | 80% / 75% | $50.5M (0.5x) | $3.1M (0.2%) | 0 | depth at 67.9 h; capital cap from 68.2 h |
+| 2026-10-22 | May 2021 | 80% / 75% | $101.1M (1x) | $1.7M (0.1%) | 0 | depth at 67.9 h; capital cap from 223.5 h |
+| 2026-10-22 | May 2021 | 80% / 75% | $303.3M (3x) | $0.67M (0.0%) | 0 | depth at 67.9 h |
+| 2026-10-22 | May 2021 | 80% / 75% | $1011.0M (10x) | $0.67M (0.0%) | 0 | depth at 67.9 h |
+| 2026-10-22 | May 2021 | 80% / 75% | unlimited | $0.67M (0.0%) | 0 | depth at 67.9 h |
+| 2026-10-22 | May 2021 | 77% / 75% | $50.5M (0.5x) | $1.0M (0.1%) | 0 | depth at 1.3 h; capital cap from 15.8 h |
+| 2026-10-22 | May 2021 | 77% / 75% | $101.1M (1x) | $0.41M (0.0%) | 0 | depth at 1.3 h; capital cap from 223.5 h |
+| 2026-10-22 | May 2021 | 77% / 75% | $303.3M (3x) | $0.00M (0.0%) | 0 | depth at 1.3 h |
+| 2026-10-22 | May 2021 | 77% / 75% | $1011.0M (10x) | $0.00M (0.0%) | 0 | depth at 1.3 h |
+| 2026-10-22 | May 2021 | 77% / 75% | unlimited | $0.00M (0.0%) | 0 | depth at 1.3 h |
+| 2026-10-22 | May 2021 | 70% / 60% | $50.5M (0.5x) | 0 | 0 | depth at 68.0 h; capital cap from 68.2 h |
+| 2026-10-22 | May 2021 | 70% / 60% | $101.1M (1x) | 0 | 0 | depth at 68.0 h; capital cap from 224.8 h |
+| 2026-10-22 | May 2021 | 70% / 60% | $303.3M (3x) | 0 | 0 | depth at 68.0 h |
+| 2026-10-22 | May 2021 | 70% / 60% | $1011.0M (10x) | 0 | 0 | depth at 68.0 h |
+| 2026-10-22 | May 2021 | 70% / 60% | unlimited | 0 | 0 | depth at 68.0 h |
+| 2026-10-22 | FTX Nov 2022 | 86% / 75% | $50.5M (0.5x) | 0 | 0 | depth at 88.2 h; capital cap from 108.4 h |
+| 2026-10-22 | FTX Nov 2022 | 86% / 75% | $101.1M (1x) | 0 | 0 | depth at 88.2 h |
+| 2026-10-22 | FTX Nov 2022 | 86% / 75% | $303.3M (3x) | 0 | 0 | depth at 88.2 h |
+| 2026-10-22 | FTX Nov 2022 | 86% / 75% | $1011.0M (10x) | 0 | 0 | depth at 88.2 h |
+| 2026-10-22 | FTX Nov 2022 | 86% / 75% | unlimited | 0 | 0 | depth at 88.2 h |
+| 2026-10-22 | FTX Nov 2022 | 80% / 75% | $50.5M (0.5x) | 0 | 0 | depth at 88.2 h; capital cap from 88.2 h |
+| 2026-10-22 | FTX Nov 2022 | 80% / 75% | $101.1M (1x) | 0 | 0 | depth at 88.2 h |
+| 2026-10-22 | FTX Nov 2022 | 80% / 75% | $303.3M (3x) | 0 | 0 | depth at 88.2 h |
+| 2026-10-22 | FTX Nov 2022 | 80% / 75% | $1011.0M (10x) | 0 | 0 | depth at 88.2 h |
+| 2026-10-22 | FTX Nov 2022 | 80% / 75% | unlimited | 0 | 0 | depth at 88.2 h |
+| 2026-10-22 | FTX Nov 2022 | 77% / 75% | $50.5M (0.5x) | 0 | 0 | capital at 88.2 h; capital cap from 88.2 h |
+| 2026-10-22 | FTX Nov 2022 | 77% / 75% | $101.1M (1x) | 0 | 0 | depth at 88.2 h |
+| 2026-10-22 | FTX Nov 2022 | 77% / 75% | $303.3M (3x) | 0 | 0 | depth at 88.2 h |
+| 2026-10-22 | FTX Nov 2022 | 77% / 75% | $1011.0M (10x) | 0 | 0 | depth at 88.2 h |
+| 2026-10-22 | FTX Nov 2022 | 77% / 75% | unlimited | 0 | 0 | depth at 88.2 h |
+| 2026-10-22 | FTX Nov 2022 | 70% / 60% | $50.5M (0.5x) | 0 | 0 | none |
+| 2026-10-22 | FTX Nov 2022 | 70% / 60% | $101.1M (1x) | 0 | 0 | none |
+| 2026-10-22 | FTX Nov 2022 | 70% / 60% | $303.3M (3x) | 0 | 0 | none |
+| 2026-10-22 | FTX Nov 2022 | 70% / 60% | $1011.0M (10x) | 0 | 0 | none |
+| 2026-10-22 | FTX Nov 2022 | 70% / 60% | unlimited | 0 | 0 | none |
+
+Reading the Mar 2020 rows (book 2026-10-22):
+
+- At 86% and the observed capital, $213.2M (12.0%) is underwater and unserved at the trough and $22.4M (1.3%) is realized by the end of the path. With 3x the capital the two read $154.5M (8.7%) and $8.4M (0.5%); with 10x or unlimited capital, $66.2M (3.7%) and $2.7M (0.2%). Capital moves both columns at every LLTV.
+- Lowering the LLTV at the observed capital moves the unserved column from 12.0% (86%) to 10.5% (80%), 9.3% (77%) and 2.6% (70% / 60%); the realized column from 1.3% to 0.5%, 0.2% and 0.0%.
+- At 86% the first binding limit is the oracle gap at 114.0 h at every capital level; at 80% and 77% it is depth at 0.2 h; at 70% / 60% it is depth at 114.1 h. The capital cap is the limit from 115-120 h at 1x and 3x. At 10x it is reached only at 80% (133.2 h) and 77% (132.4 h) and at unlimited capital never.
+- May 2021 at 86% / 75% leaves $20.1M (1.1%) unserved and no realized loss at the observed capital. At 77% it is $0.41M, and under $0.5M from there down, at the observed capital. FTX Nov 2022 has nothing underwater at the trough and nothing realized in any of its 20 cells, though a limit binds in all 15 cells at 86%, 80% and 77% (depth in 14, capital in the 0.5x cell at 77%) and in none at 70% / 60%.
+
+The other four paths (Aug 2024, Oct 2025, Feb 2026, Jun 2026) read zero on both measures in all 80 cells. The binding column still differs: Oct 2025 and Jun 2026 are *none* everywhere, Aug 2024 is *depth* in every cell, Feb 2026 is *capital* in 4 cells, *depth* in 12 and *none* in 4. Their rows are in `data/stress_grid.csv`.
+
+Reproducing the earlier result. The section 4 headline (Mar 2020, 86% / 75%, AB, observed capital: 10.0% unserved, $158.4M, and $9.2M realized) was run on the 2026-09-19 book. That book is not in the repository (`data/positions_*.json` is untracked and the `data` branch keeps only the latest snapshot), nor is the depth snapshot of that hour, so the figure cannot be regenerated here. What the script checks instead: the baseline cell is replayed twice and must agree exactly; it is then compared with the `data/backtest.json` run for the same book date if one exists (none exists for 2026-10-22, and the script says so); and, as a one-off check rather than a test, the instrumented simulator and the unmodified one gave identical values in every output field of all 140 cells. The baseline on the 2026-10-22 book reads 12.0% unserved ($213.2M) and 1.3% realized ($22.4M).
+
 ## 5. What the origination cap should be
 
 The liquidation LTV protects lenders; the origination cap protects borrowers from being liquidated by an ordinary bad week. The rule: a loan drawn at the cap should stay below LLTV after a p95 seven-day drawdown, so cap = LLTV × (1 − dd7_p95).
