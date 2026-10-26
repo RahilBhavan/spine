@@ -16,8 +16,8 @@ The headline: on a March 2020 path, losses depend on how much capital liquidator
 
 - **Book.** $1.63B borrowed against $3.66B of collateral across 68,772 positions in nine markets. Coinbase Smart Wallets hold 97.5% of the borrowing. Source: `data/summary.json`, snapshot 2026-09-23 19:05 UTC. The live site shows current figures.
 - **Track record.** The cbBTC market cleared $256M of liquidations in the four stress weeks of three events (Oct 2025, Feb 2026, Jun 2026) with zero bad debt. Source: `WRITEUP.md`.
-- **Calibration.** Fitted on those three cbBTC events, the model reproduces realized liquidation volume at 0.85–0.99x (Oct 2025 0.95x, Feb 2026 0.99x, Jun 2026 0.85x). Held-out WETH events come in at 1.58x and 0.85x. Source: `data/backtest.json`, key `calibrated.ratios`.
-- **Stress replay.** 5,372 saved backtest runs over seven crash windows at 5-minute resolution. Source: `data/backtest.json` and `data/prices/index.json`.
+- **Calibration.** The borrower-response parameters (70% responsive, two-hour reaction) were fitted on three cbBTC events, where the model reproduces realized liquidation volume at 0.85–0.99x (Oct 2025 0.95x, Feb 2026 0.99x, Jun 2026 0.85x). On five more cbBTC events chosen by a fixed rule (every UTC day with over $5M repaid, since launch) and kept out of the fit, it gives 0.42x to 1.08x (Oct 2025a 0.52x, Nov 2025 1.02x, Nov 2025a 1.08x, Jan 2026 0.77x, Jun 2026b 0.42x). Across all eight events the range is 0.42–1.08x, so the model is not within 15% across events. Held-out WETH events come in at 1.58x and 0.85x. Source: `data/backtest.json`, key `calibrated.ratios`; method in [WRITEUP.md](WRITEUP.md) section 3.
+- **Stress replay.** 5,562 saved backtest runs over seven crash windows at 5-minute resolution. Source: `data/backtest.json` and `data/prices/index.json`.
 - **Replay book.** The replay ran on the cbBTC/USDC market's loan book as of 2026-09-19, the date of `WRITEUP.md` (`latest_book` in `data/backtest.json`). All percentages of supply below are of that book's $1.58B of USDC supplied. The Book figures above are a different, later snapshot (2026-09-23, all nine markets).
 - **March 2020 at today's 86% LLTV, loss by end of path.** $9.2M (0.6% of supply) realized, because BTC bounced and the queue was served above water on the way back up. Source: `WRITEUP.md`.
 - **March 2020 at today's 86% LLTV, supply left unserved at the trough.** $158.4M (10.0% of supply) sat underwater with no liquidator able to act at the lowest print. This is a separate measure, taken at a different moment. A 77% LLTV leaves 8.4% unserved. Tripled liquidator capital leaves 6.2%. Source: `WRITEUP.md`.
@@ -54,7 +54,7 @@ uv sync --extra dev
 .venv/bin/python -m pytest -q tests
 ```
 
-Observed on 2026-10-24: `21 passed`. `uv.lock` pins the dependencies. The tests run against the frozen snapshot in `data/`, with no network.
+Observed on 2026-10-25: `26 passed`. `uv.lock` pins the dependencies. The tests run against the frozen snapshot in `data/`, with no network.
 
 Rebuild the dashboard data. The positions files are not committed, so run `fetch_positions` first on a fresh clone. These commands overwrite files in `data/`.
 
@@ -67,7 +67,7 @@ Rebuild the dashboard data. The positions files are not committed, so run `fetch
 .venv/bin/python -m spine.fetch_vaults         # vaults that fund each market
 .venv/bin/python -m spine.fetch_markets        # every Base market over $10M borrowed (market level)
 .venv/bin/python -m spine.summarize            # writes data/summary.json
-.venv/bin/python -m http.server 8000           # open http://localhost:8000/site/
+.venv/bin/python -m http.server 8000           # local copy of https://spine.rahilbhavan.com/site/ on port 8000
 ```
 
 Run the stress-test pipeline. It is slow. `fetch_oracle`, `calibrate`, `rebuild_book` and `backtest` take `--max-seconds N`, save progress to `data/cache/` and resume on the next run.

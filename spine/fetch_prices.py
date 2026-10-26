@@ -65,6 +65,20 @@ def fetch_all():
     return index
 
 
+def fetch_event_windows():
+    """5-minute BTC candles for each data/windows.json event that no stress window above covers, one file per event
+    (prices/<event>_<product>). These feed the calibration only; backtest.py's crash grid still uses WINDOWS."""
+    for name, (a, b) in (load('windows') or {}).items():
+        if any(w[1] <= a and b <= w[2] for w in WINDOWS):
+            continue
+        for p in ('BTC-USD',):  # cbBTC only; the new events have no WETH calibration
+            if os.path.exists(data_path(f'prices/{name}_{p}')):
+                continue
+            rows = candles(p, 300, day_ts(a) - H24, day_ts(b) + H24)
+            save(f'prices/{name}_{p}', rows)
+            print(f'{name} {p}: {len(rows)} candles')
+
+
 def max_drop(c, span):
     """Worst high-to-low move over any span seconds, same method as research/crash_table.py."""
     m = 0.0
