@@ -320,6 +320,14 @@ def today_book(market, seed=0):
     return book_arrays(raw, market, seed), datetime.datetime.fromtimestamp(raw['fetched_at'], datetime.UTC).date().isoformat()
 
 
+def book_tag(market):
+    """Extra keys on every live grid row: the book date and the market's USDC supply when the book was fetched, the
+    denominator for '% of supply' (today's summary.json supply belongs to a different book)."""
+    raw = load('positions_%s' % market)
+    return dict(book=datetime.datetime.fromtimestamp(raw['fetched_at'], datetime.UTC).date().isoformat(),
+                book_supply_usd=raw['market_state']['supplyAssetsUsd'])
+
+
 def candles_for(market, window):
     return load('prices/%s_%s' % (window, MARKETS[market]['cb_product']))
 
@@ -341,7 +349,7 @@ def runner(done, within_budget, new):
 
 def grid(markets, depth, shares, react, cf, get):
     for m in markets:
-        book, label = today_book(m)
+        (book, _), tag = today_book(m), book_tag(m)
         for w, _, _ in WINDOWS:
             c = candles_for(m, w)
             if c is None:  # no price file for this product in this window (SOL predates May 2021)
@@ -352,13 +360,13 @@ def grid(markets, depth, shares, react, cf, get):
                         for sc in ('A', 'AB', 'ABC'):
                             if sc == 'A' and m not in depth['dex']:  # no venue on Base: Tier A capacity is (0, 0), the row is junk
                                 continue
-                            get(m, w, book, depth, c, dict(book=label), lltv=lltv, cap=cap, scenario=sc, resp_share=sh, react_min=react, full_below_usd=cf)
+                            get(m, w, book, depth, c, tag, lltv=lltv, cap=cap, scenario=sc, resp_share=sh, react_min=react, full_below_usd=cf)
 
 
 def sensitivity(markets, depth, share, react, cf, get):
     star = dict(resp_share=share, react_min=react, full_below_usd=cf)
     for m in markets:
-        book, label = today_book(m)
+        (book, _), tag = today_book(m), book_tag(m)
         own = dict(lltv=MARKETS[m]['lltv'], cap=0.75 if MARKETS[m]['lltv'] > 0.75 else 0.55)  # the market's live terms, not cbBTC's
         for w, _, _ in WINDOWS:
             c = candles_for(m, w)
@@ -367,28 +375,28 @@ def sensitivity(markets, depth, share, react, cf, get):
             for kd in (0.1, 0.5, 1.0):
                 for kc in (0.1, 0.3, 1.0):
                     for lag in (0, 1, 3):
-                        get(m, w, book, depth, c, dict(book=label), k_dex=kd, k_cex=kc, lag_bars=lag, **own, **star)
+                        get(m, w, book, depth, c, tag, k_dex=kd, k_cex=kc, lag_bars=lag, **own, **star)
             if m == 'cbBTC' and w in ('Mar2020', 'May2021'):
                 for sh in sorted({0, 0.6, share, 0.9}):
                     for d in sorted({15, 60, react, 240}):
-                        get(m, w, book, depth, c, dict(book=label), resp_share=sh, react_min=d, full_below_usd=cf)
+                        get(m, w, book, depth, c, tag, resp_share=sh, react_min=d, full_below_usd=cf)
                 for lltv in (0.86, 0.80, 0.77):  # liquidator capital: observed max day, multiples, and depth-limited only
                     for mult in CAP_MULTIPLES:
-                        get(m, w, book, depth, c, dict(book=label), lltv=lltv, cex_cap_usd=DEFAULTS['cex_cap_usd'] * mult, **star)
+                        get(m, w, book, depth, c, tag, lltv=lltv, cex_cap_usd=DEFAULTS['cex_cap_usd'] * mult, **star)
                     for beta in BETAS:  # depth collapse: none, the Kaiko anchor, twice it
-                        get(m, w, book, depth, c, dict(book=label), lltv=lltv, beta=beta, **star)
+                        get(m, w, book, depth, c, tag, lltv=lltv, beta=beta, **star)
                     for mult in (1, np.inf):  # liquidation style: bots trim to 74% instead of closing in full
-                        get(m, w, book, depth, c, dict(book=label), lltv=lltv, close_target=0.74, cex_cap_usd=DEFAULTS['cex_cap_usd'] * mult, **star)
+                        get(m, w, book, depth, c, tag, lltv=lltv, close_target=0.74, cex_cap_usd=DEFAULTS['cex_cap_usd'] * mult, **star)
                     for hb in (12, 288):  # held at the low: one hour, one day before the bounce
                         for sc in ('AB', 'ABC'):
-                            get(m, w, book, depth, c, dict(book=label), lltv=lltv, scenario=sc, hold_bars=hb, **star)
+                            get(m, w, book, depth, c, tag, lltv=lltv, scenario=sc, hold_bars=hb, **star)
                 for seed in SEEDS:  # which wallets are responsive: hash seed
                     bs, _ = today_book(m, seed)
                     for lltv in (0.86, 0.80, 0.77):
-                        get(m, w, bs, depth, c, dict(book=label), lltv=lltv, seed=seed, **star)
+                        get(m, w, bs, depth, c, tag, lltv=lltv, seed=seed, **star)
             if m in ('cbXRP', 'SOL') and w == 'Oct2025':  # book size: the multiple of today's debt at which the alt first loses
                 for mult in (1, 2, 4, 8, 16, 32):
-                    get(m, w, book, depth, c, dict(book=label), lltv=0.625, cap=0.55, scenario='AB', book_multiple=float(mult), **star)
+                    get(m, w, book, depth, c, tag, lltv=0.625, cap=0.55, scenario='AB', book_multiple=float(mult), **star)
 
 
 def oracle_end(cw, market):
@@ -422,8 +430,8 @@ def calibration(depth, get):
             print('%-8s %-5s book $%.0fM at %.0f; trough %.0f (%+.0f%%): $%.0fM of frozen-book debt crosses lltv; realized repaid %s' % (
                 cw, m, book[1].sum() / 1e6, book[2], pmin, 100 * (pmin / book[2] - 1), at_risk / 1e6,
                 '$%.1fM' % (realized[cw, m] / 1e6) if realized[cw, m] else 'n/a'))
-    btc = [(cw, m) for cw, _, _, mk in CALIB for m in mk if m == 'cbBTC' and realized.get(cw, m)]
-    eth = [(cw, m) for cw, _, _, mk in CALIB for m in mk if m == 'WETH' and realized.get(cw, m)]
+    btc = [(cw, m) for cw, _, _, mk in CALIB for m in mk if m == 'cbBTC' and realized.get((cw, m))]
+    eth = [(cw, m) for cw, _, _, mk in CALIB for m in mk if m == 'WETH' and realized.get((cw, m))]
     held = [(cw, m) for cw, m in btc if cw not in FIT_ON]  # cbBTC events scored out of sample
     btc_all, btc = btc, [(cw, m) for cw, m in btc if cw in FIT_ON]
     obs = [cal['windows'][cw]['cbBTC']['latency']['full_share'] for cw, _ in btc] if cal else []
@@ -443,7 +451,7 @@ def calibration(depth, get):
                     r = run_at(scenario=sc, resp_share=sh, react_min=d, full_below_usd=cf_star)
                     if sc == 'AB':
                         sims[cw, m, sh, d] = r
-    ratio = lambda cw, m, sh, d: sims[cw, m, sh, d]['repaid_usd'] / realized[cw, m] if realized.get(cw, m) else None
+    ratio = lambda cw, m, sh, d: sims[cw, m, sh, d]['repaid_usd'] / realized[cw, m] if realized.get((cw, m)) else None
     best = None
     print('\nsimulated / realized repaid, AB, full below $%.0f, cbBTC (%s); rows react_min, cols resp_share:' % (cf_star, ' / '.join(cw for cw, _ in btc)))
     print('%-5s' % 'd\\s' + ''.join('%20s' % ('%.1f (debt %.2f)' % (sh, sims[btc[0][0], 'cbBTC', sh, REACTS[0]]['resp_share_debt']) if btc else sh) for sh in SHARES))
