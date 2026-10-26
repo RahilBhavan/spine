@@ -117,7 +117,7 @@ def render(md):
 
 def toc(body, bt):
     links = ''.join('<li><a href="#%s">%s</a></li>' % m for m in re.findall(r'<h2 id="([^"]+)">(.*?)</h2>', body))
-    stamp = '<p><em>Backtest book as of %s; the dashboard refreshes hourly.</em></p>' % bt['latest_book'] if bt else ''
+    stamp = '<p><em>Backtest book as of %s; the dashboard refreshes every few hours.</em></p>' % bt['latest_book'] if bt else ''
     return '<nav class="toc">%s<ol>%s</ol></nav>' % (stamp, links)
 
 

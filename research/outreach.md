@@ -1,23 +1,24 @@
 # Outreach drafts (ROADMAP Phase F4)
 
-Drafts only; nothing here has been posted. Numbers are from WRITEUP.md as of 2026-09-19 and must be re-checked
-against `spine/writeup_tables.py` output before posting. The Dune mirror of `summary.json` is not drafted: it
+Drafts only; nothing here has been posted. Book figures are from the live `summary.json` of 2026-10-25 22:42 UTC;
+replay figures are WRITEUP.md's, on the 2026-09-19 book. Re-check both against the live site and
+`spine/writeup_tables.py` output on the day you post. The Dune mirror of `summary.json` is not drafted: it
 needs a Dune account and queries against Dune's Morpho tables that cannot be checked from this repo.
 
 ## 1. Morpho governance forum post
 
 **Title:** Liquidation-capacity replay of the Coinbase cbBTC/USDC market on Base: what binds is liquidator capital, not the LLTV
 
-Morpho runs Dune dashboards on the Coinbase markets, so most of you know the shape of the book: about $1.4B of
-USDC borrowed against $2.9B of cbBTC at an 86% LLTV, 39,000 positions, almost all of them Coinbase Smart
-Wallets. It has cleared $256M of liquidations across three real stress weeks with zero bad debt.
+Morpho runs Dune dashboards on the Coinbase markets, so most of you know the shape of the book: about $1.6B of
+USDC borrowed against $3.2B of cbBTC at an 86% LLTV, 43,000 positions, 97% of the debt in Coinbase Smart
+Wallets. It has cleared $256M of liquidations in the four stress weeks of three events with zero bad debt.
 
 We built a public replay of that book through seven historical crash paths (March 2020, May 2021, FTX, Aug
 2024, Oct 2025, Feb 2026, Jun 2026) with liquidators and borrowers behaving the way the lived events show they
 behave. Everything is public data and open code: https://github.com/RahilBhavan/spine, dashboard at
-https://rahilbhavan.github.io/spine/, refreshed hourly.
+https://spine.rahilbhavan.com, refreshed every few hours.
 
-What the replay says:
+What the replay says (on the book as of 2026-09-19):
 
 - Bots are not the bottleneck. Median latency from the oracle update to the liquidation is 0-4 seconds; 80-94%
   of lived liquidations repaid the whole debt.
@@ -38,13 +39,15 @@ rather than at the cliff, then 80% LLTV with a 66-70% origination cap. WETH to 7
 Alts: keep 62.5% but cap each book at what Coinbase's own order book can absorb; cbXRP is already past that
 cap.
 
-Full argument, tables and limitations: https://rahilbhavan.github.io/spine/site/writeup.html. The model is two
-parameters fit on three events and the capital figure is a floor, not an estimate; section 7 lists what it does
+Full argument, tables and limitations: https://spine.rahilbhavan.com/site/writeup.html. The model is two
+parameters fit on three events; on five more events picked by a fixed rule and kept out of the fit it
+reproduces realized liquidations at 0.42-1.08x, so treat the dollar figures as ranges. The capital figure is
+a floor, not an estimate; section 7 lists what it does
 not capture. Corrections welcome, ideally as issues on the repo.
 
 ## 2. Short thread (warning time is the shareable result)
 
-1/ Coinbase's on-chain BTC loans ($1.4B on Morpho, Base) have survived three crashes with zero bad debt. That
+1/ Coinbase's on-chain BTC loans ($1.6B on Morpho, Base) have survived three crashes with zero bad debt. That
 record is real. It is also not the test. Here is why, in one table.
 
 2/ Time between a position entering Coinbase's warning zone (80% LTV) and crossing the 86% liquidation line,
@@ -71,5 +74,5 @@ loss.
 
 5/ Cutting the LLTV does little to the unserved share (77%: still 8.4%). A backstop liquidator does: $0 unserved,
 with a $13.1M (0.8%) realized loss. Public
-data, open code, hourly dashboard: https://rahilbhavan.github.io/spine/. Writeup with everything it does not
-capture: https://rahilbhavan.github.io/spine/site/writeup.html
+data, open code, live dashboard: https://spine.rahilbhavan.com. Writeup with everything it does not
+capture: https://spine.rahilbhavan.com/site/writeup.html

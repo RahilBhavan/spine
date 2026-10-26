@@ -1,6 +1,6 @@
 # What haircut should Coinbase take on BTC and ETH collateral?
 
-*Spine, 2026-09-19. Every number here is produced by a script in this repo from public data: the Morpho API, Base RPC, Coinbase Exchange, and Chainlink logs. Tables are printed by `spine/writeup_tables.py` and `spine/caps.py` from `data/backtest.json`, `data/calibration.json`, `data/summary.json`, `data/depth.json` and `data/caps.json`. The dashboard refreshes hourly.*
+*Spine, 2026-09-19. Every number here is produced by a script in this repo from public data: the Morpho API, Base RPC, Coinbase Exchange, and Chainlink logs. Tables are printed by `spine/writeup_tables.py` and `spine/caps.py` from `data/backtest.json`, `data/calibration.json`, `data/summary.json`, `data/depth.json` and `data/caps.json`. The dashboard refreshes every few hours (an hourly GitHub cron that GitHub runs about every 5 h).*
 
 ## The short version
 

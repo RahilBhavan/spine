@@ -1,7 +1,7 @@
 name: refresh
 on:
   schedule:
-    - cron: '17 * * * *'   # hourly
+    - cron: '17 * * * *'   # hourly on paper; GitHub delivers it every ~5 h (see STALE_HOURS in site/app.js)
   workflow_dispatch:
 permissions:
   contents: write
@@ -32,15 +32,19 @@ jobs:
           python -m spine.summarize
           python -m spine.history
           python -m spine.render_writeup
-      - name: alert (one open issue while any market's distance to capacity is 10% or less)
+      - name: alert (one open issue while any market's distance to capacity is 10% or less; closed when none is)
+        continue-on-error: true  # a GitHub issues API error must not stop the snapshot from publishing
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           python -m spine.alert > alert.txt
-          [ -s alert.txt ] || exit 0
           title="Alert: liquidatable borrow within 10% of modeled capacity"
           n=$(gh issue list --state open --search "\"$title\" in:title" --json number -q '.[0].number')
-          [ -n "$n" ] || gh issue create --title "$title" --body-file alert.txt
+          if [ -s alert.txt ]; then
+            [ -n "$n" ] || gh issue create --title "$title" --body-file alert.txt
+          elif [ -n "$n" ]; then
+            gh issue close "$n" --comment "Cleared: no market within 10% of modeled capacity as of $(date -u +%FT%H:%MZ)."
+          fi
       - name: backtest (incremental; a model failure leaves a warning and a stale Backtest tab, not a dead dashboard)
         continue-on-error: true
         run: python -m spine.backtest --max-seconds 600
