@@ -238,6 +238,9 @@ def run_window(window, max_seconds):
     for market in CALIB_MARKETS:
         dec = MARKETS[market]['decimals']
         oracle = load('oracle/%s_%s' % (window, MARKETS[market]['feed']))
+        if oracle is None:  # events added after the first three fetch the BTC feed only (ORACLE_ASSETS=BTC)
+            out[market] = None
+            continue
         rows = price_rows(liquidations(market, window), oracle, dec)
         if not rows:
             out[market] = None
@@ -309,7 +312,8 @@ def leaderboard(wins):
 
 
 def assemble():
-    wins = {w: load('cache/calib_%s' % w) for w in WINDOWS}
+    prev = (load('calibration') or {}).get('windows', {})  # data/cache is not committed: keep a window's saved result unless it was replayed again
+    wins = {w: load('cache/calib_%s' % w) or prev[w] for w in WINDOWS}
     pc = lambda x: '%.2f%%' % (100 * x) if x is not None else '-'
     for w, ms in wins.items():
         print('\n%s  (%s..%s)' % (w, *WINDOWS[w]))

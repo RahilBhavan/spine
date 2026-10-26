@@ -4,13 +4,14 @@ Window start is padded by 24h so calibrate.py can find the crossing for early li
 Run: .venv/bin/python -m spine.fetch_oracle [--max-seconds N]. Partial log ranges checkpoint to data/cache/;
 when the time budget runs out it exits 0 and says so; rerun until it prints "complete"."""
 import os, sys, time
-from spine.api import rpc, load, save, data_path, day_ts, budget, argv_max_seconds, row_price
+from spine.api import rpc, BASE_RPC, load, save, data_path, day_ts, budget, argv_max_seconds, row_price
 
 PROXY = {'BTC': '0x64c911996D3c6aC71f9b455B1E8E7266BcbD848F', 'ETH': '0x71041dddad3595F9CEd3DcCFBe3D1F4b0a16Bb70'}
 ANSWER_UPDATED = '0x0559884fd3a460db3073b7fc896cc77986f16e378210ded43186175bf646fc5f'
 WINDOWS = {k: tuple(v) for k, v in load('windows').items()}  # (first day, last day) inclusive, UTC; calibrate.py --since --apply appends
 PAD = 86400
-CHUNK = 2000  # mainnet.base.org getLogs limit. base.drpc.org's free plan refused every range we tried, so it is not used.
+URL = os.environ.get('BASE_RPC_URL', BASE_RPC)  # e.g. BASE_RPC_URL=https://base.gateway.tenderly.co BASE_LOG_CHUNK=1000 when mainnet.base.org answers getLogs with 'request limit reached'
+CHUNK = int(os.environ.get('BASE_LOG_CHUNK', 2000))  # mainnet.base.org getLogs limit. base.drpc.org's free plan refused every range we tried, so it is not used.
 _blocks = {}
 
 
@@ -21,14 +22,14 @@ def window_range(name):
 
 
 def call(method, params, **kw):
-    for i in range(6):  # mainnet.base.org 429s in bursts; api.rpc's own backoff is too short for that
-        time.sleep(0.25)  # mainnet.base.org 429s under bursts
+    for i in range(15):  # mainnet.base.org 429s in bursts (and for minutes when the IP is shared); api.rpc's own backoff is too short
+        time.sleep(0.25)
         try:
-            return rpc(method, params, **kw)
+            return rpc(method, params, url=URL, **kw)
         except Exception:
-            if i == 5:
+            if i == 14:
                 raise
-            time.sleep(10 * (i + 1))
+            time.sleep(min(10 * (i + 1), 60))
 
 
 def block_ts(n):
@@ -106,7 +107,7 @@ def fetch(window, asset, within_budget=lambda: True):
 if __name__ == '__main__':
     within_budget = budget(argv_max_seconds()[0])
     for w in WINDOWS:
-        for asset in PROXY:
+        for asset in os.environ.get('ORACLE_ASSETS', 'BTC,ETH').split(','):  # new events need BTC only (cbBTC)
             rows = fetch(w, asset, within_budget)
             if rows is None:
                 print('partial (%s %s), rerun to continue' % (w, asset))

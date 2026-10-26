@@ -35,6 +35,17 @@ def test_backtest():
     assert {'cbXRP', 'SOL'} <= {r['market'] for r in b['runs']}  # alt replays, Phase G2
 
 
+def test_calibration_scored_on_every_rule_event():
+    """Every window the $5M-a-day rule proposes has a cbBTC ratio; only the three fit events are asserted, the rest are reported."""
+    c, w = need('backtest')['calibrated'], need('calibration')['windows']
+    btc = {k.split()[0]: v for k, v in c['ratios'].items() if k.endswith('cbBTC')}
+    assert len(btc) >= 6 and set(btc) <= set(need('windows')), sorted(btc)
+    assert sorted(c['fit_on']) == ['Feb2026 cbBTC', 'Jun2026a cbBTC', 'Oct2025 cbBTC'] and not set(c['held_out_cbBTC']) & set(c['fit_on'])
+    assert all(abs(btc[x.split()[0]] - 1) <= 0.25 for x in c['fit_on'])
+    for k in c['held_out_cbBTC']:
+        assert w[k.split()[0]]['cbBTC']['volume']['repaid_usd'] > 5e6, k  # the rule's threshold
+
+
 def test_calibration():
     c = need('calibration')
     assert c['windows']

@@ -1,5 +1,5 @@
 {
- "generated_at": 1789948462,
+ "generated_at": 1792983355,
  "windows": {
   "Oct2025": {
    "cbBTC": {
@@ -1772,19 +1772,975 @@
      ]
     }
    }
+  },
+  "Oct2025a": {
+   "cbBTC": {
+    "volume": {
+     "n": 268,
+     "borrowers": 268,
+     "repaid_usd": 11785392.937064,
+     "seized_usd": 12302080.274845563,
+     "bad_debt_usd": 0.0
+    },
+    "daily": {
+     "2025-10-14": {
+      "n": 1,
+      "repaid_usd": 13.192072,
+      "seized_usd": 13.769634635347476,
+      "bad_debt_usd": 0.0
+     },
+     "2025-10-16": {
+      "n": 36,
+      "repaid_usd": 2789370.334778,
+      "seized_usd": 2911660.047990422,
+      "bad_debt_usd": 0.0
+     },
+     "2025-10-17": {
+      "n": 229,
+      "repaid_usd": 8996009.354036994,
+      "seized_usd": 9390406.398584053,
+      "bad_debt_usd": 0.0
+     },
+     "2025-10-19": {
+      "n": 2,
+      "repaid_usd": 0.056177,
+      "seized_usd": 0.058636451563754396,
+      "bad_debt_usd": 0.0
+     }
+    },
+    "peaks": {
+     "peak_5m": {
+      "repaid_usd": 1513538.6986480001,
+      "start": "2025-10-17T07:05:00+00:00"
+     },
+     "peak_1h": {
+      "repaid_usd": 3565202.7753079995,
+      "start": "2025-10-17T07:00:00+00:00"
+     }
+    },
+    "bonus": {
+     "n": 268,
+     "p10": 0.043839663323462785,
+     "p50": 0.04384132936523222,
+     "p90": 0.043841336048372925,
+     "expected": 0.04384133611691032
+    },
+    "latency": {
+     "sampled": 268,
+     "n": 262,
+     "excluded": {
+      "crossed_before_window": 4,
+      "inconsistent_history": 2
+     },
+     "full_share": 0.9312977099236641,
+     "partial": {
+      "n": 18,
+      "post_ltv_p25": 0.29306274148755507,
+      "post_ltv_p50": 0.29463379911560406,
+      "post_ltv_p75": 0.6584391203332625,
+      "repaid_frac_p50": 0.949882050611919
+     },
+     "p50": 2,
+     "p90": 88,
+     "p99": 448,
+     "within": {
+      "2": 0.5572519083969466,
+      "60": 0.8206106870229007,
+      "300": 0.9770992366412213,
+      "1800": 0.9961832061068703
+     }
+    },
+    "latency_first_eligible": {
+     "sampled": 268,
+     "n": 262,
+     "excluded": {
+      "crossed_before_window": 4,
+      "inconsistent_history": 2
+     },
+     "full_share": 0.9312977099236641,
+     "partial": {
+      "n": 18,
+      "post_ltv_p25": 0.29306274148755507,
+      "post_ltv_p50": 0.29463379911560406,
+      "post_ltv_p75": 0.6584391203332625,
+      "repaid_frac_p50": 0.949882050611919
+     },
+     "p50": 2,
+     "p90": 94,
+     "p99": 6318,
+     "within": {
+      "2": 0.5534351145038168,
+      "60": 0.8053435114503816,
+      "300": 0.9580152671755725,
+      "1800": 0.9809160305343512
+     }
+    },
+    "liquidators": {
+     "distinct": 35,
+     "top": [
+      {
+       "address": "0x9708d715523D75CAb44b801998151707B32bE260",
+       "repaid_usd": 3208664.3075540005,
+       "seized_usd": 3349336.431703117,
+       "count": 12,
+       "share": 0.2722577282479093,
+       "gross_bonus_usd": 140672.1241491167,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x253E2CDa547f6a68bC3a845216357b05bc412e03",
+       "repaid_usd": 1464331.5708680002,
+       "seized_usd": 1528529.815010276,
+       "count": 16,
+       "share": 0.12424970288965156,
+       "gross_bonus_usd": 64198.24414227577,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x0a5a3e02C2aaE465A016531A7AA6b4BE4b21D3f9",
+       "repaid_usd": 1342014.214435,
+       "seized_usd": 1400849.9048186338,
+       "count": 10,
+       "share": 0.11387097753987362,
+       "gross_bonus_usd": 58835.69038363383,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x56087Aa9bf743E2B43c00082012e4241Cd72971e",
+       "repaid_usd": 967445.0184460001,
+       "seized_usd": 1009859.100665413,
+       "count": 4,
+       "share": 0.08208848220948768,
+       "gross_bonus_usd": 42414.0822194129,
+       "latency_p50": null,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xA94cdF47E087CE09881a0Aaa0e33f2D7887116B0",
+       "repaid_usd": 746715.4448190001,
+       "seized_usd": 779452.4476120851,
+       "count": 3,
+       "share": 0.06335940165988417,
+       "gross_bonus_usd": 32737.002793085063,
+       "latency_p50": null,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xf10A8DcA67c441B95a888046414EfcCf482F2884",
+       "repaid_usd": 681400.6631779999,
+       "seized_usd": 711274.178678748,
+       "count": 2,
+       "share": 0.05781739029125249,
+       "gross_bonus_usd": 29873.515500748064,
+       "latency_p50": null,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xDD47f08660Fd647d097C21Fe76A0B91912B19a9C",
+       "repaid_usd": 625335.590034,
+       "seized_usd": 652751.1378089661,
+       "count": 6,
+       "share": 0.05306022407342701,
+       "gross_bonus_usd": 27415.547774966108,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x245e875c333cde2FF7095DD5273cdFA469496380",
+       "repaid_usd": 504325.974306,
+       "seized_usd": 526436.2988426881,
+       "count": 7,
+       "share": 0.04279246156654991,
+       "gross_bonus_usd": 22110.324536688102,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x9c1a53e723576F8ee4f5583c78a0b77dE3776fa5",
+       "repaid_usd": 424167.776035,
+       "seized_usd": 442763.85806644434,
+       "count": 4,
+       "share": 0.03599097444608999,
+       "gross_bonus_usd": 18596.082031444355,
+       "latency_p50": null,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x837a801e6FD3dCE4886302d2ff5783862ba59939",
+       "repaid_usd": 388778.206335,
+       "seized_usd": 405822.7606454106,
+       "count": 3,
+       "share": 0.03298814120251583,
+       "gross_bonus_usd": 17044.554310410633,
+       "latency_p50": null,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      }
+     ]
+    }
+   },
+   "WETH": null
+  },
+  "Nov2025": {
+   "cbBTC": {
+    "volume": {
+     "n": 448,
+     "borrowers": 445,
+     "repaid_usd": 11429564.882423,
+     "seized_usd": 11930652.251954867,
+     "bad_debt_usd": 2e-06
+    },
+    "daily": {
+     "2025-11-02": {
+      "n": 1,
+      "repaid_usd": 0.009457,
+      "seized_usd": 0.009869509830330001,
+      "bad_debt_usd": 0.0
+     },
+     "2025-11-03": {
+      "n": 5,
+      "repaid_usd": 1985.859948,
+      "seized_usd": 2072.9226915551344,
+      "bad_debt_usd": 0.0
+     },
+     "2025-11-04": {
+      "n": 435,
+      "repaid_usd": 11427516.781867014,
+      "seized_usd": 11928514.359961785,
+      "bad_debt_usd": 2e-06
+     },
+     "2025-11-05": {
+      "n": 2,
+      "repaid_usd": 2.621259,
+      "seized_usd": 2.7361735046,
+      "bad_debt_usd": 0.0
+     },
+     "2025-11-06": {
+      "n": 5,
+      "repaid_usd": 59.609892,
+      "seized_usd": 62.223258515596385,
+      "bad_debt_usd": 0.0
+     }
+    },
+    "peaks": {
+     "peak_5m": {
+      "repaid_usd": 2705280.4129399993,
+      "start": "2025-11-04T18:00:00+00:00"
+     },
+     "peak_1h": {
+      "repaid_usd": 3973571.7452189988,
+      "start": "2025-11-04T18:00:00+00:00"
+     }
+    },
+    "bonus": {
+     "n": 448,
+     "p10": 0.04384055108095275,
+     "p50": 0.04384132892354908,
+     "p90": 0.04384133602607454,
+     "expected": 0.04384133611691032
+    },
+    "latency": {
+     "sampled": 448,
+     "n": 443,
+     "excluded": {
+      "crossed_before_window": 5
+     },
+     "full_share": 0.9367945823927766,
+     "partial": {
+      "n": 28,
+      "post_ltv_p25": 0.0886783061226395,
+      "post_ltv_p50": 0.29294335310932523,
+      "post_ltv_p75": 0.294862627800485,
+      "repaid_frac_p50": 0.9637673203987638
+     },
+     "p50": 0,
+     "p90": 2,
+     "p99": 40,
+     "within": {
+      "2": 0.9300225733634312,
+      "60": 0.9909706546275395,
+      "300": 1.0,
+      "1800": 1.0
+     }
+    },
+    "latency_first_eligible": {
+     "sampled": 448,
+     "n": 443,
+     "excluded": {
+      "crossed_before_window": 5
+     },
+     "full_share": 0.9367945823927766,
+     "partial": {
+      "n": 28,
+      "post_ltv_p25": 0.0886783061226395,
+      "post_ltv_p50": 0.29294335310932523,
+      "post_ltv_p75": 0.294862627800485,
+      "repaid_frac_p50": 0.9637673203987638
+     },
+     "p50": 0,
+     "p90": 2,
+     "p99": 18462,
+     "within": {
+      "2": 0.9051918735891648,
+      "60": 0.963882618510158,
+      "300": 0.9774266365688488,
+      "1800": 0.9774266365688488
+     }
+    },
+    "liquidators": {
+     "distinct": 26,
+     "top": [
+      {
+       "address": "0x23cC6B14Dd4BF0E1D3a8Be841aD355fBBe266663",
+       "repaid_usd": 6204716.5424689995,
+       "seized_usd": 6476739.6056791395,
+       "count": 116,
+       "share": 0.5428655076809571,
+       "gross_bonus_usd": 272023.06321014,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x9708d715523D75CAb44b801998151707B32bE260",
+       "repaid_usd": 1945084.7811679998,
+       "seized_usd": 2030359.8908797938,
+       "count": 13,
+       "share": 0.17018012506838787,
+       "gross_bonus_usd": 85275.10971179395,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x2dE36b1b30e500f38CBaD4983B7f3c9b38139123",
+       "repaid_usd": 1036058.5737129999,
+       "seized_usd": 1081480.762380686,
+       "count": 6,
+       "share": 0.09064724548756066,
+       "gross_bonus_usd": 45422.18866768596,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x253E2CDa547f6a68bC3a845216357b05bc412e03",
+       "repaid_usd": 952126.7826850001,
+       "seized_usd": 993869.287202183,
+       "count": 11,
+       "share": 0.0833038521133234,
+       "gross_bonus_usd": 41742.50451718294,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x0a5a3e02C2aaE465A016531A7AA6b4BE4b21D3f9",
+       "repaid_usd": 370450.62085199996,
+       "seized_usd": 386691.6701143028,
+       "count": 4,
+       "share": 0.03241161187349301,
+       "gross_bonus_usd": 16241.049262302811,
+       "latency_p50": null,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x964AeE3e4E3BBc7245B33dA097030e95EE408170",
+       "repaid_usd": 313001.07712599996,
+       "seized_usd": 326723.46252424904,
+       "count": 15,
+       "share": 0.027385213728245237,
+       "gross_bonus_usd": 13722.385398249084,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xf10A8DcA67c441B95a888046414EfcCf482F2884",
+       "repaid_usd": 311271.02263,
+       "seized_usd": 324917.5601494782,
+       "count": 3,
+       "share": 0.027233847117722688,
+       "gross_bonus_usd": 13646.537519478181,
+       "latency_p50": null,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xaA5F8B4F3fBb80667f53e92120FFa402864D1EfB",
+       "repaid_usd": 173599.11818599995,
+       "seized_usd": 181209.93531916788,
+       "count": 75,
+       "share": 0.015188602538401968,
+       "gross_bonus_usd": 7610.817133167933,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x841997B44a19ADBECDB1F54cb131D7127E7Ed0Ed",
+       "repaid_usd": 37533.812858,
+       "seized_usd": 39179.3448058558,
+       "count": 1,
+       "share": 0.0032839231627899957,
+       "gross_bonus_usd": 1645.5319478558013,
+       "latency_p50": null,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xF6F98d344D9d1D0e93c60aE694994b8Fb0790F25",
+       "repaid_usd": 34175.678467,
+       "seized_usd": 35673.98574703523,
+       "count": 1,
+       "share": 0.0029901119437676232,
+       "gross_bonus_usd": 1498.307280035231,
+       "latency_p50": null,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      }
+     ]
+    }
+   },
+   "WETH": null
+  },
+  "Nov2025a": {
+   "cbBTC": {
+    "volume": {
+     "n": 1900,
+     "borrowers": 1853,
+     "repaid_usd": 78269476.851501,
+     "seized_usd": 81700915.06850189,
+     "bad_debt_usd": 0.0005020000000000001
+    },
+    "daily": {
+     "2025-11-12": {
+      "n": 1,
+      "repaid_usd": 1.339819,
+      "seized_usd": 1.39855611079991,
+      "bad_debt_usd": 0.0
+     },
+     "2025-11-13": {
+      "n": 159,
+      "repaid_usd": 5411296.530980001,
+      "seized_usd": 5648534.996273869,
+      "bad_debt_usd": 0.0
+     },
+     "2025-11-14": {
+      "n": 398,
+      "repaid_usd": 16451505.927671004,
+      "seized_usd": 17172761.883982487,
+      "bad_debt_usd": 0.00017099999999999998
+     },
+     "2025-11-15": {
+      "n": 12,
+      "repaid_usd": 0.7416349999999999,
+      "seized_usd": 0.7741247456868,
+      "bad_debt_usd": 0.00019
+     },
+     "2025-11-16": {
+      "n": 79,
+      "repaid_usd": 3141831.3412989993,
+      "seized_usd": 3279573.420948372,
+      "bad_debt_usd": 0.0
+     },
+     "2025-11-17": {
+      "n": 173,
+      "repaid_usd": 6934159.516050999,
+      "seized_usd": 7238162.323501093,
+      "bad_debt_usd": 0.0
+     },
+     "2025-11-18": {
+      "n": 180,
+      "repaid_usd": 7475708.547017997,
+      "seized_usd": 7803453.581259164,
+      "bad_debt_usd": 0.0
+     },
+     "2025-11-19": {
+      "n": 60,
+      "repaid_usd": 1636296.2635329997,
+      "seized_usd": 1708033.6754384306,
+      "bad_debt_usd": 0.0
+     },
+     "2025-11-20": {
+      "n": 179,
+      "repaid_usd": 7087002.730155003,
+      "seized_usd": 7397706.3663498955,
+      "bad_debt_usd": 0.0
+     },
+     "2025-11-21": {
+      "n": 656,
+      "repaid_usd": 30131673.77598901,
+      "seized_usd": 31452686.504714742,
+      "bad_debt_usd": 7e-06
+     },
+     "2025-11-22": {
+      "n": 3,
+      "repaid_usd": 0.137351,
+      "seized_usd": 0.14335299252487083,
+      "bad_debt_usd": 0.000134
+     }
+    },
+    "peaks": {
+     "peak_5m": {
+      "repaid_usd": 12207097.307479,
+      "start": "2025-11-21T07:30:00+00:00"
+     },
+     "peak_1h": {
+      "repaid_usd": 13468470.10876799,
+      "start": "2025-11-21T07:00:00+00:00"
+     }
+    },
+    "bonus": {
+     "n": 1900,
+     "p10": 0.04383994611727826,
+     "p50": 0.04384132715728306,
+     "p90": 0.04384133607702889,
+     "expected": 0.04384133611691032
+    },
+    "latency": {
+     "sampled": 1500,
+     "n": 1478,
+     "excluded": {
+      "crossed_before_window": 20,
+      "never_crossed": 2
+     },
+     "full_share": 0.9025710419485792,
+     "partial": {
+      "n": 144,
+      "post_ltv_p25": 0.29259354116257885,
+      "post_ltv_p50": 0.2943292012335364,
+      "post_ltv_p75": 0.4615355684593949,
+      "repaid_frac_p50": 0.949978978770493
+     },
+     "p50": 2,
+     "p90": 34,
+     "p99": 1158,
+     "within": {
+      "2": 0.6759133964817321,
+      "60": 0.9512855209742895,
+      "300": 0.9803788903924222,
+      "1800": 0.993234100135318
+     }
+    },
+    "latency_first_eligible": {
+     "sampled": 1500,
+     "n": 1478,
+     "excluded": {
+      "crossed_before_window": 20,
+      "never_crossed": 2
+     },
+     "full_share": 0.9025710419485792,
+     "partial": {
+      "n": 144,
+      "post_ltv_p25": 0.29259354116257885,
+      "post_ltv_p50": 0.2943292012335364,
+      "post_ltv_p75": 0.4615355684593949,
+      "repaid_frac_p50": 0.949978978770493
+     },
+     "p50": 2,
+     "p90": 60,
+     "p99": 26146,
+     "within": {
+      "2": 0.6461434370771313,
+      "60": 0.8998646820027063,
+      "300": 0.9330175913396481,
+      "1800": 0.9566982408660352
+     }
+    },
+    "liquidators": {
+     "distinct": 39,
+     "top": [
+      {
+       "address": "0x43f42846A6BcbdB5F38e4938646410E848a369a2",
+       "repaid_usd": 15580474.195037987,
+       "seized_usd": 16263543.000675954,
+       "count": 196,
+       "share": 0.1990619437076153,
+       "gross_bonus_usd": 683068.8056379668,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x9708d715523D75CAb44b801998151707B32bE260",
+       "repaid_usd": 10205994.887500001,
+       "seized_usd": 10653439.311829181,
+       "count": 49,
+       "share": 0.1303955935065673,
+       "gross_bonus_usd": 447444.42432918027,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xF0cFC6Dfc6dfD553117B30743dE72145F98e621d",
+       "repaid_usd": 7740730.738325001,
+       "seized_usd": 8080094.716270004,
+       "count": 71,
+       "share": 0.09889846016233537,
+       "gross_bonus_usd": 339363.97794500366,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x1397803421a07e383E752fD77F3AE17F98Ea2593",
+       "repaid_usd": 5553106.984464,
+       "seized_usd": 5796562.60336838,
+       "count": 21,
+       "share": 0.07094856395935534,
+       "gross_bonus_usd": 243455.61890438013,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xaA5F8B4F3fBb80667f53e92120FFa402864D1EfB",
+       "repaid_usd": 5418666.1483229995,
+       "seized_usd": 5656227.71166102,
+       "count": 282,
+       "share": 0.06923089774323801,
+       "gross_bonus_usd": 237561.56333802082,
+       "latency_p50": 2,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x2dE36b1b30e500f38CBaD4983B7f3c9b38139123",
+       "repaid_usd": 3715213.587653,
+       "seized_usd": 3878093.5036677336,
+       "count": 24,
+       "share": 0.04746695310998176,
+       "gross_bonus_usd": 162879.91601473372,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x77e3340559231D137c11Ac39B1306cC547dA1b10",
+       "repaid_usd": 3580368.9830460004,
+       "seized_usd": 3737337.1429385333,
+       "count": 56,
+       "share": 0.04574412819749592,
+       "gross_bonus_usd": 156968.15989253297,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x23cC6B14Dd4BF0E1D3a8Be841aD355fBBe266663",
+       "repaid_usd": 3277561.526014,
+       "seized_usd": 3421254.2024603086,
+       "count": 27,
+       "share": 0.041875347298314616,
+       "gross_bonus_usd": 143692.67644630838,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xbe3b7E4E4a69b4C8b66FD28EdDC9a5776B597Ed8",
+       "repaid_usd": 3160871.323128,
+       "seized_usd": 3299448.118452374,
+       "count": 61,
+       "share": 0.040384469786671165,
+       "gross_bonus_usd": 138576.795324374,
+       "latency_p50": 4,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xD12810B19B596347a3AFAC206d3cA65d08594b3f",
+       "repaid_usd": 3069552.9630690007,
+       "seized_usd": 3204126.2097291886,
+       "count": 134,
+       "share": 0.03921775239270857,
+       "gross_bonus_usd": 134573.24666018784,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      }
+     ]
+    }
+   },
+   "WETH": null
+  },
+  "Jan2026": {
+   "cbBTC": {
+    "volume": {
+     "n": 1879,
+     "borrowers": 1866,
+     "repaid_usd": 56841372.106767,
+     "seized_usd": 59332915.81985202,
+     "bad_debt_usd": 0.000255
+    },
+    "daily": {
+     "2026-01-29": {
+      "n": 278,
+      "repaid_usd": 8848080.826780003,
+      "seized_usd": 9235992.551311707,
+      "bad_debt_usd": 0.0
+     },
+     "2026-01-30": {
+      "n": 375,
+      "repaid_usd": 11200844.587857,
+      "seized_usd": 11691905.08704752,
+      "bad_debt_usd": 0.0
+     },
+     "2026-01-31": {
+      "n": 1095,
+      "repaid_usd": 31135282.904722027,
+      "seized_usd": 32499836.79550024,
+      "bad_debt_usd": 0.0
+     },
+     "2026-02-01": {
+      "n": 131,
+      "repaid_usd": 5657163.787408001,
+      "seized_usd": 5905181.385992587,
+      "bad_debt_usd": 0.000255
+     }
+    },
+    "peaks": {
+     "peak_5m": {
+      "repaid_usd": 8500600.095820997,
+      "start": "2026-01-31T18:40:00+00:00"
+     },
+     "peak_1h": {
+      "repaid_usd": 16449883.350634001,
+      "start": "2026-01-31T18:00:00+00:00"
+     }
+    },
+    "bonus": {
+     "n": 1879,
+     "p10": 0.04383037073276119,
+     "p50": 0.04384127829320672,
+     "p90": 0.04384133602856699,
+     "expected": 0.04384133611691032
+    },
+    "latency": {
+     "sampled": 1500,
+     "n": 1499,
+     "excluded": {
+      "crossed_before_window": 1
+     },
+     "full_share": 0.8052034689793195,
+     "partial": {
+      "n": 292,
+      "post_ltv_p25": 0.08579746632211911,
+      "post_ltv_p50": 0.14659325565685905,
+      "post_ltv_p75": 0.2950402413358336,
+      "repaid_frac_p50": 0.9798048104530365
+     },
+     "p50": 4,
+     "p90": 444,
+     "p99": 8974,
+     "within": {
+      "2": 0.47965310206804534,
+      "60": 0.8318879252835224,
+      "300": 0.8925950633755837,
+      "1800": 0.9459639759839893
+     }
+    },
+    "latency_first_eligible": {
+     "sampled": 1500,
+     "n": 1499,
+     "excluded": {
+      "crossed_before_window": 1
+     },
+     "full_share": 0.8052034689793195,
+     "partial": {
+      "n": 292,
+      "post_ltv_p25": 0.08579746632211911,
+      "post_ltv_p50": 0.14659325565685905,
+      "post_ltv_p75": 0.2950402413358336,
+      "repaid_frac_p50": 0.9798048104530365
+     },
+     "p50": 6,
+     "p90": 2918,
+     "p99": 29262,
+     "within": {
+      "2": 0.4242828552368246,
+      "60": 0.7084723148765844,
+      "300": 0.771847898599066,
+      "1800": 0.8639092728485657
+     }
+    },
+    "liquidators": {
+     "distinct": 48,
+     "top": [
+      {
+       "address": "0xB949a57AC64BE7a9dbe535E14f859E4C56a0Cf03",
+       "repaid_usd": 8262558.174164002,
+       "seized_usd": 8624799.76410118,
+       "count": 78,
+       "share": 0.14536169462348955,
+       "gross_bonus_usd": 362241.5899371775,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xF00001968c1d6196d3d0553030c7Af8d1905dCbb",
+       "repaid_usd": 6033303.8817719985,
+       "seized_usd": 6297811.985029394,
+       "count": 58,
+       "share": 0.1061428262224115,
+       "gross_bonus_usd": 264508.1032573953,
+       "latency_p50": 6,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xD12810B19B596347a3AFAC206d3cA65d08594b3f",
+       "repaid_usd": 5035028.603778001,
+       "seized_usd": 5255429.926160675,
+       "count": 243,
+       "share": 0.08858034943844321,
+       "gross_bonus_usd": 220401.32238267362,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x3d7BEe81047D11FE2C85E6E9ecbf82E4Deb18F54",
+       "repaid_usd": 4804178.822021999,
+       "seized_usd": 5014800.440421118,
+       "count": 49,
+       "share": 0.08451905089479814,
+       "gross_bonus_usd": 210621.618399119,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x9bE62980818c59fc654C5Ede5427EBAA32C7eb81",
+       "repaid_usd": 4797522.107701002,
+       "seized_usd": 5007851.8804339785,
+       "count": 18,
+       "share": 0.08440194052123969,
+       "gross_bonus_usd": 210329.77273297682,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xf10A8DcA67c441B95a888046414EfcCf482F2884",
+       "repaid_usd": 3210621.777032,
+       "seized_usd": 3351379.7254842496,
+       "count": 8,
+       "share": 0.05648388942830909,
+       "gross_bonus_usd": 140757.94845224964,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0x570d8FAF44b9AEaBCCE7c6B724D9078B5A266452",
+       "repaid_usd": 2820104.341862,
+       "seized_usd": 2943741.4784348807,
+       "count": 18,
+       "share": 0.04961358667705815,
+       "gross_bonus_usd": 123637.13657288067,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xaA5F8B4F3fBb80667f53e92120FFa402864D1EfB",
+       "repaid_usd": 2623714.3325430006,
+       "seized_usd": 2738741.612525612,
+       "count": 285,
+       "share": 0.046158532690146754,
+       "gross_bonus_usd": 115027.27998261154,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xbe3b7E4E4a69b4C8b66FD28EdDC9a5776B597Ed8",
+       "repaid_usd": 2461945.9793149997,
+       "seized_usd": 2569878.5703033614,
+       "count": 136,
+       "share": 0.043312571249874934,
+       "gross_bonus_usd": 107932.59098836174,
+       "latency_p50": 8,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      },
+      {
+       "address": "0xAA6FAd2b24318485d17928634bE485710aC0Ae9f",
+       "repaid_usd": 2381146.4062369997,
+       "seized_usd": 2485539.0431251293,
+       "count": 6,
+       "share": 0.04189107894447753,
+       "gross_bonus_usd": 104392.63688812964,
+       "latency_p50": 0,
+       "coinbase_affiliated": false,
+       "is_contract": true
+      }
+     ]
+    }
+   },
+   "WETH": null
   }
  },
  "leaderboard": [
   {
    "address": "0xD12810B19B596347a3AFAC206d3cA65d08594b3f",
-   "count": 929,
-   "repaid_usd": 26230000.002579033,
-   "seized_usd": 27383598.79196078,
-   "gross_bonus_usd": 1153598.7893817434,
+   "count": 1306,
+   "repaid_usd": 34334581.56942603,
+   "seized_usd": 35843154.92785064,
+   "gross_bonus_usd": 1508573.3584246049,
    "windows": [
     "Feb2026",
+    "Jan2026",
     "Jun2026a",
-    "Jun2026b"
+    "Jun2026b",
+    "Nov2025a"
+   ],
+   "is_contract": true,
+   "coinbase_affiliated": false,
+   "latency_p50": 0
+  },
+  {
+   "address": "0x9bE62980818c59fc654C5Ede5427EBAA32C7eb81",
+   "count": 115,
+   "repaid_usd": 22207838.229911,
+   "seized_usd": 23181459.492439397,
+   "gross_bonus_usd": 973621.2625283962,
+   "windows": [
+    "Feb2026",
+    "Jan2026",
+    "Jun2026a"
+   ],
+   "is_contract": true,
+   "coinbase_affiliated": false,
+   "latency_p50": 0
+  },
+  {
+   "address": "0x3d7BEe81047D11FE2C85E6E9ecbf82E4Deb18F54",
+   "count": 361,
+   "repaid_usd": 19706604.458738,
+   "seized_usd": 20571173.072560836,
+   "gross_bonus_usd": 864568.6138228332,
+   "windows": [
+    "Feb2026",
+    "Jan2026",
+    "Jun2026a"
    ],
    "is_contract": true,
    "coinbase_affiliated": false,
@@ -1805,13 +2761,14 @@
    "latency_p50": 0
   },
   {
-   "address": "0x9bE62980818c59fc654C5Ede5427EBAA32C7eb81",
-   "count": 97,
-   "repaid_usd": 17410316.122209996,
-   "seized_usd": 18173607.612005416,
-   "gross_bonus_usd": 763291.4897954194,
+   "address": "0xB949a57AC64BE7a9dbe535E14f859E4C56a0Cf03",
+   "count": 342,
+   "repaid_usd": 17242856.710644003,
+   "seized_usd": 18002870.986276075,
+   "gross_bonus_usd": 760014.2756320721,
    "windows": [
     "Feb2026",
+    "Jan2026",
     "Jun2026a"
    ],
    "is_contract": true,
@@ -1834,6 +2791,19 @@
    "latency_p50": 0
   },
   {
+   "address": "0x43f42846A6BcbdB5F38e4938646410E848a369a2",
+   "count": 196,
+   "repaid_usd": 15580474.195037987,
+   "seized_usd": 16263543.000675954,
+   "gross_bonus_usd": 683068.8056379668,
+   "windows": [
+    "Nov2025a"
+   ],
+   "is_contract": true,
+   "coinbase_affiliated": false,
+   "latency_p50": 0
+  },
+  {
    "address": "0x119F163ad76e320bf264631491fdb711fA793B85",
    "count": 42,
    "repaid_usd": 15515802.913765995,
@@ -1847,14 +2817,16 @@
    "latency_p50": 0
   },
   {
-   "address": "0x3d7BEe81047D11FE2C85E6E9ecbf82E4Deb18F54",
-   "count": 312,
-   "repaid_usd": 14902425.636716,
-   "seized_usd": 15556372.632139716,
-   "gross_bonus_usd": 653946.9954237142,
+   "address": "0x9708d715523D75CAb44b801998151707B32bE260",
+   "count": 75,
+   "repaid_usd": 15464137.757677002,
+   "seized_usd": 16142076.301183252,
+   "gross_bonus_usd": 677938.5435062506,
    "windows": [
     "Feb2026",
-    "Jun2026a"
+    "Nov2025",
+    "Nov2025a",
+    "Oct2025a"
    ],
    "is_contract": true,
    "coinbase_affiliated": false,
@@ -1901,14 +2873,57 @@
    "latency_p50": 0
   },
   {
-   "address": "0xB949a57AC64BE7a9dbe535E14f859E4C56a0Cf03",
-   "count": 264,
-   "repaid_usd": 8980298.53648,
-   "seized_usd": 9378071.222174894,
-   "gross_bonus_usd": 397772.68569489464,
+   "address": "0x23cC6B14Dd4BF0E1D3a8Be841aD355fBBe266663",
+   "count": 143,
+   "repaid_usd": 9482278.068482999,
+   "seized_usd": 9897993.808139447,
+   "gross_bonus_usd": 415715.73965644836,
    "windows": [
-    "Feb2026",
-    "Jun2026a"
+    "Nov2025",
+    "Nov2025a"
+   ],
+   "is_contract": true,
+   "coinbase_affiliated": false,
+   "latency_p50": 0
+  },
+  {
+   "address": "0xaA5F8B4F3fBb80667f53e92120FFa402864D1EfB",
+   "count": 642,
+   "repaid_usd": 8215979.599052,
+   "seized_usd": 8576179.2595058,
+   "gross_bonus_usd": 360199.6604538003,
+   "windows": [
+    "Jan2026",
+    "Nov2025",
+    "Nov2025a"
+   ],
+   "is_contract": true,
+   "coinbase_affiliated": false,
+   "latency_p50": 0
+  },
+  {
+   "address": "0xbe3b7E4E4a69b4C8b66FD28EdDC9a5776B597Ed8",
+   "count": 331,
+   "repaid_usd": 8032061.1111469995,
+   "seized_usd": 8384194.516436938,
+   "gross_bonus_usd": 352133.4052899374,
+   "windows": [
+    "Jan2026",
+    "Nov2025a",
+    "Oct2025"
+   ],
+   "is_contract": true,
+   "coinbase_affiliated": false,
+   "latency_p50": 4
+  },
+  {
+   "address": "0xF0cFC6Dfc6dfD553117B30743dE72145F98e621d",
+   "count": 71,
+   "repaid_usd": 7740730.738325001,
+   "seized_usd": 8080094.716270004,
+   "gross_bonus_usd": 339363.97794500366,
+   "windows": [
+    "Nov2025a"
    ],
    "is_contract": true,
    "coinbase_affiliated": false,
@@ -1928,6 +2943,19 @@
    "latency_p50": 2
   },
   {
+   "address": "0xF00001968c1d6196d3d0553030c7Af8d1905dCbb",
+   "count": 58,
+   "repaid_usd": 6033303.8817719985,
+   "seized_usd": 6297811.985029394,
+   "gross_bonus_usd": 264508.1032573953,
+   "windows": [
+    "Jan2026"
+   ],
+   "is_contract": true,
+   "coinbase_affiliated": false,
+   "latency_p50": 6
+  },
+  {
    "address": "0xaCb93D101D527975b4859Aa6851d42f9e0011156",
    "count": 345,
    "repaid_usd": 5923063.166489001,
@@ -1941,110 +2969,17 @@
    "latency_p50": 2
   },
   {
-   "address": "0x27668166F314bF41B04FBC58961FE9d530986024",
-   "count": 17,
-   "repaid_usd": 4780991.657089,
-   "seized_usd": 4990596.719267736,
-   "gross_bonus_usd": 209605.06217873655,
+   "address": "0x1397803421a07e383E752fD77F3AE17F98Ea2593",
+   "count": 21,
+   "repaid_usd": 5553106.984464,
+   "seized_usd": 5796562.60336838,
+   "gross_bonus_usd": 243455.61890438013,
    "windows": [
-    "Jun2026a"
+    "Nov2025a"
    ],
    "is_contract": true,
    "coinbase_affiliated": false,
    "latency_p50": 0
-  },
-  {
-   "address": "0xE96870742b1f0E4e49C6ABd65A07c7f9b188C70b",
-   "count": 96,
-   "repaid_usd": 4032273.076878001,
-   "seized_usd": 4209050.767289028,
-   "gross_bonus_usd": 176777.69041102624,
-   "windows": [
-    "Oct2025"
-   ],
-   "is_contract": true,
-   "coinbase_affiliated": false,
-   "latency_p50": 2
-  },
-  {
-   "address": "0xD4187E8680Ed8e5cf9C3DD973B3cB1106d95C6B5",
-   "count": 76,
-   "repaid_usd": 3623160.704253,
-   "seized_usd": 3781750.3631647644,
-   "gross_bonus_usd": 158589.65891176375,
-   "windows": [
-    "Jun2026a",
-    "Jun2026b"
-   ],
-   "is_contract": true,
-   "coinbase_affiliated": false,
-   "latency_p50": 0
-  },
-  {
-   "address": "0x29D0837Dd4704EC2f4aeb4F57b93E72BC62D8B26",
-   "count": 13,
-   "repaid_usd": 3587333.095691,
-   "seized_usd": 3744606.571677001,
-   "gross_bonus_usd": 157273.47598600108,
-   "windows": [
-    "Jun2026b"
-   ],
-   "is_contract": true,
-   "coinbase_affiliated": false,
-   "latency_p50": 0
-  },
-  {
-   "address": "0xBbedae5e104C6F3b4D5ED67fb10220075079fC07",
-   "count": 4,
-   "repaid_usd": 3320494.772208,
-   "seized_usd": 3466069.6995819774,
-   "gross_bonus_usd": 145574.92737397738,
-   "windows": [
-    "Jun2026a"
-   ],
-   "is_contract": true,
-   "coinbase_affiliated": false,
-   "latency_p50": null
-  },
-  {
-   "address": "0xE1Be10F40AeF6be5f98e7750B152FeefF046b2A1",
-   "count": 5,
-   "repaid_usd": 2823812.91719,
-   "seized_usd": 2947528.843985842,
-   "gross_bonus_usd": 123715.9267958423,
-   "windows": [
-    "Jun2026a",
-    "Jun2026b"
-   ],
-   "is_contract": true,
-   "coinbase_affiliated": false,
-   "latency_p50": null
-  },
-  {
-   "address": "0x9E2e9cF25ea012F3219f94BaB3B998Cc1A07A9EF",
-   "count": 4,
-   "repaid_usd": 2546661.002556,
-   "seized_usd": 2658310.0215423573,
-   "gross_bonus_usd": 111649.01898635738,
-   "windows": [
-    "Jun2026a"
-   ],
-   "is_contract": true,
-   "coinbase_affiliated": false,
-   "latency_p50": null
-  },
-  {
-   "address": "0xbe3b7E4E4a69b4C8b66FD28EdDC9a5776B597Ed8",
-   "count": 134,
-   "repaid_usd": 2409243.808704,
-   "seized_usd": 2514867.827681202,
-   "gross_bonus_usd": 105624.01897720163,
-   "windows": [
-    "Oct2025"
-   ],
-   "is_contract": true,
-   "coinbase_affiliated": false,
-   "latency_p50": 2
   }
  ]
 }

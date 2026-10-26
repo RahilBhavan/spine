@@ -31,7 +31,13 @@ HOUR_BARS, SEEDS = 60 // BAR_MIN, range(10)
 CAP_MULTIPLES = (1, 3, 10, np.inf)
 # calibration books: (window in fetch_oracle/calibrate naming, price window, book date, markets)
 CALIB = [('Feb2026', 'Feb2026', '2026-02-03', ['cbBTC', 'WETH']), ('Jun2026a', 'Jun2026', '2026-06-01', ['cbBTC', 'WETH']),
-         ('Oct2025', 'Oct2025', '2025-10-09', ['cbBTC'])]
+         ('Oct2025', 'Oct2025', '2025-10-09', ['cbBTC']),
+         # Out-of-sample cbBTC events: every window `calibrate --since 2025-10-01` proposes (a UTC day with > $5M repaid) plus Jun2026b.
+         # Book = rebuilt at 00:00 UTC on the window's first day. They never enter the (resp_share, react_min) fit; see FIT_ON.
+         ('Oct2025a', 'Oct2025a', '2025-10-14', ['cbBTC']), ('Nov2025', 'Nov2025', '2025-11-01', ['cbBTC']),
+         ('Nov2025a', 'Nov2025a', '2025-11-10', ['cbBTC']), ('Jan2026', 'Feb2026', '2026-01-26', ['cbBTC']),
+         ('Jun2026b', 'Jun2026', '2026-06-23', ['cbBTC'])]
+FIT_ON = ('Feb2026', 'Jun2026a', 'Oct2025')  # the three events the borrower-response parameters were fitted on
 
 
 def book_arrays(raw, market, seed=0):
@@ -406,6 +412,8 @@ def calibration(depth, get):
                 '$%.1fM' % (realized[cw, m] / 1e6) if realized[cw, m] else 'n/a'))
     btc = [(cw, m) for cw, _, _, mk in CALIB for m in mk if m == 'cbBTC' and realized.get(cw, m)]
     eth = [(cw, m) for cw, _, _, mk in CALIB for m in mk if m == 'WETH' and realized.get(cw, m)]
+    held = [(cw, m) for cw, m in btc if cw not in FIT_ON]  # cbBTC events scored out of sample
+    btc_all, btc = btc, [(cw, m) for cw, m in btc if cw in FIT_ON]
     obs = [cal['windows'][cw]['cbBTC']['latency']['full_share'] for cw, _ in btc] if cal else []
     obs_full, cf_star, sim_full = (sum(obs) / len(obs), DEFAULTS['full_below_usd'], {}) if obs else (None, DEFAULTS['full_below_usd'], {})
     if obs and DEFAULTS['close_target'] < 1:
@@ -440,12 +448,19 @@ def calibration(depth, get):
     out = None
     if best:
         sq, sh, d = best
-        ratios = {'%s %s' % (cw, m): ratio(cw, m, sh, d) for cw, m in btc + eth}
+        ratios = {'%s %s' % (cw, m): ratio(cw, m, sh, d) for cw, m in btc + held + eth}
+        sq_all = lambda s_, d_: sum(np.log(ratio(cw, m, s_, d_)) ** 2 if ratio(cw, m, s_, d_) else np.inf for cw, m in btc_all)
+        _, sh_all, d_all = min((sq_all(s_, d_), s_, d_) for s_ in SHARES for d_ in REACTS)  # sensitivity: the fit if every cbBTC event were used
         out = dict(resp_share=sh, react_min=d, full_below_usd=cf_star, close_target=DEFAULTS['close_target'], warn_gap=DEFAULTS['warn_gap'], margin=DEFAULTS['margin'],
                    cex_cap_usd=DEFAULTS['cex_cap_usd'], beta=DEFAULTS['beta'], ratios=ratios, sum_sq_log_cbBTC=sq,
+                   fit_on=['%s cbBTC' % cw for cw, _ in btc], held_out_cbBTC=['%s cbBTC' % cw for cw, _ in held],
+                   refit_all=dict(resp_share=sh_all, react_min=d_all, sum_sq_log=float(sq_all(sh_all, d_all)),
+                                  ratios={'%s %s' % (cw, m): ratio(cw, m, sh_all, d_all) for cw, m in btc_all}),
                    full_share=dict(observed=obs_full, simulated=sim_full.get(cf_star), sweep=sim_full),
                    resp_share_debt={'%s %s' % (cw, m): sims[cw, m, sh, d]['resp_share_debt'] for cw, m in btc + eth})
         print('(s*, d*, fb*) = (%.1f, %d min, $%.0f), sum sq log %.3f: ' % (sh, d, cf_star, sq) + ', '.join('%s %.2fx' % kv for kv in ratios.items()))
+        print('held out (not in the fit): ' + ', '.join('%s %.2fx' % (k, ratios[k]) for k in out['held_out_cbBTC']))
+        print('refit on all %d cbBTC events: s %.1f, d %d min' % (len(btc_all), sh_all, d_all) + ', '.join(' %s %.2fx' % kv for kv in out['refit_all']['ratios'].items()))
         print('debt-weighted responsive share at s*: ' + ', '.join('%s %.2f' % kv for kv in out['resp_share_debt'].items()))
     return out
 
@@ -510,7 +525,7 @@ if __name__ == '__main__':
     print('complete')
     if cal:
         print('calib ratios at (s*, d*, c*): ' + ', '.join('%s %.2fx' % kv for kv in cal['ratios'].items()))
-        off = {k: v for k, v in cal['ratios'].items() if 'cbBTC' in k and abs(v - 1) > 0.25}
+        off = {k: v for k, v in cal['ratios'].items() if k in cal['fit_on'] and abs(v - 1) > 0.25}  # held-out events are reported, not asserted
         assert not off, 'cbBTC lived events off by more than 25%%: %s' % off
 
     (book, _), c = today_book('cbBTC'), candles_for('cbBTC', 'Jun2026')
