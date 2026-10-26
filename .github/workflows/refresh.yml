@@ -20,7 +20,14 @@ jobs:
         with: { python-version: '3.12' }
       - run: pip install numpy
       - name: restore the latest generated data from the data branch (first run falls back to main's snapshot)
-        run: git fetch -q --depth 1 origin data && git checkout FETCH_HEAD -- data || echo "no data branch yet; starting from main's snapshot"
+        run: |
+          git fetch -q --depth 1 origin data && git checkout FETCH_HEAD -- data || echo "no data branch yet; starting from main's snapshot"
+          # A fit or backtest committed to main after the data branch last wrote that file wins, or it never reaches the site.
+          for f in backtest calibration; do
+            if python -c "import json,subprocess,sys; m=json.loads(subprocess.check_output(['git','show','HEAD:data/$f.json'])); d=json.load(open('data/$f.json')); sys.exit(m['generated_at'] <= d['generated_at'])"; then
+              git checkout HEAD -- data/$f.json && echo "data/$f.json: main's copy is newer"
+            fi
+          done
       - name: fetch live data (positions, liquidations, tags, depth, vaults, Base market list) and summarize
         run: |
           python -m spine.fetch_positions
