@@ -9,6 +9,10 @@ Liquidations section), supplier vault exposure (`spine/fetch_vaults.py`, "Who ca
 (`spine/oracle_lag.py`, writeup section 7), alert as a GitHub issue from the hourly job (`spine/alert.py`), and the Aave/TradFi
 table in writeup section 6. Nothing planned beyond keeping the live parts live.
 
+Status 2026-10-26: Phase I and PRs #12-15 merged. Refresh reliability fixed (positions paged by borrow shares,
+stale banner at 8 h, alert issue closes itself). Open: posting the F4 drafts (owner's call), the Dune mirror, and the
+local Phase J branch `showcase/spine-20261025`, which supersedes `fetch_positions` with on-chain reconciliation.
+
 Status 2026-09-19: Phase G (pipeline, model, code fixes) planned below. Status 2026-09-18: Phases A-E done (E1 item 3, alt-asset replays, deferred; item 6 lands as
 `calibrate --since` plus `data/windows.json`). The partial-liquidation model changed the
 headline: under calm-day liquidator behaviour (trim to 74%), LLTV barely moves March 2020
@@ -370,7 +374,7 @@ independent and can run in parallel with either.
 ## Phase I: Base grant upgrades (2026-10-22)
 
 1. **Freshness on every page.** The dashboard header and the writeup nav show the snapshot time and its age; past
-   3 h (`STALE_HOURS`) the stamp turns red and a banner says the numbers are as of the last refresh. Replaces the
+   3 h (`STALE_HOURS`, raised to 8 h on 2026-10-26) the stamp turns red and a banner says the numbers are as of the last refresh. Replaces the
    8 h stamp and 12 h notice from G1.6. Rechecked every minute, so an open tab goes stale too.
 2. **Check a loan.** A section where a visitor pastes a Base address. The browser asks Morpho's public GraphQL for
    that address's positions in every market on the page (no key, nothing via this site) and shows debt,

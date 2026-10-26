@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased (refresh reliability)
+
+- `fetch_positions` pages by borrow shares instead of health factor. Health factor moves with the oracle, so a price move during the minute-long cbBTC walk let positions slip behind the cursor; 7 of the scheduled refreshes since 2026-10-02 failed on the count check (gaps of 1 to 560 positions). After three walks a gap of up to 2 positions (`CHURN`) is accepted as live churn.
+- Stale banner at 8 h (`STALE_HOURS`), not 3 h. GitHub ran the hourly cron every 4.9 h median, 7.1 h p90 over 97 runs in October 2026, so 3 h showed the banner most of the time.
+- The alert issue closes itself with a comment when no market is within 10% of capacity.
+- Copy says "every few hours" instead of "hourly". Outreach drafts updated to the 2026-10-25 book, the out-of-sample calibration range and the custom domain.
+
 ## Unreleased (stress grid)
 
 - `spine/stress_grid.py` replays the cbBTC book on all seven crash paths across four LLTVs and five liquidator-capital levels and writes `data/stress_grid.csv` (one row per cell, with the loan book date). Underwater-and-unserved at the trough and realized loss are separate columns; `binds_first` records the first limit that left a queue unserved. Summary in `WRITEUP.md` section 4b.

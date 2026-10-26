@@ -90,7 +90,7 @@ async function get(file) {
   return null;
 }
 
-const STALE_HOURS = 3;  // the refresh is hourly: three missed runs is a dead cron, not GitHub's schedule jitter
+const STALE_HOURS = 8;  // the cron asks for hourly, but GitHub ran it every 4.9 h median, 7.1 h p90 (Oct 2026); past 8 h a run failed or the cron died
 
 // Timestamp into el; past STALE_HOURS it turns red (class stale) so a dead cron shows on the page.
 function stamp(el, text, ms) {
@@ -118,7 +118,7 @@ function renderFreshness(iso) {
     document.body.insertAdjacentHTML('afterbegin', '<p id="stale-banner" class="banner" role="alert"></p>');
     b = document.getElementById('stale-banner');
   }
-  b.textContent = 'Stale data: the newest snapshot is ' + ago(ms) + ' old (' + utc(ms) + '). The hourly refresh has not landed since, so every number on this page is as of then.';
+  b.textContent = 'Stale data: the newest snapshot is ' + ago(ms) + ' old (' + utc(ms) + '). The refresh has not landed since, so every number on this page is as of then.';
 }
 
 // Tile 1: the book. Large number is borrow; the rest as small cards.
@@ -553,7 +553,7 @@ async function checkLoan(raw) {
   out.innerHTML = '<p class="muted">Asking Morpho…</p>';
   const known = knownMarkets();
   if (!Object.keys(known).length) {  // a summary.json from before market ids were published: an empty filter would match every market
-    out.innerHTML = '<p class="muted">Not available until the next hourly refresh publishes the market list.</p>';
+    out.innerHTML = '<p class="muted">Not available until the next refresh publishes the market list.</p>';
     return;
   }
   let items;
@@ -594,7 +594,7 @@ async function checkLoan(raw) {
 
 function renderBase() {
   const bm = DATA.base_markets, stat = document.getElementById('base-stat');
-  if (!bm) { stat.textContent = 'Not available yet: the next hourly refresh adds this list.'; return; }
+  if (!bm) { stat.textContent = 'Not available yet: the next refresh adds this list.'; return; }
   const listed = bm.markets.filter(m => m.listed), unlisted = bm.markets.filter(m => !m.listed);
   const sum = ms => ms.reduce((a, m) => a + m.borrow_usd, 0), ours = bm.markets.filter(m => m.tracked);
   stat.textContent = bm.markets.length + ' markets have more than ' + usd(bm.min_borrow_usd) + ' borrowed (' + usd(sum(bm.markets)) + '). Morpho lists ' + listed.length +
