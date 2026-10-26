@@ -22,9 +22,11 @@ jobs:
       - name: restore the latest generated data from the data branch (first run falls back to main's snapshot)
         run: |
           git fetch -q --depth 1 origin data && git checkout FETCH_HEAD -- data || echo "no data branch yet; starting from main's snapshot"
-          # CI never runs calibrate, so main's calibration.json is current; main's backtest rows win on key and CI-only rows stay.
+          # Only a local spine.calibrate writes calibration.json, so main's copy is current. main's backtest rows win on key and
+          # CI-only rows stay; the backtest step below refits from them. A failed merge leaves the data branch's copy, not a dead job.
           git checkout HEAD -- data/calibration.json
-          python -c "import json,subprocess; from spine.backtest import save, saved_runs; m=json.loads(subprocess.check_output(['git','show','HEAD:data/backtest.json'])); save(saved_runs(m), m['calibrated'])"
+          python -c "import json,subprocess; from spine.backtest import save, saved_runs; m=json.loads(subprocess.check_output(['git','show','HEAD:data/backtest.json'])); save(saved_runs(m), m['calibrated'])" \
+            || echo "::warning::merging main's backtest.json failed; using the data branch's copy"
       - name: fetch live data (positions, liquidations, tags, depth, vaults, Base market list) and summarize
         run: |
           python -m spine.fetch_positions
