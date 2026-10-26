@@ -33,6 +33,7 @@ jobs:
           python -m spine.history
           python -m spine.render_writeup
       - name: alert (one open issue while any market's distance to capacity is 10% or less; closed when none is)
+        continue-on-error: true  # a GitHub issues API error must not stop the snapshot from publishing
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
