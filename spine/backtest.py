@@ -430,8 +430,8 @@ def calibration(depth, get):
             print('%-8s %-5s book $%.0fM at %.0f; trough %.0f (%+.0f%%): $%.0fM of frozen-book debt crosses lltv; realized repaid %s' % (
                 cw, m, book[1].sum() / 1e6, book[2], pmin, 100 * (pmin / book[2] - 1), at_risk / 1e6,
                 '$%.1fM' % (realized[cw, m] / 1e6) if realized[cw, m] else 'n/a'))
-    btc = [(cw, m) for cw, _, _, mk in CALIB for m in mk if m == 'cbBTC' and realized.get(cw, m)]
-    eth = [(cw, m) for cw, _, _, mk in CALIB for m in mk if m == 'WETH' and realized.get(cw, m)]
+    btc = [(cw, m) for cw, _, _, mk in CALIB for m in mk if m == 'cbBTC' and realized.get((cw, m))]
+    eth = [(cw, m) for cw, _, _, mk in CALIB for m in mk if m == 'WETH' and realized.get((cw, m))]
     held = [(cw, m) for cw, m in btc if cw not in FIT_ON]  # cbBTC events scored out of sample
     btc_all, btc = btc, [(cw, m) for cw, m in btc if cw in FIT_ON]
     obs = [cal['windows'][cw]['cbBTC']['latency']['full_share'] for cw, _ in btc] if cal else []
@@ -451,7 +451,7 @@ def calibration(depth, get):
                     r = run_at(scenario=sc, resp_share=sh, react_min=d, full_below_usd=cf_star)
                     if sc == 'AB':
                         sims[cw, m, sh, d] = r
-    ratio = lambda cw, m, sh, d: sims[cw, m, sh, d]['repaid_usd'] / realized[cw, m] if realized.get(cw, m) else None
+    ratio = lambda cw, m, sh, d: sims[cw, m, sh, d]['repaid_usd'] / realized[cw, m] if realized.get((cw, m)) else None
     best = None
     print('\nsimulated / realized repaid, AB, full below $%.0f, cbBTC (%s); rows react_min, cols resp_share:' % (cf_star, ' / '.join(cw for cw, _ in btc)))
     print('%-5s' % 'd\\s' + ''.join('%20s' % ('%.1f (debt %.2f)' % (sh, sims[btc[0][0], 'cbBTC', sh, REACTS[0]]['resp_share_debt']) if btc else sh) for sh in SHARES))
