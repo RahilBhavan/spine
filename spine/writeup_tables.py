@@ -16,7 +16,17 @@ FIT = 'fitted response s %.1f / d %d min, %s, depth multipliers constant (beta %
 BETAS = (0.0, 0.5493061443340549, 1.0986122886681098)
 BETA_NOTE = ('Depth per step is k * exp(-beta * |trailing 1h return| / 0.05); beta %.2f is anchored on one Kaiko point (Oct 10 2025: '
              'top-of-book depth down >90%% on a ~10%% hourly move), not fitted.' % D['beta'])
-SUPPLY = {m: SUMMARY['markets'][m]['state']['supply_usd'] for m in ('cbBTC', 'WETH', 'cbXRP', 'SOL')}
+# Rows replayed before backtest recorded book_supply_usd: the 2026-09-19 19:56 UTC summary.json (commit 5c48333).
+PINNED_SUPPLY = {'2026-09-19': dict(cbBTC=1585759775, WETH=94138850, cbXRP=54329893, SOL=6521985)}
+
+
+def book_supply(market):
+    """USDC supply of the replayed book, the denominator for every '% of supply' here."""
+    tagged = [r['book_supply_usd'] for r in RUNS if r.get('book') == BT['latest_book'] and r['market'] == market and 'book_supply_usd' in r]
+    return tagged[0] if tagged else PINNED_SUPPLY[BT['latest_book']][market]
+
+
+SUPPLY = {m: book_supply(m) for m in ('cbBTC', 'WETH', 'cbXRP', 'SOL')}
 LIVED = [('Oct2025', 'Oct 9-12 2025'), ('Feb2026', 'Feb 2-8 2026'), ('Jun2026a', 'Jun 1-7 2026'), ('Jun2026b', 'Jun 23-27 2026')]
 LABEL = dict(Mar2020='Mar 2020', May2021='May 2021', FTX2022='FTX Nov 2022', Aug2024='Aug 2024', Oct2025='Oct 2025', Feb2026='Feb 2026', Jun2026='Jun 2026')
 
