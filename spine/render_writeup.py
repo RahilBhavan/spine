@@ -7,8 +7,8 @@ from spine.api import DATA, load
 ROOT = os.path.dirname(DATA)
 SRC, OUT = os.path.join(ROOT, 'WRITEUP.md'), os.path.join(ROOT, 'site', 'writeup.html')
 FIGURES = {  # table header prefix -> figure emitted right after that table
-    '| LLTV |': '''<figure class="fig"><h3>Bad debt by LLTV and crash path, cbBTC, scenario AB</h3><div id="fig-heat" class="chart"></div>
-<figcaption>Loss by LLTV and path; the only non-zero cells are the two 2020-2021 paths.</figcaption></figure>''',
+    '| LLTV: left unserved': '''<figure class="fig"><h3>Bad debt by LLTV and crash path, cbBTC, scenario AB</h3><div id="fig-heat" class="chart"></div>
+<figcaption>Switch between the two measures, loss by end of path and left unserved at the trough; the only non-zero cells are the two 2020-2021 paths.</figcaption></figure>''',
     '| Crash |': '''<figure class="fig"><h3>Warning time before crossing 86%, median liquidated position</h3><div id="fig-warn" class="chart chart-short"></div>
 <figcaption>Hours between the first margin call and the 86% crossing; every path gives hours to days except March 2020, which gives 25 minutes.</figcaption></figure>''',
 }
@@ -139,4 +139,4 @@ if __name__ == '__main__':
     assert render('## T\n\ntext *em* [l](u)\n- a\n- b') == '<h2 id="t">T</h2>\n<p>text <em>em</em> <a href="u">l</a></p>\n<ul><li>a</li><li>b</li></ul>'
     assert toc('<h2 id="x-y">X y</h2>', None) == '<nav class="toc"><ol><li><a href="#x-y">X y</a></li></ol></nav>'
     assert h.count('<div class="tablewrap"><table>') == h.count('<table>') == sum(l.startswith('|---') for l in open(SRC))
-    assert h.index('<th>LLTV</th>') < h.index('fig-heat') and h.index('<th>Crash</th>') < h.index('fig-warn') and 'marked.min.js' not in h
+    assert h.index('<th>LLTV: left unserved at the trough</th>') < h.index('fig-heat') and h.index('<th>Crash</th>') < h.index('fig-warn') and 'marked.min.js' not in h

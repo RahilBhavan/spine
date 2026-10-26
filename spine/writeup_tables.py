@@ -56,13 +56,19 @@ def expo(r):
     return r['trough_exposure_usd']
 
 
+def unserved(r):
+    """Supply left unserved at the trough. Exposure that is no larger than the loss already realized means every underwater position was served
+    at the low (the backstop case), so nothing is left unserved and the figure is only realized shortfall."""
+    return 0 if expo(r) <= bad(r) else expo(r)
+
+
 def expo_pct(r):
-    return '0' if expo(r) == 0 else '%s (%s)' % (usd(expo(r)), pct(expo(r), r['market']))
+    return '0' if unserved(r) == 0 else '%s (%s)' % (usd(unserved(r)), pct(unserved(r), r['market']))
 
 
-def both(r):
-    """'loss by end of path / exposure at trough'."""
-    return '%s / %s' % (bad_pct(r), expo_pct(r))
+def plateau(r):
+    """Loss and unserved exposure as two separately named measures in one sentence."""
+    return 'loss by end of path %s, left unserved at the trough %s' % (bad_pct(r), expo_pct(r))
 
 
 def dur(minutes):
@@ -83,14 +89,26 @@ def table(head, rows):
     print()
 
 
+def by_measure(lead_head, head, rows):
+    """Prints one table per measure (loss by end of path, then supply left unserved at the trough) so the two are never read as one comparison.
+    lead_head names the label columns, rows are (*labels, run, run, ...). The measure goes in the first header, and the unserved table's
+    starts '| LLTV: left unserved', which render_writeup keys its figure on."""
+    n = len(lead_head)
+    for name, cell in (('loss by end of path', bad_pct), ('left unserved at the trough', expo_pct)):
+        table(['%s: %s' % (lead_head[0], name), *lead_head[1:], *head], [(*r[:n], *(cell(x) for x in r[n:])) for r in rows])
+
+
 def recommendation():
     print('## Short version: recommendation row, cbBTC (Mar 2020, AB, %s, cap 75%%)\n' % FIT)
-    rows = [('%g%%' % (100 * l), both(find(lltv=l, window='Mar2020'))) for l in (0.86, 0.80, 0.77)]
+    rows = []
+    for l in (0.86, 0.80, 0.77):
+        r = find(lltv=l, window='Mar2020')
+        rows.append(('%g%%' % (100 * l), bad_pct(r), expo_pct(r)))
     for kc in (0.1, 1.0):
         rs = [find(window='Mar2020', k_cex=kc, k_dex=kd, lag_bars=lag) for kd in (0.1, 0.5, 1.0) for lag in (0, 1, 3)]
         rows.append(('86%%, k_cex %.1f' % kc, '%s at k_dex 0.5 / lag 1; %s to %s across k_dex and lag' % (
-            bad_pct(find(window='Mar2020', k_cex=kc)), usd(min(map(bad, rs))), usd(max(map(bad, rs))))))
-    table(['LLTV', 'Loss by end of path / exposure at trough (% of supply)'], rows)
+            bad_pct(find(window='Mar2020', k_cex=kc)), usd(min(map(bad, rs))), usd(max(map(bad, rs)))), ''))
+    table(['LLTV', 'Loss by end of path (% of supply)', 'Left unserved at the trough (% of supply)'], rows)
 
 
 def lived_events():
@@ -127,7 +145,7 @@ def borrower_response():
             r = find(window=w, resp_share=sh, react_min=dm)
             rows.append((label, usd(r['liquidated_usd']), usd(bad(r))))
         table(['Borrowers', 'Liquidated', 'Bad debt'], rows)
-    print('Plateau, Mar 2020, loss / exposure: ' + '; '.join('s %.1f, d %d min: %s' % (sh, dm, both(find(window='Mar2020', resp_share=sh, react_min=dm))) for sh in (0.6, 0.7) for dm in (60, 120)) + '.\n')
+    print('Plateau, Mar 2020, two separate measures: ' + '; '.join('s %.1f, d %d min: %s' % (sh, dm, plateau(find(window='Mar2020', resp_share=sh, react_min=dm))) for sh in (0.6, 0.7) for dm in (60, 120)) + '.\n')
 
 
 def seven_paths():
@@ -137,24 +155,25 @@ def seven_paths():
         c = load('prices/%s_BTC-USD' % w)
         ab, abc = find(window=w), find(window=w, scenario='ABC')
         rows.append((LABEL[w], '-%.0f%% / -%.0f%%' % (100 * max_drop(c, H4), 100 * max_drop(c, H24)), usd(ab['liquidated_usd']), bad_pct(ab) + seed_range(window=w), expo_pct(ab),
-                     '%s / %s' % (dur(ab['queue_minutes_p50']), dur(ab['queue_minutes_p95'])), both(abc)))
-    table(['Path', 'Worst 4h / 24h', 'AB: liquidated', 'AB: loss by end of path', 'AB: exposure at trough', 'AB: queue p50 / p95', 'ABC: loss / exposure'], rows)
-    print('Percentages are of the $%.2fB USDC supplied to the market; the range in brackets is the loss over hash seeds 0-9 where those were run. Loss = shortfall realized on liquidations plus what is still underwater at the end of the path; exposure = the same marked at the lowest oracle print. %s\n' % (SUPPLY['cbBTC'] / 1e9, BETA_NOTE))
+                     '%s / %s' % (dur(ab['queue_minutes_p50']), dur(ab['queue_minutes_p95'])), bad_pct(abc), expo_pct(abc)))
+    table(['Path', 'Worst 4h / 24h', 'AB: liquidated', 'AB: loss by end of path', 'AB: left unserved at trough', 'AB: queue p50 / p95', 'ABC: loss by end of path', 'ABC: left unserved at trough'], rows)
+    print('Percentages are of the $%.2fB USDC supplied to the market; the range in brackets is the loss over hash seeds 0-9 where those were run. Loss = shortfall realized on liquidations plus what is still underwater at the end of the path; exposure (left unserved at the trough) = the same marked at the lowest oracle print. The two are different measures taken at different moments, not a before and after of one number: the first is what lenders lost once the bounce had played out, the second is what sat underwater at the low. Under ABC nothing is left unserved, so the trough figure is just the shortfall already realized. %s\n' % (SUPPLY['cbBTC'] / 1e9, BETA_NOTE))
 
 
 def lltv_grid():
     print('## Section 4: LLTV grid (cbBTC, %s; cap 75%%, 60%% where 75%% would exceed the LLTV)\n' % FIT)
-    rows = []
     others = [w for w, _, _ in WINDOWS if w not in ('Mar2020', 'May2021')]
-    for l in (0.86, 0.80, 0.77, 0.70, 0.625):
-        cap = 0.75 if l > 0.75 else 0.60
-        lif = min(1.15, 1 / (0.3 * l + 0.7))
-        cells = ['%s%s / %s' % (usd(bad(find(lltv=l, cap=cap, window=w, scenario=sc))), seed_range(lltv=l, cap=cap, window=w, scenario=sc), usd(expo(find(lltv=l, cap=cap, window=w, scenario=sc))))
-                 for sc in ('AB', 'ABC') for w in ('Mar2020', 'May2021')]
-        other = max(max(bad(r), expo(r)) for r in (find(lltv=l, cap=cap, window=w, scenario=sc) for sc in ('AB', 'ABC') for w in others))
-        rows.append(('%g%%' % (100 * l), '%.1f%%' % (100 / lif), *cells, usd(other)))
-    table(['LLTV', 'Bad-debt LTV (1/LIF)', 'AB: Mar 2020', 'AB: May 2021', 'ABC: Mar 2020', 'ABC: May 2021', 'Other five paths (max)'], rows)
-    print('Cells are loss by end of path / exposure at trough; the range in brackets is the loss over hash seeds 0-9 where those were run.\n')
+    cols = [(sc, w) for sc in ('AB', 'ABC') for w in ('Mar2020', 'May2021')]
+    for name, cell in (('loss by end of path', lambda r, kw: usd(bad(r)) + seed_range(**kw)), ('left unserved at the trough', lambda r, kw: usd(unserved(r)))):
+        rows = []
+        for l in (0.86, 0.80, 0.77, 0.70, 0.625):
+            cap = 0.75 if l > 0.75 else 0.60
+            lif_ = min(1.15, 1 / (0.3 * l + 0.7))
+            kws = [dict(lltv=l, cap=cap, window=w, scenario=sc) for sc, w in cols]
+            other = max((bad if name.startswith('loss') else unserved)(find(lltv=l, cap=cap, window=w, scenario=sc)) for sc in ('AB', 'ABC') for w in others)
+            rows.append(('%g%%' % (100 * l), '%.1f%%' % (100 / lif_), *(cell(find(**kw), kw) for kw in kws), usd(other)))
+        table(['LLTV: %s' % name, 'Bad-debt LTV (1/LIF)', 'AB: Mar 2020', 'AB: May 2021', 'ABC: Mar 2020', 'ABC: May 2021', 'Other five paths (max)'], rows)
+    print('The two tables are different measures; the range in brackets is the loss over hash seeds 0-9 where those were run.\n')
 
 
 def k_cex_line():
@@ -172,9 +191,8 @@ def beta_table():
     rows = []
     for w in ('Mar2020', 'May2021'):
         for l in (0.86, 0.80, 0.77):
-            rows.append((LABEL[w], '%g%%' % (100 * l), *(both(find(window=w, lltv=l, beta=b)) for b in BETAS)))
-    table(['Path', 'LLTV'] + ['beta %.2f%s' % (b, ' (constant depth)' if b == 0 else '') for b in BETAS], rows)
-    print('Cells are loss by end of path / exposure at trough.\n')
+            rows.append((LABEL[w], '%g%%' % (100 * l), *(find(window=w, lltv=l, beta=b) for b in BETAS)))
+    by_measure(['Path', 'LLTV'], ['beta %.2f%s' % (b, ' (constant depth)' if b == 0 else '') for b in BETAS], rows)
 
 
 def seed_table():
@@ -207,7 +225,7 @@ def alt_table():
         for w in ws:
             r = find(market=m, window=w, lltv=LLTV_ALT, cap=MD)
             rows.append((LABEL[w], usd(r['liquidated_usd']), bad_pct(r), expo_pct(r), dur(r['queue_minutes_p95'])))
-        table(['%s (supply $%.0fM)' % (m, SUPPLY[m] / 1e6), 'AB: liquidated', 'AB: loss by end of path', 'AB: exposure at trough', 'AB: queue p95'], rows)
+        table(['%s (supply $%.0fM)' % (m, SUPPLY[m] / 1e6), 'AB: liquidated', 'AB: loss by end of path', 'AB: left unserved at trough', 'AB: queue p95'], rows)
         rs = [(k, find(market=m, window='Oct2025', lltv=LLTV_ALT, cap=MD, book_multiple=float(k))) for k in (1, 2, 4, 8, 16, 32)]
         hit = next(((k, r) for k, r in rs if bad(r) > 0), None)
         q = lambda r: dur(r['queue_minutes_p95'])
@@ -226,9 +244,8 @@ def capital_range():
     for w in ('Mar2020', 'May2021'):
         print('## Section 4: liquidator capital (cbBTC, %s, AB, cap 75%%, %s; Tier B rolling-24h cap as a multiple of the max collateral seized in one day on the market, $%.1fM from calibration.json via backtest.json defaults)\n' % (LABEL[w], FIT, D['cex_cap_usd'] / 1e6))
         mults = (1, 3, 10, float('inf'))
-        rows = [('%g%%' % (100 * l), *(both(find(window=w, lltv=l, cex_cap_usd=D['cex_cap_usd'] * m)) for m in mults)) for l in (0.86, 0.80, 0.77)]
-        table(['LLTV', '1x', '3x', '10x', 'depth-limited only'], rows)
-        print('Cells are loss by end of path / exposure at trough.\n')
+        rows = [('%g%%' % (100 * l), *(find(window=w, lltv=l, cex_cap_usd=D['cex_cap_usd'] * m) for m in mults)) for l in (0.86, 0.80, 0.77)]
+        by_measure(['LLTV'], ['1x', '3x', '10x', 'depth-limited only'], rows)
 
 
 def hold_table():
@@ -237,16 +254,16 @@ def hold_table():
     for w in ('Mar2020', 'May2021'):
         for l in (0.86, 0.80, 0.77):
             rs = [find(window=w, lltv=l, hold_bars=hb) for hb in (0, 12, 288)]
-            rows.append((LABEL[w], '%g%%' % (100 * l), *(bad_pct(r) for r in rs), expo_pct(rs[0])))
-    table(['Path', 'LLTV', 'Loss, no hold', 'Loss, held 1 h', 'Loss, held 1 day', 'Exposure at trough'], rows)
+            rows.append((LABEL[w], '%g%%' % (100 * l), *(bad_pct(r) for r in rs)))
+    table(['Path', 'LLTV', 'Loss, no hold', 'Loss, held 1 h', 'Loss, held 1 day'], rows)
 
 
 def style_table():
     print('## Section 4: liquidation style (cbBTC, AB, cap 75%%, %s). Full close is what bots do (80-94%% of lived liquidations repaid the whole debt); trim-to-74%% is the alternative\n' % FIT)
     cols = [(1.0, D['cex_cap_usd']), (0.74, D['cex_cap_usd']), (1.0, float('inf')), (0.74, float('inf'))]
     for w in ('Mar2020', 'May2021'):
-        rows = [('%s, %g%%' % (LABEL[w], 100 * l), *(both(find(window=w, lltv=l, close_target=ct, cex_cap_usd=cc)) for ct, cc in cols)) for l in (0.86, 0.80, 0.77)]
-        table(['Path, LLTV', 'full close, capital 1x', 'trim to 74%, capital 1x', 'full close, unlimited capital', 'trim to 74%, unlimited capital'], rows)
+        rows = [('%s, %g%%' % (LABEL[w], 100 * l), *(find(window=w, lltv=l, close_target=ct, cex_cap_usd=cc) for ct, cc in cols)) for l in (0.86, 0.80, 0.77)]
+        by_measure(['Path, LLTV'], ['full close, capital 1x', 'trim to 74%, capital 1x', 'full close, unlimited capital', 'trim to 74%, unlimited capital'], rows)
 
 
 def oracle_table():

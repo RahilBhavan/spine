@@ -6,7 +6,7 @@
 
 **Live:** https://spine.rahilbhavan.com
 
-[![Spine dashboard on 2026-09-23: $1.6B borrowed across nine Morpho markets on Base, cbBTC 11% from its liquidation capacity, and a worst modeled path of $9.2M lost and $158M exposed at the trough](docs/screenshot.png)](https://spine.rahilbhavan.com/site/)
+[![Spine dashboard on 2026-09-23: $1.6B borrowed across nine Morpho markets on Base, cbBTC 11% from its liquidation capacity, and, as two separate measures on the worst modeled path, a $9.2M loss by the end of the path and $158M left unserved at the trough](docs/screenshot.png)](https://spine.rahilbhavan.com/site/)
 
 Spine is a risk dashboard and liquidation backtest for the nine Morpho Blue markets on Base that fund the USDC loans in Coinbase's app. Python fetchers read positions, liquidations, Chainlink oracle updates, Coinbase 5-minute candles and CEX and DEX depth from public endpoints. The pipeline writes `data/summary.json` for a static dashboard. A numpy backtest replays rebuilt historical loan books through seven crash paths and recommends a liquidation LTV (LLTV) and maximum draw for each collateral.
 
@@ -18,7 +18,10 @@ The headline: on a March 2020 path, losses depend on how much capital liquidator
 - **Track record.** The cbBTC market cleared $256M of liquidations in the four stress weeks of three events (Oct 2025, Feb 2026, Jun 2026) with zero bad debt. Source: `WRITEUP.md`.
 - **Calibration.** The borrower-response parameters (70% responsive, two-hour reaction) were fitted on three cbBTC events, where the model reproduces realized liquidation volume at 0.85–0.99x (Oct 2025 0.95x, Feb 2026 0.99x, Jun 2026 0.85x). On five more cbBTC events chosen by a fixed rule (every UTC day with over $5M repaid, since launch) and kept out of the fit, it gives 0.42x to 1.08x (Oct 2025a 0.52x, Nov 2025 1.02x, Nov 2025a 1.08x, Jan 2026 0.77x, Jun 2026b 0.42x). Across all eight events the range is 0.42–1.08x, so the model is not within 15% across events. Held-out WETH events come in at 1.58x and 0.85x. Source: `data/backtest.json`, key `calibrated.ratios`; method in [WRITEUP.md](WRITEUP.md) section 3.
 - **Stress replay.** 5,562 saved backtest runs over seven crash windows at 5-minute resolution. Source: `data/backtest.json` and `data/prices/index.json`.
-- **March 2020 at today's 86% LLTV.** $9.2M realized loss (0.6% of supply), but $158.4M (10.0% of supply) underwater and unserved at the trough. A 77% LLTV leaves 8.4% exposed. Tripled liquidator capital leaves 6.2%. A Coinbase backstop liquidator leaves 0.8%. Source: `WRITEUP.md`.
+- **Replay book.** The replay ran on the cbBTC/USDC market's loan book as of 2026-09-19, the date of `WRITEUP.md` (`latest_book` in `data/backtest.json`). All percentages of supply below are of that book's $1.58B of USDC supplied. The Book figures above are a different, later snapshot (2026-09-23, all nine markets).
+- **March 2020 at today's 86% LLTV, loss by end of path.** $9.2M (0.6% of supply) realized, because BTC bounced and the queue was served above water on the way back up. Source: `WRITEUP.md`.
+- **March 2020 at today's 86% LLTV, supply left unserved at the trough.** $158.4M (10.0% of supply) sat underwater with no liquidator able to act at the lowest print. This is a separate measure, taken at a different moment. A 77% LLTV leaves 8.4% unserved. Tripled liquidator capital leaves 6.2%. Source: `WRITEUP.md`.
+- **March 2020 with a Coinbase backstop liquidator.** $0 left unserved and $13.1M (0.8%) realized loss. Source: `WRITEUP.md`.
 
 Recommended parameters, from [WRITEUP.md](WRITEUP.md):
 
@@ -35,7 +38,7 @@ Recommended parameters, from [WRITEUP.md](WRITEUP.md):
 - Fetchers in `spine/` (`fetch_positions`, `fetch_liquidations`, `tag_coinbase`, `fetch_prices`, `fetch_depth`, `fetch_vaults`, `fetch_markets`, `fetch_oracle`) read the Morpho API, Base RPC, Coinbase Exchange and Chainlink logs. They use only the standard library.
 - `spine/summarize.py` writes `data/summary.json`. `site/index.html`, `site/charts.js` and `site/app.js` render it with no build step. The page's loan check reads one address's positions from Morpho's public API in the visitor's browser.
 - `spine/calibrate.py` measures liquidator latency, bonus and throughput on the real events. `spine/rebuild_book.py` rebuilds historical books from on-chain events.
-- `spine/backtest.py` (numpy) replays books through the crash paths with fitted borrower response and liquidator capacity. `spine/writeup_tables.py` prints the tables in `WRITEUP.md`.
+- `spine/backtest.py` (numpy) replays books through the crash paths with fitted borrower response and liquidator capacity. `spine/writeup_tables.py` prints the tables in `WRITEUP.md`. `spine/stress_grid.py` writes the crash path x LLTV x liquidator capital grid to `data/stress_grid.csv`.
 - `.github/workflows/refresh.yml` is scheduled hourly (GitHub runs it best-effort). It refreshes the data, advances the backtest, publishes to the `data` branch and GitHub Pages, and runs `spine/alert.py`. The alert opens a GitHub issue when any market is within 10% of its liquidation capacity. Vercel serves the `data` branch at the live URL.
 
 [CODEBASE_GUIDE.md](CODEBASE_GUIDE.md) explains the architecture module by module.
@@ -51,7 +54,7 @@ uv sync --extra dev
 .venv/bin/python -m pytest -q tests
 ```
 
-Observed on 2026-10-25: `22 passed`. `uv.lock` pins the dependencies. The tests run against the frozen snapshot in `data/`, with no network.
+Observed on 2026-10-25: `26 passed`. `uv.lock` pins the dependencies. The tests run against the frozen snapshot in `data/`, with no network.
 
 Rebuild the dashboard data. The positions files are not committed, so run `fetch_positions` first on a fresh clone. These commands overwrite files in `data/`.
 
