@@ -23,7 +23,11 @@ PINNED_SUPPLY = {'2026-09-19': dict(cbBTC=1585759775, WETH=94138850, cbXRP=54329
 def book_supply(market):
     """USDC supply of the replayed book, the denominator for every '% of supply' here."""
     tagged = [r['book_supply_usd'] for r in RUNS if r.get('book') == BT['latest_book'] and r['market'] == market and 'book_supply_usd' in r]
-    return tagged[0] if tagged else PINNED_SUPPLY[BT['latest_book']][market]
+    if tagged:
+        return tagged[0]
+    if BT['latest_book'] not in PINNED_SUPPLY:
+        raise SystemExit('writeup_tables: no book_supply_usd for %s on book %s; rerun the backtest grid for it' % (market, BT['latest_book']))
+    return PINNED_SUPPLY[BT['latest_book']][market]
 
 
 SUPPLY = {m: book_supply(m) for m in ('cbBTC', 'WETH', 'cbXRP', 'SOL')}
