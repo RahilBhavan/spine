@@ -158,3 +158,9 @@ def test_partial_liquidation_repays_to_target():
     assert math.isclose((90.0 - rep) / (P0 - rep * L), 0.74, rel_tol=1e-6)  # remaining position sits at the target
     deep = simulate((np.ones(1), np.full(1, 97.0), np.full(1, 0.5)), flat, params(scenario='ABC', lag_bars=0, close_target=0.74))
     assert deep['n_liquidated'] == 1 and deep['full_share'] == 1.0 and deep['realized_bad_debt_usd'] > 0
+
+
+def test_book_tag_carries_the_books_own_supply(monkeypatch):
+    import spine.backtest as bt
+    monkeypatch.setattr(bt, 'load', lambda name: dict(fetched_at=1758300000, market_state=dict(supplyAssetsUsd=1.5e9)))
+    assert bt.book_tag('cbBTC') == dict(book='2025-09-19', book_supply_usd=1.5e9)
