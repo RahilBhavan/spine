@@ -10,6 +10,12 @@
 
 Spine is a risk dashboard and liquidation backtest for the nine Morpho Blue markets on Base that fund the USDC loans in Coinbase's app. Python fetchers read positions, liquidations, Chainlink oracle updates, Coinbase 5-minute candles and CEX and DEX depth from public endpoints. The pipeline writes `data/summary.json` for a static dashboard. A numpy backtest replays rebuilt historical loan books through seven crash paths and recommends a liquidation LTV (LLTV) and maximum draw for each collateral.
 
+## Reading the dashboard
+
+The first screen summarizes observed borrowing, the selected market’s modeled capacity threshold, and its worst replay loss, with trough exposure shown separately. Daily comparisons use a saved snapshot near 24 hours before the displayed book and print both timestamps; stale or missing data is labeled explicitly. One market selection carries through a sortable/filterable nine-market watchlist, an exact-sample price-shock inspector, positions, liquidation charts, crash replays and supplier exposure. The URL preserves the investigation state and supports back/forward navigation. System/light/dark theme persists locally, and the view can be copied as a link.
+
+Stress results identify their saved book, assumptions and held-out calibration limits. The [UI improvement loop](tools/uiloop/README.md) requires working charts, screenshots and a recorded reader check before accepting a candidate. [Workstation implementation and verification record](docs/ui-workstation-review.md). The [blue graph refinement](docs/graph-review.md) adds stable matrix scales, phone-readable labels, explicit log views, source summaries and color-vision proof captures.
+
 ## Results
 
 The headline: on a March 2020 path, losses depend on how much capital liquidators can deploy in a day. Cutting the haircut or the LLTV changes little.

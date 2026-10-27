@@ -14,6 +14,7 @@
 <link rel="canonical" href="https://spine.rahilbhavan.com/site/writeup.html">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230f172a'/><text x='32' y='42' text-anchor='middle' font-family='Arial,sans-serif' font-size='28' font-weight='700' fill='%2338bdf8'>SP</text></svg>">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="chart-system.css">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <style>
   .prose { max-width: 860px; margin: 0 auto; }
@@ -75,7 +76,7 @@
 <p>What moves each measure. Scenario AB, March 2020, as two separate tables:</p>
 <div class="tablewrap"><table><thead><tr><th>LLTV: loss by end of path</th><th>Capital as observed ($101.1M/day)</th><th>3x</th><th>10x</th><th>Depth-limited only</th></tr></thead><tbody><tr><td>86%</td><td>$9.2M (0.6%)</td><td>$2.2M (0.1%)</td><td>$2.1M (0.1%)</td><td>$2.1M (0.1%)</td></tr><tr><td>80%</td><td>$4.0M (0.3%)</td><td>$0.70M (0.0%)</td><td>$1.2M (0.1%)</td><td>$1.2M (0.1%)</td></tr><tr><td>77%</td><td>$2.4M (0.2%)</td><td>$1.1M (0.1%)</td><td>$1.5M (0.1%)</td><td>$1.5M (0.1%)</td></tr></tbody></table></div>
 <div class="tablewrap"><table><thead><tr><th>LLTV: left unserved at the trough</th><th>Capital as observed ($101.1M/day)</th><th>3x</th><th>10x</th><th>Depth-limited only</th></tr></thead><tbody><tr><td>86%</td><td>$158.4M (10.0%)</td><td>$97.7M (6.2%)</td><td>$75.2M (4.7%)</td><td>$75.2M (4.7%)</td></tr><tr><td>80%</td><td>$143.0M (9.0%)</td><td>$91.8M (5.8%)</td><td>$54.1M (3.4%)</td><td>$54.1M (3.4%)</td></tr><tr><td>77%</td><td>$133.5M (8.4%)</td><td>$88.7M (5.6%)</td><td>$38.0M (2.4%)</td><td>$38.0M (2.4%)</td></tr></tbody></table></div>
-<figure class="fig"><h3>Bad debt by LLTV and crash path, cbBTC, scenario AB</h3><div id="fig-heat" class="chart"></div>
+<figure class="fig"><h3>Bad debt by LLTV and crash path, cbBTC, scenario AB</h3><div id="writeup-metric-buttons" class="buttons" role="group" aria-label="Replay measure"></div><div id="fig-heat" class="chart"></div>
 <figcaption>Switch between the two measures, loss by end of path and left unserved at the trough; the only non-zero cells are the two 2020-2021 paths.</figcaption></figure>
 <p>Read down a column of the unserved table: the LLTV buys about a point of supply from 86% to 80% and half a point from 80% to 77%. Read across a row: tripling liquidator capital buys three to four points, and unlimited capital five to six. The loss table moves by tenths of a point either way. At 70% and 62.5% LLTV (with a 60% max draw) the supply left unserved falls to $25-28M and the realized loss to rounding dust, but that is a different product. On May 2021 the supply left unserved is $17.1M (1.1%) at 86% and under $2M from 80% down, at any capital level.</p>
 <p>What turns the unserved measure into loss is the bounce. To see what a slower recovery costs, the same paths are replayed with the trough low held for an hour and for a day before the historical bounce resumes:</p>
@@ -125,7 +126,14 @@
 <script src="charts.js" defer></script>
 <script src="app.js" defer></script>
 <script>
-addEventListener('DOMContentLoaded', () => loadBacktest().then(bt => { if (bt) { renderHeatmap('fig-heat', bt, 'cbBTC', 'AB'); renderWarn('fig-warn', bt, 'cbBTC'); } }));
+addEventListener('DOMContentLoaded', () => loadBacktest().then(bt => {
+  if (!bt) return;
+  const draw = () => {
+    buttons('writeup-metric-buttons', Object.keys(METRICS), btMetric, key => { btMetric = key; draw(); });
+    renderHeatmap('fig-heat', bt, 'cbBTC', 'AB');
+  };
+  draw(); renderWarn('fig-warn', bt, 'cbBTC');
+}));
 </script>
 </body>
 </html>

@@ -7,7 +7,7 @@ from spine.api import DATA, load
 ROOT = os.path.dirname(DATA)
 SRC, OUT = os.path.join(ROOT, 'WRITEUP.md'), os.path.join(ROOT, 'site', 'writeup.html')
 FIGURES = {  # table header prefix -> figure emitted right after that table
-    '| LLTV: left unserved': '''<figure class="fig"><h3>Bad debt by LLTV and crash path, cbBTC, scenario AB</h3><div id="fig-heat" class="chart"></div>
+    '| LLTV: left unserved': '''<figure class="fig"><h3>Bad debt by LLTV and crash path, cbBTC, scenario AB</h3><div id="writeup-metric-buttons" class="buttons" role="group" aria-label="Replay measure"></div><div id="fig-heat" class="chart"></div>
 <figcaption>Switch between the two measures, loss by end of path and left unserved at the trough; the only non-zero cells are the two 2020-2021 paths.</figcaption></figure>''',
     '| Crash |': '''<figure class="fig"><h3>Warning time before crossing 86%, median liquidated position</h3><div id="fig-warn" class="chart chart-short"></div>
 <figcaption>Hours between the first margin call and the 86% crossing; every path gives hours to days except March 2020, which gives 25 minutes.</figcaption></figure>''',
@@ -28,6 +28,7 @@ TEMPLATE = '''<!doctype html>
 <link rel="canonical" href="https://spine.rahilbhavan.com/site/writeup.html">
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230f172a'/><text x='32' y='42' text-anchor='middle' font-family='Arial,sans-serif' font-size='28' font-weight='700' fill='%2338bdf8'>SP</text></svg>">
 <link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="chart-system.css">
 <link rel="preconnect" href="https://cdn.jsdelivr.net">
 <style>
   .prose { max-width: 860px; margin: 0 auto; }
@@ -59,7 +60,14 @@ TEMPLATE = '''<!doctype html>
 <script src="charts.js" defer></script>
 <script src="app.js" defer></script>
 <script>
-addEventListener('DOMContentLoaded', () => loadBacktest().then(bt => { if (bt) { renderHeatmap('fig-heat', bt, 'cbBTC', 'AB'); renderWarn('fig-warn', bt, 'cbBTC'); } }));
+addEventListener('DOMContentLoaded', () => loadBacktest().then(bt => {
+  if (!bt) return;
+  const draw = () => {
+    buttons('writeup-metric-buttons', Object.keys(METRICS), btMetric, key => { btMetric = key; draw(); });
+    renderHeatmap('fig-heat', bt, 'cbBTC', 'AB');
+  };
+  draw(); renderWarn('fig-warn', bt, 'cbBTC');
+}));
 </script>
 </body>
 </html>

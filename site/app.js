@@ -19,7 +19,7 @@ const MAJORS = ['cbBTC', 'WETH', 'cbETH'];  // everything else is an alt, shown 
 const EVENTS = [['Oct 2025', '2025-10-09', '2025-10-12'], ['Feb 2026', '2026-02-02', '2026-02-08'], ['Jun 2026', '2026-06-01', '2026-06-27']];
 const RANGES = { all: Infinity, '1y': 365, '90d': 90 };
 // Distance-to-capacity bands: [upper bound, colour class, marker, word]. Marker and word carry the status without colour.
-const GAUGE_BANDS = [[0.10, 'red', '▲', 'tight'], [0.20, 'amber', '◆', 'watch'], [Infinity, 'green', '●', 'clear']];
+const GAUGE_BANDS = [[0.10, 'red', '▲', 'tight'], [0.20, 'amber', '◆', 'watch'], [Infinity, 'green', '●', 'more room']];
 const PHONE = window.matchMedia('(max-width: 700px)').matches;  // read once; the layout rules in style.css switch at the same width
 
 function band(d) {
@@ -84,8 +84,12 @@ function banner(file) {
 
 // Text of data/<file>, or null (and the banner) on any failure.
 async function get(file) {
-  const r = await fetch('../data/' + file).catch(() => null);
-  if (r && r.ok) return r.text();
+  try {
+    const r = await fetch('../data/' + file);
+    if (r.ok) return await r.text();
+  } catch (e) {
+    if (e.name === 'AbortError') return null;  // leaving the page cancels in-flight reads
+  }
   banner('../data/' + file);
   return null;
 }
@@ -118,7 +122,7 @@ function renderFreshness(iso) {
     document.body.insertAdjacentHTML('afterbegin', '<p id="stale-banner" class="banner" role="alert"></p>');
     b = document.getElementById('stale-banner');
   }
-  b.textContent = 'Stale data: the newest snapshot is ' + ago(ms) + ' old (' + utc(ms) + '). The refresh has not landed since, so every number on this page is as of then.';
+  b.textContent = 'Refresh delayed. This snapshot is ' + ago(ms) + ' old; values below describe that saved book.';
 }
 
 // Tile 1: the book. Large number is borrow; the rest as small cards.
@@ -148,7 +152,7 @@ function buttons(id, keys, current, onpick, alts) {
 
 function renderButtons() {
   const [maj, alt] = split(Object.keys(DATA.markets));
-  buttons('market-buttons', maj, market, k => { market = k; renderAll(); }, alt);
+  buttons('market-buttons', maj, market, k => selectMarket(k), alt);
 }
 
 function distance(d) {
@@ -170,7 +174,7 @@ function renderGauges() {
   const [maj, alt] = [rows.filter(([k]) => MAJORS.includes(k)), rows.filter(([k]) => !MAJORS.includes(k))];
   const el = document.getElementById('distance-list');
   el.innerHTML = maj.map(li).join('') + (alt.length ? '<li><details class="alts"><summary>Alts</summary><ol>' + alt.map(li).join('') + '</ol></details></li>' : '');
-  el.querySelectorAll('a[data-k]').forEach(a => a.onclick = () => { market = a.dataset.k; renderAll(); });
+  el.querySelectorAll('a[data-k]').forEach(a => a.onclick = () => selectMarket(a.dataset.k));
 }
 
 function renderCards(m) {
@@ -193,23 +197,24 @@ function renderCards(m) {
 }
 
 function renderLtv(m) {
-  const k = cbOnly ? 'cb_' : '';
-  const x = m.ltv_hist.map(b => b.lo + 0.01), y = m.ltv_hist.map(b => b[k + 'borrow_usd']), n = m.ltv_hist.map(b => b[k + 'count']);
-  const bin = b => pct(b.lo, 0) + ' to ' + pct(b.lo + 0.02, 0);
-  const hover = m.ltv_hist.map((b, i) => 'LTV ' + bin(b) + ': ' + usd(y[i]) + ', ' + num(n[i]) + ' positions');
-  const traces = [{ type: 'bar', x, y, name: 'Borrow USD', marker: { color: css('--accent') }, width: 0.02, customdata: hover, hovertemplate: '%{customdata}<extra></extra>' }];
-  // Threshold lines with their labels above the plot, each ending at its line; the bad-debt label takes the upper row so the two do not overlap.
-  const vline = (v, text, padding) => ({ type: 'line', x0: v, x1: v, y0: 0, y1: 1, yref: 'paper', line: { color: css('--danger'), width: 1.5, dash: 'dash' },
-    label: { text, textposition: 'end', textangle: 0, xanchor: 'right', yanchor: 'bottom', padding, font: { color: css('--danger'), size: 11 } } });
-  const layout = baseLayout({
-    margin: { l: 64, r: 16, t: 40, b: 80 },
-    xaxis: Object.assign({ title: 'LTV', range: [0, 1] }, pctTicks([1])),
-    yaxis: Object.assign({ title: 'Borrow USD', automargin: true, type: logY ? 'log' : 'linear' }, ticks(y, usd, logY)),
-    shapes: [vline(m.state.lltv, 'liquidation ' + pct(m.state.lltv, 0), 2), vline(m.state.bad_debt_ltv, 'bad debt ' + pct(m.state.bad_debt_ltv), 18)],
-  });
-  plot('chart-ltv', traces, layout, ['LTV bin', 'Borrow', 'Positions'], m.ltv_hist.map((b, i) => [bin(b), usd(y[i]), num(n[i])]));
-  const near = m.hf_cdf.reduce((a, p) => Math.abs(p.hf - 1.1) < Math.abs(a.hf - 1.1) ? p : a);  // the grid point nearest HF 1.1
-  document.getElementById('ltv-stat').textContent = 'Share of borrow within 10% of liquidation (health factor below 1.1): ' + pct(near.share) + ' of the whole market.';
+  const k=cbOnly?'cb_':'';
+  const x=m.ltv_hist.map(b=>b.lo+.01), y=m.ltv_hist.map(b=>b[k+'borrow_usd']), n=m.ltv_hist.map(b=>b[k+'count']);
+  const bin=b=>pct(b.lo,0)+' to '+pct(b.lo+.02,0);
+  const top=y.indexOf(Math.max(...y));
+  const traces=[{type:logY?'scatter':'bar',mode:'markers',x,y:logY?y.map(v=>v>0?v:null):y,
+    name:'Borrow USD',marker:{color:y.map((_,i)=>i===top?chartColor('blue'):chartColor('context')),size:7},width:.02,
+    customdata:m.ltv_hist.map((b,i)=>'LTV '+bin(b)+': '+usd(y[i])+', '+num(n[i])+' positions'),hovertemplate:'%{customdata}<extra></extra>'}];
+  const vline=(value,text,padding)=>({type:'line',x0:value,x1:value,y0:0,y1:1,yref:'paper',line:{color:chartColor('ink'),width:1.5,dash:'dash'},
+    label:{text,textposition:'end',textangle:0,xanchor:'right',yanchor:'bottom',padding,font:{color:chartColor('ink'),size:12}}});
+  const layout=baseLayout({showlegend:false,margin:{l:64,r:16,t:56,b:56},
+    xaxis:Object.assign({title:'Loan-to-value',range:[0,1]},pctTicks([1])),
+    yaxis:Object.assign({title:logY?'Borrow USD · log scale':'Borrow USD',type:logY?'log':'linear',rangemode:'tozero'},ticks(y,usd,logY)),
+    shapes:[vline(m.state.lltv,'Liquidation '+pct(m.state.lltv,0),2),vline(m.state.bad_debt_ltv,'Bad debt '+pct(m.state.bad_debt_ltv),22)]});
+  chartContext('chart-ltv',Math.max(...y)>0?market+': the largest 2% LTV bin is '+bin(m.ltv_hist[top])+' ('+usd(y[top])+'). '+(logY?'Dots use a logarithmic value axis; zero bins remain in the table.':'Bars start at zero; blue identifies the largest bin.'):'No borrowing appears in these bins.',
+    'Observed book · '+utc(Date.parse(DATA.generated_at))+' · '+(cbOnly?'Coinbase wallets only.':'All wallets.'));
+  plot('chart-ltv',traces,layout,['LTV bin','Borrow','Positions'],m.ltv_hist.map((b,i)=>[bin(b),usd(y[i]),num(n[i])]));
+  const near=m.hf_cdf.reduce((a,p)=>Math.abs(p.hf-1.1)<Math.abs(a.hf-1.1)?p:a);
+  document.getElementById('ltv-stat').textContent='Share of whole-market borrow at health factor below about 1.1: '+pct(near.share)+'. This statistic covers all wallets, even when the histogram is filtered.';
 }
 
 function capacity(m) {
@@ -221,59 +226,41 @@ function capacity(m) {
 }
 
 function renderCurve(m) {
-  const k = cbOnly ? 'cb_' : '';
-  const c = m.liquidatable_curve, x = c.map(p => p.drop), y = c.map(p => p[k + 'borrow_usd']), bad = c.map(p => p[k + 'bad_borrow_usd']);
-  const muted = css('--muted');
-  const cap = capacity(m), total = m.state.capacity_ab_usd, d = m.state.distance_to_capacity;
-  const traces = [
-    { type: 'scatter', mode: 'lines', x, y, name: 'Liquidatable borrow', line: { color: css('--accent'), width: 2.5 }, fill: 'tozeroy', fillcolor: css('--band'),
-      customdata: y.map(usd), hovertemplate: '%{customdata}<extra>liquidatable</extra>' },
-    { type: 'scatter', mode: 'lines', x, y: bad, name: 'Past the bad-debt LTV', line: { color: css('--accent2'), width: 2 },
-      customdata: bad.map(usd), hovertemplate: '%{customdata}<extra>bad-debt zone</extra>' },
+  const k=cbOnly?'cb_':'', curve=m.liquidatable_curve, x=curve.map(p=>p.drop), y=curve.map(p=>p[k+'borrow_usd']), bad=curve.map(p=>p[k+'bad_borrow_usd']);
+  const total=m.state.capacity_ab_usd, d=m.state.distance_to_capacity;
+  const onScale=v=>curveLogY&&v<=0?null:v;
+  const traces=[
+    {type:'scatter',mode:'lines',x,y:y.map(onScale),name:'Liquidatable debt',line:{color:chartColor('blue'),width:3},fill:curveLogY?'none':'tozeroy',fillcolor:chartColor('tint'),customdata:y.map(usd),hovertemplate:'%{customdata}<extra>Liquidatable debt</extra>'},
+    {type:'scatter',mode:'lines',x,y:bad.map(onScale),name:'Past bad-debt LTV',line:{color:chartColor('secondary'),width:2,dash:'dash'},customdata:bad.map(usd),hovertemplate:'%{customdata}<extra>Past bad-debt LTV</extra>'},
   ];
-  const ly = v => curveLogY ? Math.log10(v) : v;  // annotations and ranges take log10 units on a log axis; shapes take raw values
-  const top = Math.max(...y, cap.cex || 0, cap.dex || 0) * 1.08, lo = Math.min(...y.filter(v => v > 0), total || Infinity) / 2;
-  const shapes = [], annotations = [];
-  // Capacity lines are traces so a phone can name them in the legend; a wide screen labels them at their right end instead.
-  const hline = (v, text, yshift) => {
-    if (!v) return;
-    traces.push({ type: 'scatter', mode: 'lines', x: [x[0], x[x.length - 1]], y: [v, v], name: text + ' ' + usd(v), showlegend: PHONE, hoverinfo: 'skip', line: { color: muted, width: 1.5, dash: 'dash' } });
-    if (!PHONE) annotations.push({ x: 0.995, xref: 'paper', yref: 'y', y: ly(v), yshift, text: text + ' within the bonus ' + usd(v), showarrow: false, xanchor: 'right', yanchor: 'bottom', font: { color: muted, size: 11 } });
-  };
-  hline(cap.cex, 'Coinbase bids', curveLogY ? 0 : 16);  // in linear mode both lines hug zero, so the upper label is shifted up
-  hline(cap.dex, 'DEX capacity', 0);
-  if (total) {
-    shapes.push({ type: 'rect', xref: 'paper', x0: 0, x1: 1, yref: 'y', y0: total, y1: top, fillcolor: css('--shade'), line: { width: 0 }, layer: 'below' });
-    annotations.push({ x: 0.005, xref: 'paper', y: 0.99, yref: 'paper', text: 'more than liquidators can sell', showarrow: false, xanchor: 'left', yanchor: 'top', font: { color: muted, size: 11 } });
+  if(total>0) traces.push({type:'scatter',mode:'lines',x:[x[0],x.at(-1)],y:[total,total],name:'Stressed capacity',line:{color:chartColor('ink'),width:2,dash:'dot'},customdata:[usd(total),usd(total)],hovertemplate:'%{customdata}<extra>Stressed capacity</extra>'});
+  const positives=y.concat(bad,[total]).filter(v=>v>0), top=Math.max(...positives,1)*1.2, low=Math.min(...positives,1e30)/2;
+  const annotations=[];
+  // The threshold describes the whole market. A wallet-filtered curve is a subset.
+  if(d!=null&&!cbOnly) {
+    const index=x.findIndex(v=>Math.abs(v-d)<1e-9), value=y[index];
+    if(value>0) annotations.push({x:d,y:curveLogY?Math.log10(value):value,text:pct(d,0)+' fall · '+usd(value),showarrow:true,arrowhead:0,arrowcolor:chartColor('ink'),ax:48,ay:-38,font:{size:12,color:chartColor('ink')},bgcolor:chartColor('bg'),borderpad:3});
   }
-  if (d != null) {
-    const yd = y[x.findIndex(v => Math.abs(v - d) < 1e-9)];
-    traces.push({ type: 'scatter', mode: 'markers', x: [d], y: [yd], name: 'Distance to capacity', showlegend: false, marker: { color: css('--accent'), size: 10 }, hoverinfo: 'skip' });
-    annotations.push({ x: d, y: ly(yd), text: '-' + pct(d, 0) + ': ' + usd(yd), showarrow: true, arrowhead: 0, arrowcolor: muted, ax: 56, ay: curveLogY ? 36 : -36, font: { size: 11 } });
-  }
-  const layout = baseLayout({
-    xaxis: Object.assign({ title: 'Instantaneous price drop' }, pctTicks(x)),
-    yaxis: Object.assign({ title: 'Borrow USD', automargin: true, type: curveLogY ? 'log' : 'linear', range: [curveLogY ? ly(lo) : 0, ly(top)] }, ticks(y.concat(bad, [cap.cex, cap.dex]), usd, curveLogY)),
-    shapes, annotations,
-  });
-  plot('chart-curve', traces, layout, ['Price drop', 'Liquidatable', 'Past bad-debt LTV'], c.map((p, i) => [(p.drop ? '-' : '') + pct(p.drop, 0), usd(y[i]), usd(bad[i])]));
+  const layout=baseLayout({showlegend:false,margin:{l:68,r:16,t:40,b:56},
+    xaxis:Object.assign({title:'Instantaneous price fall',range:[0,.7]},pctTicks([.7])),
+    yaxis:Object.assign({title:curveLogY?'Debt USD · log scale':'Debt USD',type:curveLogY?'log':'linear',range:[curveLogY?Math.log10(low):0,curveLogY?Math.log10(top):top]},ticks(positives,usd,curveLogY)),annotations});
+  chartContext('chart-curve',cbOnly?'The blue line shows Coinbase-wallet debt only; capacity still describes the whole market. No whole-market crossing is asserted for this subset.':d==null?'No capacity crossing appears through the sampled 70% price fall.':market+' first exceeds the published '+usd(total)+' stressed capacity at a '+pct(d,0)+' sampled price fall.',
+    'Modeled instantaneous shock on the '+utc(Date.parse(DATA.generated_at))+' book. '+(curveLogY?'Log axis: equal vertical steps are ratios; zero values are omitted from lines and retained in the table.':'Linear value axis starts at zero. Neither line is a realized-loss estimate.'),
+    [['Liquidatable debt',''],['Past bad-debt LTV','context'],['Stressed capacity','capacity']]);
+  plot('chart-curve',traces,layout,['Price fall','Liquidatable debt','Past bad-debt LTV'],curve.map((p,i)=>[pct(p.drop,0),usd(y[i]),usd(bad[i])]));
 }
 
 function renderLiq(m) {
-  const since = liqRange === 'all' ? '' : new Date(Date.now() - RANGES[liqRange] * 864e5).toISOString().slice(0, 10);
-  const days = m.liquidations_daily.filter(d => d.day >= since);
-  const muted = css('--muted');
-  buttons('liq-range-buttons', Object.keys(RANGES), liqRange, k => { liqRange = k; renderLiq(DATA.markets[market]); });
-  const hover = days.map(d => usd(d.repaid_usd) + ' (' + num(d.n) + ' liquidations)');
-  const traces = [{ type: 'bar', x: days.map(d => d.day), y: days.map(d => d.repaid_usd), name: 'Repaid USD', marker: { color: css('--accent') }, customdata: hover, hovertemplate: '%{customdata}<extra></extra>' }];
-  // Each lived event is named at its largest day, when that day is in range.
-  const peaks = EVENTS.map(([name, lo, hi]) => [name, days.filter(d => d.day >= lo && d.day <= hi).sort((a, b) => b.repaid_usd - a.repaid_usd)[0]]).filter(([, d]) => d);
-  const layout = baseLayout({
-    xaxis: { type: 'date' },
-    yaxis: Object.assign({ title: 'Repaid USD' }, ticks(traces[0].y, usd, false)),
-    annotations: peaks.map(([name, d]) => ({ x: d.day, y: d.repaid_usd, text: name + ' ' + usd(d.repaid_usd), showarrow: true, arrowhead: 0, arrowcolor: muted, ax: 0, ay: -28, font: { size: 11, color: muted } })),
-  });
-  plot('chart-liq', traces, layout, ['Day', 'Repaid', 'Liquidations'], days.map((d, i) => [d.day, usd(d.repaid_usd), num(d.n)]));
+  const anchor=Date.parse(DATA.generated_at), since=liqRange==='all'?'':new Date(anchor-RANGES[liqRange]*864e5).toISOString().slice(0,10);
+  const days=m.liquidations_daily.filter(d=>d.day>=since&&d.day<=DATA.generated_at.slice(0,10));
+  buttons('liq-range-buttons',Object.keys(RANGES),liqRange,k=>{liqRange=k;renderLiq(DATA.markets[market]);});
+  const values=days.map(d=>d.repaid_usd), max=Math.max(...values,0), peak=values.indexOf(max), row=days[peak];
+  const traces=[{type:'bar',x:days.map(d=>d.day),y:values,name:'Repaid USD',marker:{color:values.map((_,i)=>i===peak?chartColor('blue'):chartColor('context'))},customdata:days.map(d=>usd(d.repaid_usd)+' · '+num(d.n)+' liquidations'),hovertemplate:'%{customdata}<extra></extra>'}];
+  const layout=baseLayout({showlegend:false,margin:{l:64,r:16,t:40,b:56},xaxis:{type:'date',nticks:PHONE?4:7},yaxis:Object.assign({title:'Daily repaid USD',range:[0,Math.max(max*1.2,1)]},ticks(values,usd,false)),
+    annotations:row&&max>0?[{x:row.day,y:max,text:usd(max),showarrow:false,yshift:14,font:{size:12,color:chartColor('ink')}}]:[]});
+  chartContext('chart-liq',row&&max>0?'Highest daily repayment in this view: '+usd(max)+' on '+row.day+' ('+num(row.n)+' liquidations).': 'No liquidation repayments are recorded in this view.',
+    'Observed liquidations · bars start at zero · range ends at the saved '+DATA.generated_at.slice(0,10)+' snapshot, not the current clock. Blue marks the highest day.');
+  plot('chart-liq',traces,layout,['Day','Repaid','Liquidations'],days.map(d=>[d.day,usd(d.repaid_usd),num(d.n)]));
 }
 
 // history.csv: utc_ts, market, then numbers; an empty cell is null.
@@ -291,25 +278,22 @@ async function loadHistory() {
 
 // Three small multiples for the selected market, one series each, as stacked subplots sharing the time axis.
 function renderTrend() {
-  const el = document.getElementById('chart-trend');
-  if (HIST == null) return;  // still loading
-  const rows = HIST.filter(r => r.market === market);
-  if (!rows.length) { el.textContent = 'not available'; return; }
-  const x = rows.map(r => r.utc_ts);
-  const series = [['book_ltv', 'Book LTV', v => pct(v), pctTicks], ['distance_to_capacity', 'Distance to capacity', v => v == null ? '> 70%' : pct(v, 0), pctTicks], ['liq_20', 'Liquidatable at -20%', usd, v => ticks(v, usd)]];
-  const traces = series.map(([k, name, f], i) => {
-    const y = rows.map(r => r[k]);
-    return { type: 'scatter', mode: 'lines+markers', x, y, name, yaxis: 'y' + (i ? i + 1 : ''), line: { color: css('--accent'), width: 2 }, marker: { size: 5 },
-      customdata: y.map(f), hovertemplate: '%{customdata}<extra>' + name + '</extra>' };
+  const el=document.getElementById('chart-trend');
+  if(HIST==null)return;
+  const rows=HIST.filter(r=>r.market===market).sort((a,b)=>Date.parse(a.utc_ts)-Date.parse(b.utc_ts));
+  if(!rows.length){el.textContent='No saved trend snapshots for this market.';return;}
+  const x=rows.map(r=>r.utc_ts), latest=rows.at(-1);
+  const series=[['book_ltv','Book LTV',v=>pct(v),pctTicks],['distance_to_capacity','Fall to capacity',v=>v==null?'>70%':pct(v,0),pctTicks],['liq_20','Liquidatable at 20% fall',usd,v=>ticks(v,usd)]];
+  const traces=series.map(([key,name,format],i)=>({type:'scatter',mode:'lines',x,y:rows.map(r=>r[key]),name,yaxis:'y'+(i?i+1:''),line:{color:chartColor('blue'),width:2.5},connectgaps:false,customdata:rows.map(r=>format(r[key])),hovertemplate:'%{customdata}<extra>'+name+'</extra>'}));
+  const layout=baseLayout({grid:{rows:3,columns:1,pattern:'coupled',ygap:.22},showlegend:false,margin:{l:68,r:16,t:40,b:56},xaxis:{type:'date',nticks:PHONE?3:6},annotations:[]});
+  series.forEach(([key,name,format,tk],i)=>{
+    const suffix=i?i+1:'';
+    layout['yaxis'+suffix]=axis(Object.assign({showgrid:true,rangemode:'tozero'},tk(traces[i].y.filter(v=>v!=null))));
+    layout.annotations.push({text:name+' · latest '+format(latest[key]),xref:'paper',x:0,yref:'y'+suffix+' domain',y:1,xanchor:'left',yanchor:'bottom',showarrow:false,font:{size:12,color:chartColor('ink')}});
   });
-  const layout = baseLayout({ grid: { rows: 3, columns: 1, pattern: 'coupled', ygap: 0.18 }, showlegend: false, xaxis: { type: 'date' }, annotations: [] });
-  series.forEach(([k, name, f, tk], i) => {  // each subplot is named above its top-left corner; a y-axis title would collide with the tick labels on a phone
-    const sfx = i ? i + 1 : '';
-    layout['yaxis' + sfx] = axis(Object.assign({ rangemode: 'tozero' }, tk(traces[i].y.filter(v => v != null))));
-    layout.annotations.push({ text: name, xref: 'paper', x: 0, yref: 'y' + sfx + ' domain', y: 1, xanchor: 'left', yanchor: 'bottom', showarrow: false, font: { size: 11, color: css('--muted') } });
-  });
-  plot(el, traces, layout, ['Time (UTC)', 'Book LTV', 'Distance to capacity', 'Liquidatable at -20%'],
-    rows.map((r, i) => [r.utc_ts.slice(0, 16).replace('T', ' '), traces[0].customdata[i], traces[1].customdata[i], traces[2].customdata[i]]));
+  chartContext(el,rows.length+' saved snapshots from '+rows[0].utc_ts.slice(0,10)+' to '+latest.utc_ts.slice(0,10)+'. Each panel has its own named units and zero-based value axis.',
+    'Observed book with modeled threshold/liquidatable amounts. Gaps in the threshold line mean no crossing through the sampled 70% fall; they are not zero. Panels share time, not value units.');
+  plot(el,traces,layout,['Time (UTC)','Book LTV','Fall to capacity','Liquidatable at 20% fall'],rows.map((r,i)=>[r.utc_ts.slice(0,16).replace('T',' '),...traces.map(t=>t.customdata[i])]));
 }
 
 function renderBorrowers(m) {
@@ -389,29 +373,55 @@ function pickCap(rows) {
   return rows.find(r => r.cap === 0.75) || rows.find(r => r.cap === 0.60) || null;
 }
 
-function renderHeatmap(el, bt, mkt, scenario) {
-  const z = LLTVS.map(l => WINDOWS.map(w => {
-    const r = pickCap(btRows(bt, { market: mkt, window: w, lltv: l, scenario, cex_cap_usd: bt.cexCap }));
-    return r ? badDebt(r) : null;
-  }));
-  heat(el, LLTVS.map(l => pct(l, l === 0.625 ? 1 : 0)), WINDOWS, z);
+const PATH_LABELS={Mar2020:'Mar 2020',May2021:'May 2021',FTX2022:'FTX 2022',Aug2024:'Aug 2024',Oct2025:'Oct 2025',Feb2026:'Feb 2026',Jun2026:'Jun 2026'};
+function chartScaleMax(bt,mkt) {
+  return Math.max(1,...btRows(bt,{market:mkt}).filter(r=>r.cap===(r.lltv<.75?.60:.75)).map(badDebt));
 }
-
-function renderCapital(el, bt) {
-  const rows = btRows(bt, { market: 'cbBTC', window: 'Mar2020', scenario: 'AB', cap: 0.75 });
-  const caps = [...new Set(rows.map(r => r.cex_cap_usd))].sort((a, b) => a - b);
-  const lltvs = LLTVS.filter(l => rows.some(r => r.lltv === l));
-  const z = lltvs.map(l => caps.map(c => { const r = rows.find(r => r.lltv === l && r.cex_cap_usd === c); return r ? badDebt(r) : null; }));
-  heat(el, lltvs.map(l => pct(l, 0)), caps.map(c => c === Infinity ? 'unlimited' : (c / bt.cexCap).toFixed(0) + 'x'), z, 'Liquidator daily capital, multiple of ' + usd(bt.cexCap));
+function replaySource(bt,mkt,scenario) {
+  return mkt+' · saved book '+bt.latest_book+' · scenario '+scenario+' · '+btMetric+'. Estimates from historical replays, not forecasts.';
 }
-
-function renderWarn(el, bt, mkt) {
-  const y = WINDOWS.map(w => { const r = pickCap(btRows(bt, { market: mkt, window: w, lltv: 0.86, scenario: 'AB', cex_cap_usd: bt.cexCap })); return r ? r.warn_minutes_p50 : null; });
-  const text = y.map(dur);
-  const traces = [{ type: 'bar', x: WINDOWS, y: y.map(v => v == null ? null : v / 60), text, textposition: 'outside', name: 'Warning time p50',
-    marker: { color: css('--accent') }, cliponaxis: false, hovertemplate: '%{text}<extra></extra>' }];
-  const layout = baseLayout({ showlegend: false, hovermode: 'closest', xaxis: { type: 'category' }, yaxis: { title: 'Hours', rangemode: 'tozero' } });
-  plot(el, traces, layout, ['Path', 'Warning time (median)'], WINDOWS.map((w, i) => [w, text[i]]));
+function renderHeatmap(el,bt,mkt,scenario) {
+  const z=LLTVS.map(l=>WINDOWS.map(w=>{const r=pickCap(btRows(bt,{market:mkt,window:w,lltv:l,scenario,cex_cap_usd:bt.cexCap}));return r?badDebt(r):null;}));
+  const values=z.flat().filter(v=>v!=null), max=values.length?Math.max(...values):null;
+  const node=document.getElementById(el);
+  const title=node.closest('.fig')?.querySelector('h3');
+  if(title) {
+    if(max==null) title.textContent='No matching '+btMetric.toLowerCase()+' replays';
+    else if(max===0) title.textContent='Every available replay shows $0 '+btMetric.toLowerCase();
+    else {
+      const row=z.findIndex(values=>values.includes(max)), col=z[row].indexOf(max);
+      const path=PATH_LABELS[WINDOWS[col]].replace(/^Mar /,'March ');
+      title.textContent=path+': largest '+btMetric.toLowerCase()+' is '+usd(max)+' at '+pct(LLTVS[row],LLTVS[row]===.625?1:0)+' LLTV';
+    }
+  }
+  chartContext(el,max==null?'No matching replay runs for this market and scenario.':max===0?'Every available cell is a modeled zero for this measure. Missing runs remain labeled Not run.':'Largest displayed '+btMetric.toLowerCase()+': '+usd(max)+'. Compare the printed values; the blue scale stays fixed when this market’s scenario changes.',replaySource(bt,mkt,scenario));
+  heat(el,LLTVS.map(l=>pct(l,l===.625?1:0)),WINDOWS.map(w=>PATH_LABELS[w]),z,'Historical crash path',chartScaleMax(bt,mkt));
+}
+function renderCapital(el,bt,mkt='cbBTC') {
+  const cap=(DATA?.markets[mkt]?.state.lltv??.86)<.75?.60:.75;
+  const rows=btRows(bt,{market:mkt,window:'Mar2020',scenario:'AB',cap});
+  const caps=[...new Set(rows.map(r=>r.cex_cap_usd))].sort((a,b)=>a-b);
+  const lltvs=LLTVS.filter(l=>rows.some(r=>r.lltv===l));
+  const z=lltvs.map(l=>caps.map(c=>{const r=rows.find(r=>r.lltv===l&&r.cex_cap_usd===c);return r?badDebt(r):null;}));
+  const labels=caps.map(c=>c===Infinity?'Unlimited':(c/bt.cexCap).toFixed(2).replace(/\.?0+$/,'')+'×');
+  chartContext(el,rows.length?'Compare '+btMetric.toLowerCase()+' as daily exchange-liquidator capital changes. Each capital level is a category, including the hypothetical unlimited case.':'No capital-sensitivity replay is available for this selected market.',
+    replaySource(bt,mkt,'AB')+' One multiple is '+usd(bt.cexCap)+' per day; colors share the crash-grid scale.');
+  heat(el,lltvs.map(l=>pct(l,l===.625?1:0)),labels,z,'Daily capital · 1× = '+usd(bt.cexCap),chartScaleMax(bt,mkt));
+}
+function renderWarn(el,bt,mkt) {
+  const rows=WINDOWS.map(w=>pickCap(btRows(bt,{market:mkt,window:w,lltv:DATA?.markets[mkt]?.state.lltv??.86,scenario:'AB',cex_cap_usd:bt.cexCap})));
+  const minutes=rows.map(r=>r?r.warn_minutes_p50:null), present=minutes.filter(v=>v!=null);
+  const min=present.length?Math.min(...present):null, max=Math.max(...present,0)/60;
+  const text=rows.map((r,i)=>!r?'Not run':minutes[i]==null?'No median':dur(minutes[i]));
+  const traces=[{type:'bar',orientation:'h',x:minutes.map(v=>v==null?null:v/60),y:WINDOWS.map(w=>PATH_LABELS[w]),name:'Median warning',text,textposition:'outside',textfont:{size:12,color:chartColor('ink')},marker:{color:minutes.map(v=>v===min?chartColor('blue'):chartColor('context'))},cliponaxis:false,hovertemplate:'%{text}<extra></extra>'}];
+  const annotations=minutes.flatMap((v,i)=>v==null?[{x:0,y:PATH_LABELS[WINDOWS[i]],text:text[i],xanchor:'left',xshift:4,showarrow:false,font:{size:12,color:chartColor('secondary')}}]:[]);
+  const layout=baseLayout({showlegend:false,hovermode:'closest',margin:{l:82,r:76,t:20,b:56},xaxis:{title:'Hours · linear scale from zero',range:[0,Math.max(max*1.18,1)],showgrid:true},yaxis:{type:'category',categoryorder:'array',categoryarray:WINDOWS.map(w=>PATH_LABELS[w]),autorange:'reversed',showgrid:false},annotations});
+  const shortest=minutes.findIndex(v=>v===min&&v!=null);
+  const title=document.getElementById(el).closest('.fig')?.querySelector('h3');
+  if(title) title.textContent=shortest<0?'No median warning estimate is available':PATH_LABELS[WINDOWS[shortest]].replace(/^Mar /,'March ')+': just '+dur(min)+' of median warning';
+  chartContext(el,shortest<0?'No median warning estimate is available for the selected market.':PATH_LABELS[WINDOWS[shortest]]+' gives the shortest available median warning: '+dur(min)+'. Blue identifies the shortest available warning, not the largest bar.',
+    mkt+' · replay book '+bt.latest_book+' · scenario AB. Warning medians cover positions that liquidate. No median = no defined median in a saved run; Not run = no matching replay.');
+  plot(el,traces,layout,['Path','Warning time (median)'],WINDOWS.map((w,i)=>[PATH_LABELS[w],text[i]]));
 }
 
 // The grid row for a market at today's terms: its live LLTV (0.86 without summary.json), scenario AB, max draw from pickCap.
@@ -432,14 +442,18 @@ function renderWorst(bt) {
   const cells_ = bt && lossCells(bt, 'cbBTC', 'Mar2020');
   if (!cells_) { el.innerHTML = ''; p.textContent = 'not available'; return; }
   cards(el, [['Loss by end of path', cells_[0]], ['Exposure at trough', cells_[1]], ['Loss if held a day at the low', cells_[2]]]);
-  p.innerHTML = "Today's cbBTC book replayed through March 2020 with liquidators selling on-chain and on exchanges (scenario AB): " +
+  p.innerHTML = 'The cbBTC book saved on ' + bt.latest_book + ' replayed through March 2020 with liquidators selling on-chain and on exchanges (scenario AB): ' +
     'what lenders lose by the end of the path, what sat underwater at the lowest print, and the loss if the low had held for a day. <a href="#stress">Stress test</a>';
 }
 
 // Six cells: the two paths that cost money, for the selected backtest market at today's terms.
 function renderSummary(bt) {
-  document.getElementById('bt-summary').innerHTML = '<tr><th>Path</th><th>Loss by end of path</th><th>Exposure at trough</th><th>Loss if held a day at the low</th></tr>' +
-    ['Mar2020', 'May2021'].map(w => '<tr><td>' + w + '</td>' + (lossCells(bt, btMarket, w) || ['-', '-', '-']).map(v => '<td>' + v + '</td>').join('') + '</tr>').join('');
+  const labels = ['Loss by end of path', 'Exposure at trough', 'Loss if held a day at the low'];
+  const rows = ['Mar2020', 'May2021'].map(w => [w, lossCells(bt, btMarket, w) || ['Not run', 'Not run', 'Not run']]);
+  document.getElementById('bt-summary').innerHTML = '<tr><th>Path</th>' + labels.map(l => '<th>' + l + '</th>').join('') + '</tr>' +
+    rows.map(([w, values]) => '<tr><th scope="row">' + w + '</th>' + values.map(v => '<td>' + v + '</td>').join('') + '</tr>').join('');
+  document.getElementById('bt-summary-mobile').innerHTML = rows.map(([w, values]) => '<article><h4>' + (w === 'Mar2020' ? 'March 2020' : 'May 2021') + '</h4><dl>' +
+    labels.map((label, i) => '<div><dt>' + label + '</dt><dd>' + values[i] + '</dd></div>').join('') + '</dl></article>').join('');
 }
 
 async function loadVaults() {
@@ -467,23 +481,29 @@ async function renderBacktest() {
   const bt = await loadBacktest();
   const note = document.getElementById('bt-note');
   renderWorst(bt);
-  renderVaults(await loadVaults(), bt);
+  renderBriefing();
+  renderConfidence(bt);
+  const vaults = await loadVaults();
+  renderVaults(vaults, bt);
   if (!bt) {
     ['bt-note', 'bt-generated-at', 'bt-summary', 'chart-heat', 'chart-capital', 'chart-warn'].forEach(id => document.getElementById(id).textContent = 'not available');
+    document.getElementById('bt-summary-mobile').textContent = 'Replay unavailable for this snapshot.';
     return;
   }
-  const [markets, alts] = split([...new Set(bt.runs.filter(r => bt.base(r)).map(r => r.market))]);
-  if (!markets.concat(alts).includes(btMarket)) btMarket = markets[0];
   const c = bt.calibrated || {};
   note.textContent = 'Grid rows at the fitted borrower response (' + pct(c.resp_share, 0) + ' within ' + c.react_min + ' min), depth multipliers DEX ' +
     bt.defaults.k_dex + ' / CEX ' + bt.defaults.k_cex + ', liquidator daily capital ' + usd(bt.cexCap) + '. Max draw 75%, or 60% where the LLTV is below 75%.';
   stamp(document.getElementById('bt-generated-at'), 'book as of ' + bt.latest_book + ', run ' + new Date(bt.generated_at * 1000).toISOString().slice(0, 16).replace('T', ' ') + ' UTC', bt.generated_at * 1000);
-  buttons('bt-market-buttons', markets, btMarket, k => { btMarket = k; renderBacktest(); }, alts);
-  buttons('bt-scenario-buttons', ['A', 'AB', 'ABC'], btScenario, k => { btScenario = k; renderBacktest(); });
-  buttons('bt-metric-buttons', Object.keys(METRICS), btMetric, k => { btMetric = k; renderBacktest(); });
+  const [maj, alt] = split(Object.keys(DATA.markets));
+  buttons('bt-market-buttons', maj, btMarket, selectMarket, alt);
+  buttons('bt-scenario-buttons', ['A', 'AB', 'ABC'], btScenario, k => { btScenario = k; syncViewUrl(true); renderBacktest(); });
+  buttons('bt-metric-buttons', Object.keys(METRICS), btMetric, k => { btMetric = k; syncViewUrl(true); renderBacktest(); });
   renderSummary(bt);
   renderHeatmap('chart-heat', bt, btMarket, btScenario);
-  renderCapital('chart-capital', bt);
+  renderCapital('chart-capital', bt, btMarket);
+  document.getElementById('capital-market').textContent = btMarket;
+  const lltv = DATA.markets[btMarket].state.lltv;
+  document.getElementById('warning-description').textContent = 'Median time between ' + pct(lltv - bt.defaults.warn_gap, 1) + ' and ' + pct(lltv, 1) + ' LTV for positions that were liquidated (scenario AB). A missing bar means no estimate is available.';
   renderWarn('chart-warn', bt, btMarket);
 }
 
@@ -543,13 +563,27 @@ function worstText(r, mkt, bt) {
     (cells ? ' <span class="muted">Whole market on that path (scenario AB): loss by end of path ' + cells[0] + '; supply left unserved at the low, a separate measure, ' + cells[1] + '.</span>' : '');
 }
 
+async function submitLoan(value) {
+  const button = document.querySelector('#check-form button');
+  button.disabled = true;
+  button.textContent = 'Checking…';
+  try { await checkLoan(value); }
+  finally { button.disabled = false; button.textContent = 'Check'; }
+}
+
 async function checkLoan(raw) {
   const out = document.getElementById('check-result'), addr = raw.trim();
   if (!/^0x[0-9a-fA-F]{40}$/.test(addr)) {
+    document.getElementById('check-address').setAttribute('aria-invalid', 'true');
+    document.getElementById('check-address').focus();
     out.innerHTML = '<p class="stale" role="alert">That is not a Base address: it should be 0x followed by 40 hex characters.</p>';
     return;
   }
-  history.replaceState(null, '', '?address=' + addr + location.hash);
+  document.getElementById('check-address').removeAttribute('aria-invalid');
+  const url = new URL(location.href);
+  url.searchParams.set('address', addr);
+  history.replaceState(null, '', url);
+  syncViewUrl();
   out.innerHTML = '<p class="muted">Asking Morpho…</p>';
   const known = knownMarkets();
   if (!Object.keys(known).length) {  // a summary.json from before market ids were published: an empty filter would match every market
@@ -558,7 +592,7 @@ async function checkLoan(raw) {
   }
   let items;
   try {
-    const r = await fetch(MORPHO_API, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    const r = await fetch(MORPHO_API, { method: 'POST', signal: AbortSignal.timeout(15000), headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ query: POSITIONS_Q, variables: { u: [addr.toLowerCase()], m: Object.keys(known) } }) });
     const j = await r.json();
     if (j.errors) throw new Error(j.errors[0].message);
@@ -577,7 +611,7 @@ async function checkLoan(raw) {
     const id = p.market.marketId.toLowerCase(), mkt = DATA.markets[known[id]] ? known[id] : null;
     return [p, known[id], mkt, loanRisk(p, mkt && DATA.markets[mkt].crash_drops)];
   }).sort((x, y) => y[3].debt - x[3].debt);
-  out.innerHTML = '<p>' + rows.length + ' position' + (rows.length > 1 ? 's' : '') + ' for ' + link(addr) + ', live from Morpho.</p><div class="scroll-x"><table id="check-table">' +
+  out.innerHTML = '<p>' + rows.length + ' position' + (rows.length > 1 ? 's' : '') + ' for ' + link(addr) + ', live from Morpho.</p><div class="scroll-x" tabindex="0" role="region" aria-label="Loan positions"><table id="check-table">' +
     '<tr><th>Market</th><th>Debt</th><th>Collateral</th><th>LTV / LLTV</th><th>Liquidation price</th><th>Buffer</th></tr>' +
     rows.map(([p, name, mkt, r]) => {
       const sym = esc(p.market.collateralAsset.symbol);
@@ -594,7 +628,7 @@ async function checkLoan(raw) {
 
 function renderBase() {
   const bm = DATA.base_markets, stat = document.getElementById('base-stat');
-  if (!bm) { stat.textContent = 'Not available yet: the next refresh adds this list.'; return; }
+  if (!bm) { stat.innerHTML = 'This snapshot does not include the wider Base market list. The nine Coinbase-linked markets remain available above. <a href="https://app.morpho.org" target="_blank" rel="noopener">Open Morpho’s market explorer</a>.'; return; }
   const listed = bm.markets.filter(m => m.listed), unlisted = bm.markets.filter(m => !m.listed);
   const sum = ms => ms.reduce((a, m) => a + m.borrow_usd, 0), ours = bm.markets.filter(m => m.tracked);
   stat.textContent = bm.markets.length + ' markets have more than ' + usd(bm.min_borrow_usd) + ' borrowed (' + usd(sum(bm.markets)) + '). Morpho lists ' + listed.length +
@@ -610,16 +644,52 @@ function renderBase() {
   document.getElementById('base-unlisted').innerHTML = '<tr><th>Market</th><th>LLTV</th><th>Borrowed</th><th>Utilization</th><th>Collateral value</th><th>Morpho warnings</th></tr>' +
     unlisted.map(m => '<tr><td>' + cell(m) + '</td><td>' + pct(m.lltv) + '</td><td>' + usd(m.borrow_usd) + '</td><td>' + pct(m.utilization) + '</td><td>' +
       (m.collateral_price_usd == null ? 'unpriced' : usd(m.collateral_usd)) + '</td><td class="wrap">' + esc(m.warnings.join(', ').replace(/_/g, ' ')) + '</td></tr>').join('');
-  document.querySelectorAll('#base-listed a[data-k]').forEach(a => a.onclick = () => { market = a.dataset.k; renderAll(); });
+  document.querySelectorAll('#base-listed a[data-k]').forEach(a => a.onclick = () => selectMarket(a.dataset.k));
+}
+
+// A single market is shared by the book, liquidation evidence, replays and suppliers.
+function readViewUrl() {
+  const q = new URLSearchParams(location.search);
+  readWorkspaceUrl(q);
+  const key = q.get('market') || location.hash.slice(1);
+  market = Object.hasOwn(DATA.markets, key) ? key : 'cbBTC';
+  btMarket = market;
+  btScenario = ['A', 'AB', 'ABC'].includes(q.get('scenario')) ? q.get('scenario') : 'AB';
+  btMetric = Object.hasOwn(METRICS, q.get('metric')) ? q.get('metric') : 'Loss by end of path';
+}
+
+function syncViewUrl(push = false) {
+  const url = new URL(location.href);
+  url.searchParams.set('market', market);
+  url.searchParams.set('scenario', btScenario);
+  url.searchParams.set('metric', btMetric);
+  writeWorkspaceUrl(url);
+  if (url.href !== location.href) history[push ? 'pushState' : 'replaceState'](null, '', url);
+  const share = document.getElementById('share-market');
+  if (share) { url.hash = 'now'; share.href = url.href; }
+}
+
+function selectMarket(key) {
+  market = key;
+  btMarket = key;
+  syncViewUrl(true);
+  renderAll();
+  renderBacktest();
 }
 
 function renderAll() {
   const m = DATA.markets[market];
   renderButtons();
+  renderBriefing();
+  renderDailyChanges();
+  renderWorkspace();
+  document.querySelectorAll('[data-selected-market]').forEach(el => el.textContent = market);
+  document.getElementById('selected-market').value = market;
   renderGauges();
   renderCards(m);
   renderLtv(m);
   renderCurve(m);
+  document.getElementById('capacity-reconciliation').textContent = capacityExplanation(m);
   renderLiq(m);
   renderTrend();
   renderBorrowers(m);
@@ -635,24 +705,32 @@ async function main() {
   }
   if (!document.getElementById('totals')) return;  // writeup.html: the data age and stale banner; its own script draws the backtest figures
   if (PHONE) document.querySelectorAll('details.fold').forEach(d => d.open = false);  // tables fold on phones
-  if (!DATA) { document.getElementById('data-age').textContent = 'not available'; return; }
-  if (DATA.markets[location.hash.slice(1)]) market = location.hash.slice(1);  // #cbXRP deep link
+  if (!DATA) { renderPrimaryFailure(); return; }
+  readViewUrl();
+  document.getElementById('selected-market').innerHTML = Object.keys(DATA.markets).map(k => '<option>' + k + '</option>').join('');
+  document.getElementById('selected-market').onchange = e => selectMarket(e.target.value);
+  window.addEventListener('popstate', () => { readViewUrl(); renderAll(); renderBacktest(); });
+  window.addEventListener('hashchange', () => { if (Object.hasOwn(DATA.markets, location.hash.slice(1))) selectMarket(location.hash.slice(1)); });
+  document.getElementById('now-evidence').open = false;
   if (!DATA.markets[market]) market = Object.keys(DATA.markets)[0];
+  btMarket = market;
+  syncViewUrl();
   document.getElementById('cb-only').onchange = e => { cbOnly = e.target.checked; renderAll(); };
   document.getElementById('log-y').onchange = e => { logY = e.target.checked; renderLtv(DATA.markets[market]); };
   document.getElementById('log-y-curve').onchange = e => { curveLogY = e.target.checked; renderCurve(DATA.markets[market]); };
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { renderAll(); renderBacktest(); });
+  initWorkspace();
   renderHeader();
   renderAll();
   renderBacktest();
   renderLeaderboard();
   renderBase();
   const form = document.getElementById('check-form'), input = document.getElementById('check-address');
-  form.onsubmit = e => { e.preventDefault(); checkLoan(input.value); };
+  form.onsubmit = async e => { e.preventDefault(); await submitLoan(input.value); };
   const q = new URLSearchParams(location.search).get('address');  // ?address=0x… deep link, also what a check writes back to the URL
-  if (q) { input.value = q; checkLoan(q); }
-  loadHistory().then(h => { HIST = h; renderTrend(); });
-  if (DATA.markets[location.hash.slice(1)]) document.getElementById('book').scrollIntoView();  // the market anchor has no element of its own
+  if (q) { input.value = q; submitLoan(q); }
+  loadHistory().then(h => { HIST = h; renderTrend(); renderDailyChanges(); });
+  if (Object.hasOwn(DATA.markets, location.hash.slice(1))) document.getElementById('book').scrollIntoView();  // the market anchor has no element of its own
 }
 
 main();
