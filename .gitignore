@@ -7,3 +7,6 @@ data/positions_*.json
 data/base_markets.json
 .vercel
 .env*
+tools/uiloop/node_modules
+
+.artifacts/

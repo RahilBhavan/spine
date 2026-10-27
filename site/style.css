@@ -1,14 +1,14 @@
 :root {
   --bg: #ffffff;
   --fg: #1a1a1a;
-  --muted: #6b7280;
+  --muted: #69707d;
   --card: #f5f6f8;
   --border: #e3e5e8;
   --accent: #0052ff;
   --grid: #e9ebee;
   --danger: #d0342c;
-  --warn: #c77700;
-  --ok: #1f8a4c;
+  --warn: #a16000;
+  --ok: #1c7e45;
   --accent2: #d9480f;
   --band: rgba(0, 82, 255, 0.08);
   --shade: rgba(107, 114, 128, 0.14);
@@ -50,6 +50,7 @@ h1 { font-size: 1.75rem; margin: 24px 0 8px; }
 h2 { font-size: 1.25rem; margin: 0 0 8px; }
 h3 { font-size: 1rem; margin: 24px 0 8px; }
 p { margin: 4px 0 8px; }
+p:not(.banner), dd { max-width: 72ch; }  /* a readable measure; tables and charts keep the full width */
 .lede { margin: 0 0 16px; }
 .muted { color: var(--muted); font-size: 0.875rem; }
 .stale { color: var(--danger); }
@@ -59,7 +60,7 @@ a:hover { text-decoration: underline; }
 abbr[title] { text-decoration: underline dotted; cursor: help; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-details > summary { cursor: pointer; color: var(--accent); }
+details > summary { cursor: pointer; color: var(--accent); padding: 2px 0; }  /* 24px tap target (WCAG 2.5.8) */
 #glossary { margin: 8px 0 16px; }
 #glossary dl { margin: 8px 0 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; font-size: 0.875rem; }
 #glossary dt { font-weight: 600; }
@@ -93,7 +94,16 @@ section:first-child { border-top: 0; }
 #distance-list a { color: inherit; display: block; }
 #distance-list ol { list-style: none; margin: 0; padding: 0; }
 #distance-list b { font-variant-numeric: tabular-nums; }
-@media (max-width: 700px) { .tiles { grid-template-columns: 1fr; } }
+@media (max-width: 700px) {  /* phones: a tighter header and tiles bring the three answers up the first screen */
+  h1 { font-size: 1.375rem; margin: 16px 0 4px; }
+  .tiles { grid-template-columns: 1fr; gap: 12px; }
+  .tile { padding: 12px; }
+  #now .lede { display: none; }  /* the three tiles name themselves; desktop keeps the sentence */
+  .hero { font-size: 2rem; }
+  nav.sections a { padding: 10px 0; }
+  #glossary { margin: 4px 0 8px; }
+  #now { padding-top: 16px; }
+}
 
 .cards { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
 .card {
@@ -121,7 +131,7 @@ section:first-child { border-top: 0; }
 .buttons button.active { background: var(--accent); color: var(--bg); border-color: var(--accent); }
 .buttons details { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .buttons details[open] summary { margin-right: 8px; }
-.toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.toggle { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; min-height: 24px; }
 
 .fig h3 { margin-top: 24px; }
 .chart { width: 100%; height: 380px; }
@@ -155,7 +165,7 @@ th:first-child, td:first-child { text-align: left; }
   color: var(--bg);
   border-radius: 4px;
   padding: 0 6px;
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   margin-left: 6px;
 }
 footer { margin-top: 24px; border-top: 1px solid var(--border); padding-top: 16px; }
@@ -179,4 +189,31 @@ td.wrap { white-space: normal; min-width: 240px; text-align: left; }
   #check-table tr:not(.sub) > :nth-child(3), #check-table tr:not(.sub) > :nth-child(4) { display: none; }
   #check-table th, #check-table td { white-space: normal; }
   td.wrap { min-width: 0; }
+}
+
+/* Risk briefing: answer rows first, with the established Spine type and color roles. */
+h1 .muted { display: inline-block; font-size: 0.65em; font-weight: 400; }
+.investigate { gap: 8px; margin: 12px 0 4px; }
+.investigate select { background: var(--bg); color: var(--fg); border: 1px solid var(--border); border-radius: 4px; padding: 6px 8px; font: inherit; }
+.investigate a { margin-left: auto; padding: 6px 0; }
+.briefing-rows { margin: 16px 0 8px; }
+.briefing-rows > div { display: grid; grid-template-columns: 1fr 1.7fr; gap: 16px; padding: 12px 0; border-top: 1px solid var(--border); }
+.briefing-rows dt { color: var(--muted); font-size: 0.875rem; }
+.briefing-rows dd { margin: 0; }
+.briefing-rows strong { font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.briefing-rows a { display: block; font-size: 0.875rem; padding: 4px 0; }
+.brief-exposure { display: block; font-size: 0.875rem; }
+.briefing-date { margin-bottom: 12px; }
+#now-evidence > summary { margin-bottom: 12px; }
+#daily-changes h3 { margin-top: 24px; }
+.model-note { border-left: 3px solid var(--accent); padding: 4px 0 4px 12px; margin: 16px 0; font-size: 0.875rem; }
+@media (max-width: 700px) {
+  .briefing-rows > div { grid-template-columns: 1fr; gap: 2px; padding: 8px 0; }
+  .briefing-rows strong { font-size: 1.375rem; }
+  #selection-note { margin-bottom: 8px; }
+}
+@media (max-width: 700px) {
+  #daily-changes table { table-layout: fixed; }
+  #daily-changes th, #daily-changes td { white-space: normal; padding: 6px 4px; font-size: 0.8125rem; }
+  #daily-changes th:first-child { width: 32%; }
 }
