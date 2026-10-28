@@ -60,7 +60,7 @@ uv sync --extra dev
 .venv/bin/python -m pytest -q tests
 ```
 
-Observed on 2026-10-25: `26 passed`. `uv.lock` pins the dependencies. The tests run against the frozen snapshot in `data/`, with no network.
+Observed on 2026-10-28: `29 passed`. `uv.lock` pins the dependencies. The tests run against the frozen snapshot in `data/`, with no network.
 
 Rebuild the dashboard data. The positions files are not committed, so run `fetch_positions` first on a fresh clone. These commands overwrite files in `data/`.
 
