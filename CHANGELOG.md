@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased (offline what-if)
+
+- `spine/whatif.py`: `python -m spine.whatif --market cbBTC --book 2026-06-01 --path Mar2020 --lltv 0.80 --capital-multiple 3` replays a committed rebuilt book (`data/book_*.json`) on a crash path or a real event path with no network or keys. It prints `underwater_unserved_at_trough` and `realized_loss` separately with the book, path and parameters, and reports whether a default run matches the stored `data/backtest.json` row. `--bench` times the stress-grid cells; `--list` shows valid names. No model code changed.
+
 ## Unreleased (refresh reliability)
 
 - `fetch_positions` pages by borrow shares instead of health factor. Health factor moves with the oracle, so a price move during the minute-long cbBTC walk let positions slip behind the cursor; 7 of the scheduled refreshes since 2026-10-02 failed on the count check (gaps of 1 to 560 positions). After three walks a gap of up to 2 positions (`CHURN`) is accepted as live churn.

@@ -157,6 +157,10 @@ Why both end loss and trough exposure: historical prices often bounce before a q
 
 The bottom half of the module is experiment orchestration. Runs have parameter keys, existing keys are skipped, and results append within a time budget. `grid`, `sens`, and `calib` serve different purposes: headline comparison, assumption sensitivity, and lived-event validation.
 
+### `whatif.py`: the offline what-if
+
+Replays one committed rebuilt book (`data/book_<market>_<date>.json`) through `backtest.run` for a crash path (reshaped, as in `stress_grid.py`) or an `event:` path (the real price path, as in calibration), with `--lltv`, `--cap` and `--capital-multiple` set by the caller. It never reads `positions_*.json`. For an event replay at the default parameters it compares the result with the stored `data/backtest.json` calibration row and reports `reproduced` or `differs`. `--bench` times the stress-grid cells. `tests/test_whatif.py` holds the reproduction check.
+
 ### `summarize.py`: the presentation boundary
 
 The browser should not load tens of thousands of raw positions. This module reduces them to:

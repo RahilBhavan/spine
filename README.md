@@ -44,7 +44,7 @@ Recommended parameters, from [WRITEUP.md](WRITEUP.md):
 - Fetchers in `spine/` (`fetch_positions`, `fetch_liquidations`, `tag_coinbase`, `fetch_prices`, `fetch_depth`, `fetch_vaults`, `fetch_markets`, `fetch_oracle`) read the Morpho API, Base RPC, Coinbase Exchange and Chainlink logs. They use only the standard library.
 - `spine/summarize.py` writes `data/summary.json`. `site/index.html`, `site/charts.js` and `site/app.js` render it with no build step. The page's loan check reads one address's positions from Morpho's public API in the visitor's browser.
 - `spine/calibrate.py` measures liquidator latency, bonus and throughput on the real events. `spine/rebuild_book.py` rebuilds historical books from on-chain events.
-- `spine/backtest.py` (numpy) replays books through the crash paths with fitted borrower response and liquidator capacity. `spine/writeup_tables.py` prints the tables in `WRITEUP.md`. `spine/stress_grid.py` writes the crash path x LLTV x liquidator capital grid to `data/stress_grid.csv`.
+- `spine/backtest.py` (numpy) replays books through the crash paths with fitted borrower response and liquidator capacity. `spine/writeup_tables.py` prints the tables in `WRITEUP.md`. `spine/stress_grid.py` writes the crash path x LLTV x liquidator capital grid to `data/stress_grid.csv`. `spine/whatif.py` runs one cell of that kind offline on a committed book.
 - `.github/workflows/refresh.yml` is scheduled hourly (GitHub runs it best-effort). It refreshes the data, advances the backtest, publishes to the `data` branch and GitHub Pages, and runs `spine/alert.py`. The alert opens a GitHub issue when any market is within 10% of its liquidation capacity. Vercel serves the `data` branch at the live URL.
 
 [CODEBASE_GUIDE.md](CODEBASE_GUIDE.md) explains the architecture module by module.
@@ -60,7 +60,7 @@ uv sync --extra dev
 .venv/bin/python -m pytest -q tests
 ```
 
-Observed on 2026-10-25: `26 passed`. `uv.lock` pins the dependencies. The tests run against the frozen snapshot in `data/`, with no network.
+Observed on 2026-10-29: `52 passed`. `uv.lock` pins the dependencies. The tests run against the frozen snapshot in `data/`, with no network.
 
 Rebuild the dashboard data. The positions files are not committed, so run `fetch_positions` first on a fresh clone. These commands overwrite files in `data/`.
 
@@ -86,9 +86,25 @@ Run the stress-test pipeline. It is slow. `fetch_oracle`, `calibrate`, `rebuild_
 .venv/bin/python -m spine.backtest grid --market cbBTC
 ```
 
+Stress-test a Morpho market offline. `spine/whatif.py` replays a committed rebuilt loan book (`data/book_<market>_<date>.json`) through a crash path with your own LLTV and liquidator capital. It reads only committed files (`data/prices/`, `data/depth.json`, `data/backtest.json`'s calibrated fit), never the gitignored `positions_*.json`, and needs no network or keys.
+
+```bash
+.venv/bin/python -m spine.whatif --list    # committed books and the paths valid for each
+.venv/bin/python -m spine.whatif --market cbBTC --book 2026-06-01 --path Mar2020 --lltv 0.80 --capital-multiple 3
+.venv/bin/python -m spine.whatif --market cbBTC --book 2026-06-01 --path event:Jun2026a   # the real Jun 2026 path; defaults repeat a stored calibration run
+.venv/bin/python -m spine.whatif --market cbBTC --book 2026-06-01 --bench --repeats 3     # time the 140 stress-grid cells on this book
+```
+
+- **Output.** The command names the book, path and every parameter, then prints `underwater_unserved_at_trough` and `realized_loss` on separate lines. They are taken at different moments and are not added. Percentages are of the book's debt, not of market supply.
+- **Paths.** A crash path (`Mar2020`, `May2021`, `FTX2022`, `Aug2024`, `Oct2025`, `Feb2026`, `Jun2026`) rescales the pre-trough peak-to-recovery shape onto the book's price and re-draws the book under `--lltv` and `--cap`, as `spine.stress_grid` does. An `event:<name>` path replays the book on the real price path that followed it; the book is not reshaped, so `--cap` does not apply.
+- **Defaults.** The market's LLTV and max draw, observed liquidator capital (`--capital-multiple 1`, about $101.1M a day) and the calibrated borrower-response fit in `data/backtest.json`. `--scenario`, `--resp-share` and `--react-min` override the model; `--capital-multiple inf` removes the capital limit.
+- **Check against stored runs.** With the defaults, an `event:` replay repeats a calibration run in `data/backtest.json`, and the command says `reproduced` or `differs`. `tests/test_whatif.py` enforces this for all ten stored events: nine reproduce exactly; `event:Feb2026` on the cbBTC book differs on `liquidated_usd` because stored runs used the depth snapshot of the hour they ran in, which is not kept. Crash-path rows in `data/stress_grid.csv` and the crash-path rows in `data/backtest.json` were run on the uncommitted live book, so they cannot be reproduced from a fresh clone. A crash-path what-if on a committed book has no stored row, and the command says so.
+- **Bad names.** An unknown market, book or path exits with an error that lists the valid choices.
+- **Runtime.** `--bench` times `backtest.run` (reshape, capacity and `simulate`) over the stress grid's cells: 7 crash paths x 4 LLTV/cap pairs x 5 capital levels = 140 on the cbBTC 2026-06-01 book (30,216 positions). Measured on 2026-10-29 with a machine load average near 90 on 32 CPUs: 30.6 s per pass, 218 ms mean per cell (median 204 ms, 70 to 521 ms). Rerun it for your own figure.
+
 ## Repository layout
 
-- `spine/`: fetchers, summarizer, calibration, book rebuild, backtest, alert and writeup renderer.
+- `spine/`: fetchers, summarizer, calibration, book rebuild, backtest, offline what-if (`whatif.py`), alert and writeup renderer.
 - `tests/`: pytest checks for the summarizer, backtest, alert and committed data.
 - `data/`: one frozen snapshot of the generated data, so a fresh clone renders and tests pass. The `data` branch holds the latest.
 - `site/`: the static dashboard and `writeup.html`, rendered from `WRITEUP.md`.
