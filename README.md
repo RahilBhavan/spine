@@ -1,6 +1,6 @@
 # Spine: liquidator capital, not the LLTV, binds when Coinbase's Morpho loan book meets a fast crash
 
-[![ci](https://github.com/RahilBhavan/spine/actions/workflows/ci.yml/badge.svg)](https://github.com/RahilBhavan/spine/actions/workflows/ci.yml)
+[![tests](https://img.shields.io/github/actions/workflow/status/RahilBhavan/spine/ci.yml?branch=main&label=tests)](https://github.com/RahilBhavan/spine/actions/workflows/ci.yml)
 [![refresh](https://github.com/RahilBhavan/spine/actions/workflows/refresh.yml/badge.svg)](https://github.com/RahilBhavan/spine/actions/workflows/refresh.yml)
 [![license: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -60,7 +60,7 @@ uv sync --extra dev
 .venv/bin/python -m pytest -q tests
 ```
 
-Observed on 2026-10-25: `26 passed`. `uv.lock` pins the dependencies. The tests run against the frozen snapshot in `data/`, with no network.
+The `tests` badge at the top shows the latest result of this command in CI on `main`. `uv.lock` pins the dependencies. The tests run against the frozen snapshot in `data/`, with no network.
 
 Rebuild the dashboard data. The positions files are not committed, so run `fetch_positions` first on a fresh clone. These commands overwrite files in `data/`.
 
@@ -85,6 +85,23 @@ Run the stress-test pipeline. It is slow. `fetch_oracle`, `calibrate`, `rebuild_
 .venv/bin/python -m spine.backtest calib
 .venv/bin/python -m spine.backtest grid --market cbBTC
 ```
+
+## How this was built
+
+<!-- DRAFT: drafted by an AI agent from the git history and the repo's own docs. Needs Rahil's confirmation before merge. -->
+
+*Draft, pending Rahil's confirmation.*
+
+AI coding agents wrote much of this repository. 80 of the 86 commits not made by the refresh bot carry a `Co-Authored-By: Claude` trailer (Opus 5, Opus 5.5 and Sonnet 5.5 appear in the trailers), and the history includes merges of agent worktree branches. The 43 `spine-bot` commits are hourly data snapshots, not code.
+
+What the repository itself records about the human side:
+
+- Every non-bot commit is under Rahil's git identity, and the roadmap leaves decisions such as posting the outreach drafts to "the owner's call".
+- The blue graph palette is recorded as the user's explicit choice in [DESIGN.md](DESIGN.md) and [docs/graph-review.md](docs/graph-review.md).
+- The review rules in [CONTRIBUTING.md](CONTRIBUTING.md) require each pull request to paste its acceptance-check output.
+- No human reader study has been done. The UI reader checks in [tools/uiloop/LOG.md](tools/uiloop/LOG.md) were done by an agent, and the repo says so.
+
+Rahil to fill in before this ships: which parts of the question, the model, the data choices and the numbers he designed himself, and which results he re-derived or checked by hand. Until then, treat the numbers as agent-produced and script-checked (`pytest`, the `--check` runs and the tables printed from `data/`), not as independently verified by a person.
 
 ## Repository layout
 
