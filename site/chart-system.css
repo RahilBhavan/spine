@@ -1,0 +1,39 @@
+/* Spine graph system. Explicit user override: blue replaces public-system yellow. */
+:root {
+  --chart-bg:#ffffff;
+  --chart-ink:#1a1a1a;
+  --chart-secondary:#566171;
+  --chart-context:#708094;
+  --chart-grid:#e3e8ee;
+  --chart-blue:#0052ff;
+  --chart-tint:#e8efff;
+  --chart-label-dark:#000000;
+  --chart-label-light:#ffffff;
+}
+.chart { background:var(--chart-bg); color:var(--chart-ink); border-radius:4px; }
+.chart[hidden] { display:none; }
+.chart-summary { color:var(--fg); font-size:14px; margin:12px 0 8px; max-width:68ch; }
+.chart-source { color:var(--muted); font-size:12px; margin:8px 0 16px; max-width:72ch; }
+.chart-key { list-style:none; display:flex; flex-wrap:wrap; gap:8px 20px; padding:0; margin:12px 0 8px; }
+.chart-key li { display:flex; align-items:center; gap:8px; font-size:12px; }
+.chart-key .key-mark { display:inline-block; width:24px; border-top:3px solid var(--chart-blue); flex:none; }
+.chart-key .context { border-color:var(--chart-secondary); border-top-style:dashed; }
+.chart-key .capacity { border-color:var(--chart-ink); border-top-style:dotted; }
+.chart-scale { display:flex; flex-wrap:wrap; align-items:center; gap:8px; font-size:12px; color:var(--muted); margin:8px 0; }
+.chart-scale .scale-ramp { display:inline-block; width:96px; height:12px; background:linear-gradient(90deg,var(--chart-bg),var(--chart-blue)); border:1px solid var(--chart-secondary); }
+.table-toggle { min-height:32px; }
+.chart-data { overflow-x:auto; margin-bottom:16px; }
+.chart-data table { font-size:13px; }
+.chart-data caption { text-align:left; color:var(--muted); font-size:12px; padding:8px 0; }
+.chart-data:focus-visible { outline:2px solid var(--accent); outline-offset:3px; }
+@media(max-width:700px) {
+  .chart-summary { font-size:13px; }
+  .chart-source { font-size:12px; }
+  #chart-curve { height:380px; }
+  #chart-warn, #fig-warn { height:380px; }
+  .chart-key { gap:8px 16px; }
+}
+@media(forced-colors:active) {
+  .chart { forced-color-adjust:none; }
+  .chart-key .key-mark { border-color:CanvasText; }
+}
