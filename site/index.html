@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spine: Coinbase's on-chain loan book on Base</title>
+<meta name="description" content="Live risk dashboard for the Morpho Blue loans behind Coinbase's app on Base: book size, distance to liquidator capacity, and crash replays.">
+<meta property="og:title" content="Spine: Coinbase's on-chain loan book on Base">
+<meta property="og:description" content="Live risk dashboard for the Morpho Blue loans behind Coinbase's app on Base: book size, distance to liquidator capacity, and crash replays.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://spine.rahilbhavan.com/site/">
+<meta property="og:image" content="https://spine.rahilbhavan.com/docs/social-card.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="canonical" href="https://spine.rahilbhavan.com/site/">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230f172a'/><text x='32' y='42' text-anchor='middle' font-family='Arial,sans-serif' font-size='28' font-weight='700' fill='%2338bdf8'>SP</text></svg>">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="workspace.css">
+<link rel="stylesheet" href="chart-system.css">
+<script src="theme.js"></script>
+<link rel="preconnect" href="https://cdn.jsdelivr.net">
+</head>
+<body class="dashboard">
+<a class="skip-link" href="#now">Skip to risk overview</a>
+<noscript><p class="banner">Spine needs JavaScript to load the market snapshots. <a href="../WRITEUP.md">Read the analysis</a> or <a href="../data/summary.json">download the source data</a>.</p></noscript>
+<header>
+  <h1>Spine <span class="muted">Coinbase’s on-chain loan book</span></h1>
+  <p class="header-description">Independent analysis of Coinbase’s Morpho loan markets on Base.</p>
+  <p class="snapshot-line muted">Snapshot <span id="data-age">loading</span></p>
+  <details id="glossary">
+    <summary>What the words mean</summary>
+    <dl>
+      <dt>LLTV</dt><dd>Liquidation loan-to-value: the debt-to-collateral ratio at which a position can be liquidated. 86% on cbBTC and WETH, 77% on cbETH, 62.5% on the alts.</dd>
+      <dt>Liquidation bonus</dt><dd>The discount a liquidator gets on the collateral it seizes, 4.38% at 86% LLTV. A lower LLTV comes with a larger bonus.</dd>
+      <dt>Bad-debt LTV</dt><dd>1 / (1 + bonus), about 95.8% at 86% LLTV. Above it the seized collateral no longer covers the debt plus the bonus, and lenders take the difference.</dd>
+      <dt>Health factor</dt><dd>LLTV divided by the position's LTV. Below 1.0 the position can be liquidated.</dd>
+      <dt>Capacity</dt><dd>How much collateral liquidators can sell within the bonus in one step: on-chain pools plus Coinbase bids, after the stress adjustments. The price-shock view shows the calculation used by the snapshot.</dd>
+      <dt>Scenarios A / AB / ABC</dt><dd>A: on-chain bots only. AB: plus liquidators selling on Coinbase and Kraken, limited by the capital they bring each day. ABC: plus Coinbase itself redeeming cbBTC 1:1, so depth is unlimited.</dd>
+      <dt>Book</dt><dd>Every open position in a market (or in all nine), marked at today's prices.</dd>
+      <dt>Stress multiplier</dt><dd>The fraction of today's measured depth assumed to survive a crash; the Stress test note prints the values in use.</dd>
+    </dl>
+  </details>
+</header>
+
+<nav class="sections" aria-label="Sections">
+  <a class="nav-brand" href="#now"><svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true"><path d="M5 5h14M5 12h14M5 19h14M12 5v14" fill="none" stroke="currentColor" stroke-width="2"/></svg> Spine</a>
+  <ul>
+    <li><a href="#now">Overview</a></li>
+    <li><a href="#markets">Market watchlist</a></li>
+    <li><a href="#explore">Price shock</a></li>
+    <li><a href="#check">Check a loan</a></li>
+    <li><a href="#book">Book</a></li>
+    <li><a href="#liquidations">Liquidations</a></li>
+    <li><a href="#stress">Stress test</a></li>
+    <li><a href="#base">All Base markets</a></li>
+    <li><a href="writeup.html">Writeup</a></li>
+  </ul>
+</nav>
+
+<div class="workspace-toolbar" role="region" aria-label="Market and view controls">
+  <div class="market-picker"><label for="selected-market">Market</label><select id="selected-market" aria-label="Market" aria-describedby="selection-note"></select><span id="selected-status" class="status-word"></span></div>
+  <div class="view-actions"><label for="theme-choice" class="sr-only">Color theme</label><select id="theme-choice" aria-label="Color theme"><option value="system">System</option><option value="light">Light</option><option value="dark">Dark</option></select><a id="share-market" href="#now">Link to view</a><button id="copy-view" type="button">Copy link</button></div>
+  <p id="copy-feedback" class="sr-only" role="status"></p>
+</div>
+<main>
+<section id="now">
+  <h2>Risk overview</h2>
+<p id="selection-note" class="muted">One market, from current book to stress replay.</p>
+  <div id="risk-briefing" aria-live="polite"><p>Loading risk briefing…</p></div>
+  <div id="daily-changes"><p class="muted">Loading daily comparison…</p></div>
+  <details id="now-evidence">
+  <summary>Full book figures and capacity breakdown</summary>
+  <div class="tiles">
+    <div class="tile" id="tile-book">
+      <h3>The book</h3>
+      <div class="hero" id="hero-borrow">-</div>
+      <p class="muted">borrowed, all nine markets</p>
+      <div id="totals" class="cards"></div>
+    </div>
+    <div class="tile" id="tile-distance">
+      <h3>Distance to <abbr title="How much collateral liquidators can sell within the bonus in one step">capacity</abbr>, cbBTC</h3>
+      <div class="hero" id="hero-distance">-</div>
+      <p id="distance-sentence"></p>
+      <ol id="distance-list"></ol>
+      <p class="muted">Red at 10% or under, amber at 20% or under. Alts are 3% of the book.</p>
+    </div>
+    <div class="tile" id="tile-worst">
+      <h3>cbBTC · March 2020 replay</h3>
+      <div id="worst" class="cards"></div>
+      <p id="worst-sentence" class="muted">loading</p>
+    </div>
+  </div>
+  </details>
+</section>
+
+<section id="markets">
+  <div class="section-heading"><div><h2>Market watchlist</h2><p class="lede">Compare the nine markets. Select one to carry it through every view.</p></div></div>
+  <div class="watch-controls controls">
+    <div class="buttons" role="group" aria-label="Market filter"><button id="filter-all" type="button" data-filter="all">All markets</button><button id="filter-attention" type="button" data-filter="attention">Needs attention</button></div>
+    <label for="market-sort">Sort by <select id="market-sort"><option value="borrow">Borrowed, largest first</option><option value="distance">Room to capacity, least first</option></select></label>
+  </div>
+  <p id="watchlist-count" class="muted" role="status"></p>
+  <div id="market-watchlist"></div>
+  <p class="muted">Threshold is the modeled price fall at which liquidatable debt exceeds stressed capacity. “Needs attention” means a threshold of 20% or less; it is not a forecast.</p>
+</section>
+
+<section id="explore">
+  <div class="section-heading"><div><h2>Inspect a price shock · <span data-selected-market>cbBTC</span></h2><p class="lede">What crosses the liquidation line if the price falls all at once?</p></div></div>
+  <div class="shock-workspace">
+    <div class="shock-input"><label for="shock-drop">Instantaneous price fall <output id="shock-label" for="shock-drop">20%</output></label><input id="shock-drop" type="range" min="0" max="70" step="1" value="20" aria-describedby="shock-assumptions"><div class="range-ends" aria-hidden="true"><span>0%</span><span>70%</span></div><div class="shock-presets buttons" role="group" aria-label="Price shock presets"><button type="button" data-shock="10">−10%</button><button type="button" data-shock="20">−20%</button><button type="button" data-shock="30">−30%</button></div></div>
+    <div id="shock-result" aria-live="polite"></div>
+  </div>
+  <p id="shock-assumptions" class="muted">A static inspection of the saved loan book, at the selected price fall. No borrower top-ups, repayments, elapsed time or liquidator execution. Liquidatable debt is not realized loss. The historical <a href="#stress">stress test</a> models a path over time.</p>
+</section>
+
+<section id="check">
+  <h2>Check a loan</h2>
+  <p class="lede">Paste a Base address to see, for each of its loans in the markets on this page, the price at which it gets liquidated, how far the price can fall before that, and what the worst replayed crash would do to it.</p>
+  <form id="check-form" class="controls" autocomplete="off" novalidate>
+    <label for="check-address">Base wallet address</label>
+    <input id="check-address" name="address" type="text" spellcheck="false" placeholder="0x… Base address" required>
+    <button type="submit">Check</button>
+  </form>
+  <p class="muted">Your browser asks Morpho's public API directly; no key, and nothing passes through this site. The liquidation price comes from Morpho's health factor, which uses the market's oracle. The crash paths are the backtest's seven, applied to this one position as it stands, with no top-up or repayment.</p>
+  <div id="check-result" aria-live="polite"><p class="empty">Enter a public Base address to inspect its loans. No wallet connection is required.</p></div>
+</section>
+
+<section id="book">
+  <h2>Book</h2>
+  <p class="lede">Who owes what, at what loan-to-value, and how close each position sits to its liquidation line.</p>
+  <div class="controls">
+    <div id="market-buttons" class="buttons"></div>
+    <label class="toggle"><input type="checkbox" id="cb-only"> Coinbase wallets only</label>
+  </div>
+  <h3 id="market-title">Market</h3>
+  <div id="market-cards" class="cards"></div>
+
+  <div class="fig">
+    <h3>LTV distribution</h3>
+    <p class="muted">Borrow USD per 2% LTV bin; the tooltip carries the number of positions. Dashed lines: the <abbr title="Liquidation loan-to-value">LLTV</abbr> where liquidation starts and the LTV past which seized collateral no longer covers the debt (bad debt).
+      <label class="toggle"><input type="checkbox" id="log-y"> Log scale (dots)</label></p>
+    <div id="chart-ltv" class="chart" role="figure" aria-label="LTV distribution"></div>
+    <p id="ltv-stat" class="muted"></p>
+  </div>
+
+  <details class="fold" open>
+    <summary>Top 25 borrowers</summary>
+    <div class="scroll-x" tabindex="0" role="region" aria-label="Top 25 borrowers table"><table id="borrowers"></table></div>
+  </details>
+</section>
+
+<section id="liquidations">
+  <h2>Liquidations · <span data-selected-market>cbBTC</span></h2>
+  <p class="lede">How much debt a price drop would put up for liquidation, what liquidators can absorb, and what they have cleared before.</p>
+  <div class="fig">
+    <h3>Liquidatable borrow vs price drop</h3>
+    <p class="muted">Blue shows debt crossing <abbr title="Liquidation loan-to-value">LLTV</abbr> at each sampled instantaneous price fall. The gray dashed line is the portion already past bad-debt LTV. The black dotted line is modeled stressed capacity. The labeled annotation marks the whole market’s first sampled exceedance; a filtered wallet subset has no asserted crossing.
+      <label class="toggle"><input type="checkbox" id="log-y-curve" checked> Log scale</label></p>
+    <div id="chart-curve" class="chart" role="figure" aria-label="Liquidatable borrow vs price drop"></div>
+    <p id="capacity-reconciliation" class="capacity-method muted"></p>
+  </div>
+
+  <div class="fig">
+    <h3>Liquidation history</h3>
+    <p class="muted">Daily repaid USD. Blue identifies the highest repayment day in the selected range; the other days provide context.</p>
+    <div class="controls"><div id="liq-range-buttons" class="buttons"></div></div>
+    <div id="chart-liq" class="chart" role="figure" aria-label="Liquidation history"></div>
+  </div>
+
+  <div class="fig">
+    <h3>Trend</h3>
+    <p class="muted">Each snapshot since the tracker started: book LTV, distance to capacity and borrow liquidatable at a 20% drop, for the selected market.</p>
+    <div id="chart-trend" class="chart chart-tall" role="figure" aria-label="Trend"></div>
+  </div>
+
+  <details class="fold" open>
+    <summary>Top 10 liquidators (all time, by repaid USD)</summary>
+    <div class="scroll-x" tabindex="0" role="region" aria-label="Top 10 liquidators table"><table id="liquidators"></table></div>
+  </details>
+  <details class="fold">
+    <summary>Liquidator leaderboard (stress windows)</summary>
+    <p class="muted">Top-10 liquidators of each stress window, merged across cbBTC and WETH. Gross bonus is seized minus repaid, before gas. Latency: median seconds from the oracle crossing to the liquidation, where the address has at least 5 measured events.</p>
+    <div class="scroll-x" tabindex="0" role="region" aria-label="Liquidator leaderboard table"><table id="leaderboard"></table></div>
+  </details>
+</section>
+
+<section id="stress">
+  <h2>Stress test · <span data-selected-market>cbBTC</span> <small id="bt-generated-at" class="muted">loading</small></h2>
+  <p class="lede">A saved book replayed through seven historical crashes to estimate lender losses.</p>
+  <div id="model-confidence" class="model-note" aria-live="polite">Loading model assumptions…</div>
+  <div class="controls"><div id="bt-market-buttons" class="buttons"></div></div>
+
+  <div class="fig">
+    <h3>March 2020 and May 2021, at the selected market’s LLTV</h3>
+    <p class="muted">The saved replay book at the selected market’s current LLTV, liquidators selling on-chain and on exchanges (scenario AB): three separate measures: the loss by the end of the path, the supply left unserved (underwater) at the lowest print, and the loss if the low had held for a day.</p>
+    <div class="scroll-x replay-wide" tabindex="0" role="region" aria-label="Paths that cost money table"><table id="bt-summary"></table></div>
+    <div id="bt-summary-mobile" class="replay-cases"></div>
+  </div>
+
+  <details class="fold" id="supplier-exposure">
+    <summary>Who carries a loss · <span data-selected-market>cbBTC</span></summary>
+    <p class="muted">The vaults funding the selected market, largest first, and their cut of the worst modeled path (March 2020, scenario AB, the row above). Morpho socializes bad debt pro rata to suppliers, so each vault's cut is its share of market supply; the last column sets the held-a-day loss against the vault's total assets. Other suppliers are wallets supplying the market directly.</p>
+    <div class="scroll-x" tabindex="0" role="region" aria-label="Who carries a loss table"><table id="bt-vaults"></table></div>
+  </details>
+
+  <div class="fig">
+    <h3>Bad debt by LLTV and crash path</h3>
+    <div class="controls"><div id="bt-scenario-buttons" class="buttons"></div><span class="explain">A: on-chain bots only. AB: plus exchange-hedged liquidators (what we observe). ABC: plus a Coinbase backstop (hypothetical).</span></div>
+    <div class="controls"><div id="bt-metric-buttons" class="buttons"></div><span class="explain">Loss: realized by the end of the path. Exposure: supply left unserved, underwater at the lowest print. Two separate measures; switch between them.</span></div>
+    <div id="chart-heat" class="chart" role="figure" aria-label="Bad debt by LLTV and crash path"></div>
+    <p id="bt-note" class="muted"></p>
+  </div>
+
+  <div class="fig">
+    <h3>Liquidator capital, <span id="capital-market">cbBTC</span> on March 2020 (AB)</h3>
+    <p class="muted">How the selected market’s March 2020 replay changes as liquidator capital increases. Read the selected replay measure as the daily cap on exchange-hedged liquidators rises from the largest day the book has seen (1×).</p>
+    <div id="chart-capital" class="chart chart-short" role="figure" aria-label="Liquidator capital on March 2020, scenario AB"></div>
+  </div>
+
+  <div class="fig">
+    <h3>Warning time</h3>
+    <p id="warning-description" class="muted">Median time in the warning band before liquidation, scenario AB.</p>
+    <div id="chart-warn" class="chart chart-short" role="figure" aria-label="Warning time"></div>
+  </div>
+</section>
+
+<section id="base">
+  <h2>All Base markets</h2>
+  <p class="lede">Every Morpho Blue market on Base with more than $10M borrowed, not only Coinbase's. Market-level numbers from Morpho's API, refreshed with the rest of the page; the charts above cover Coinbase's nine markets only.</p>
+  <p id="base-stat" class="muted"></p>
+  <div class="scroll-x" tabindex="0" role="region" aria-label="Listed Base markets table"><table id="base-listed"></table></div>
+  <details class="fold">
+    <summary id="base-unlisted-summary">Markets Morpho does not list</summary>
+    <p class="muted">Markets Morpho's app does not list, with the warnings its API attaches. Most lend real USDC against a token Morpho cannot price, so their collateral value and LTV are unknown; their size is what borrowers drew, not what backs it.</p>
+    <div class="scroll-x" tabindex="0" role="region" aria-label="Unlisted Base markets table"><table id="base-unlisted"></table></div>
+  </details>
+</section>
+</main>
+
+<footer class="muted">
+  Independent analysis from public on-chain data. Not affiliated with or endorsed by Coinbase or Morpho.
+  Sources: Morpho API (positions, liquidations), Coinbase Exchange and Kraken order books, Base RPC (wallet tagging), Aerodrome/Uniswap quoters (DEX depth).
+  <a href="writeup.html">Writeup: what haircut should Coinbase take?</a> · <a href="../PLAN.md">Plan</a>
+</footer>
+<script src="charts.js" defer></script>
+<script src="briefing.js" defer></script>
+<script src="workspace.js" defer></script>
+<script src="app.js" defer></script>
+</body>
+</html>

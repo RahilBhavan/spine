@@ -1,0 +1,1002 @@
+{
+ "generated_at": "2026-11-07T14:49:58.534591+00:00",
+ "markets": {
+  "cbBTC": {
+   "supply_usd": 1796125704.6683643,
+   "vaults": [
+    {
+     "address": "0xbeef0786756810478b88982DE00F3CD7fdB8e7c7",
+     "name": "Grove x Steakhouse USDC",
+     "kind": "v2",
+     "supplied_usd": 528952458.85943496,
+     "vault_total_usd": 577320295.324577,
+     "share": 0.29449634704554295
+    },
+    {
+     "address": "0xeE8F4eC5672F09119b96Ab6fB59C27E1b7e44b61",
+     "name": "Gauntlet USDC Prime",
+     "kind": "v1",
+     "supplied_usd": 375315235.19969755,
+     "vault_total_usd": 402943393.4365908,
+     "share": 0.20895822281492016
+    },
+    {
+     "address": "0x7BfA7C4f149E7415b73bdeDfe609237e29CBF34A",
+     "name": "Spark USDC Vault",
+     "kind": "v1",
+     "supplied_usd": 280720616.9423236,
+     "vault_total_usd": 280720616.9423236,
+     "share": 0.1562922997052457
+    },
+    {
+     "address": "0x050cE30b927Da55177A4914EC73480238BAD56f0",
+     "name": "Gauntlet USDC Prime",
+     "kind": "v2",
+     "supplied_usd": 129954335.53717408,
+     "vault_total_usd": 134746371.840538,
+     "share": 0.07235258378598217
+    },
+    {
+     "address": "0xbeef0e0834849aCC03f0089F01f4F1Eeb06873C9",
+     "name": "Steakhouse Prime USDC",
+     "kind": "v2",
+     "supplied_usd": 126300205.34603532,
+     "vault_total_usd": 141200361.589723,
+     "share": 0.07031813253257534
+    },
+    {
+     "address": "0xbeeff2490FEffa212faC2f6553682C219E6a8845",
+     "name": "Steakhouse High Yield USDC Edition",
+     "kind": "v2",
+     "supplied_usd": 99990118.29654962,
+     "vault_total_usd": 463299217.757472,
+     "share": 0.05566988882607843
+    },
+    {
+     "address": "0xbeeF010f9cb27031ad51e3333f9aF9C6B1228183",
+     "name": "Steakhouse USDC",
+     "kind": "v1",
+     "supplied_usd": 99633648.34441896,
+     "vault_total_usd": 106618700.95484087,
+     "share": 0.055471422788203606
+    },
+    {
+     "address": "0x1401d1271C47648AC70cBcdfA3776D4A87CE006B",
+     "name": "Pangolins USDC",
+     "kind": "v1",
+     "supplied_usd": 7044306.169493489,
+     "vault_total_usd": 7044306.169493489,
+     "share": 0.003921944968096844
+    },
+    {
+     "address": "0x1deEfABEe758AAbdC29a542B24ca3b75aFD56765",
+     "name": "Gauntlet USDC Frontier",
+     "kind": "v2",
+     "supplied_usd": 3866109.390302025,
+     "vault_total_usd": 5045494.296975,
+     "share": 0.002152471500326232
+    },
+    {
+     "address": "0xb88A0269C0b7E665F15DE46F634e02cE81E361c9",
+     "name": "SoSoValue x Unified Labs USDC",
+     "kind": "v2",
+     "supplied_usd": 3468326.449584446,
+     "vault_total_usd": 3468326.546547,
+     "share": 0.0019310042947271533
+    },
+    {
+     "address": "0x1e9e47583f15D45a10Df48c0b1846E0492c795D7",
+     "name": "Galaxy USDC Quality",
+     "kind": "v2",
+     "supplied_usd": 2036962.827202391,
+     "vault_total_usd": 2036962.915456,
+     "share": 0.0011340870084471592
+    },
+    {
+     "address": "0x91C056B6d4311a743614FBc03ac32d4E6A2d3a3c",
+     "name": "Clearstar cbAssets Vault",
+     "kind": "v2",
+     "supplied_usd": 1884217.7282257103,
+     "vault_total_usd": 32107961.046562,
+     "share": 0.0010490455781176024
+    },
+    {
+     "address": "0x39E18c066187c83e860801Befe45aE8ecd021575",
+     "name": "Bitso USDC Prime",
+     "kind": "v2",
+     "supplied_usd": 1858758.1509454928,
+     "vault_total_usd": 2372535.547514,
+     "share": 0.0010348708590464124
+    },
+    {
+     "address": "0xc0c5689e6f4D256E861F65465b691aeEcC0dEb12",
+     "name": "Gauntlet USDC Core",
+     "kind": "v1",
+     "supplied_usd": 1720176.8730275554,
+     "vault_total_usd": 1943784.5113048053,
+     "share": 0.0009577151914014659
+    },
+    {
+     "address": "0x392B3CCf36C8adB8094F45573346B457414cD752",
+     "name": "KPK USDC Yield",
+     "kind": "v2",
+     "supplied_usd": 1115406.2479579658,
+     "vault_total_usd": 4954913.192345,
+     "share": 0.0006210067842461583
+    },
+    {
+     "address": "0xbeeff7aE5E00Aae3Db302e4B0d8C883810a58100",
+     "name": "Steakhouse High Yield USDC",
+     "kind": "v2",
+     "supplied_usd": 431908.99129503284,
+     "vault_total_usd": 31343667.382782,
+     "share": 0.000240467017521349
+    },
+    {
+     "address": "0xef417a2512C5a41f69AE4e021648b69a7CdE5D03",
+     "name": "Yearn OG USDC",
+     "kind": "v1",
+     "supplied_usd": 429206.2637575636,
+     "vault_total_usd": 2062403.53442947,
+     "share": 0.00023896226341062917
+    },
+    {
+     "address": "0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2",
+     "name": "Steakhouse Prime USDC",
+     "kind": "v1",
+     "supplied_usd": 369566.6045744638,
+     "vault_total_usd": 11810502.40860568,
+     "share": 0.0002057576502657426
+    },
+    {
+     "address": "0xBEEFA7B88064FeEF0cEe02AAeBBd95D30df3878F",
+     "name": "Steakhouse High Yield USDC v1.1",
+     "kind": "v1",
+     "supplied_usd": 290970.4610196494,
+     "vault_total_usd": 1107935.9541308705,
+     "share": 0.0001619989404212519
+    },
+    {
+     "address": "0xAE4181CFB5aaA08bbE77d269c6B595672b9F9Edc",
+     "name": "RockawayX Midas USDC Prime",
+     "kind": "v2",
+     "supplied_usd": 226368.08289125105,
+     "vault_total_usd": 612107.704343,
+     "share": 0.00012603131412400087
+    },
+    {
+     "address": "0xBeEF00fc6e87dE086A0e29169A2f6e25cF5C11a9",
+     "name": "Farcaster x Steakhouse Prime",
+     "kind": "v2",
+     "supplied_usd": 144976.2451220634,
+     "vault_total_usd": 161956.808396,
+     "share": 8.071609060838632e-05
+    },
+    {
+     "address": "0xE74c499fA461AF1844fCa84204490877787cED56",
+     "name": "Yield Clearstar USDC",
+     "kind": "v1",
+     "supplied_usd": 8014.4212281134,
+     "vault_total_usd": 779260.4821039246,
+     "share": 4.462060315312495e-06
+    },
+    {
+     "address": "0xc1256Ae5FF1cf2719D4937adb3bbCCab2E00A2Ca",
+     "name": "Moonwell Flagship USDC",
+     "kind": "v1",
+     "supplied_usd": 2327.1397559446,
+     "vault_total_usd": 2413529.2354244334,
+     "share": 1.2956441466741783e-06
+    },
+    {
+     "address": "0x5e03f8965e2957291B3c6990C6Cb9023c36d3d30",
+     "name": "Bitwise Liquid Prime USDC",
+     "kind": "v2",
+     "supplied_usd": 945.3887840811607,
+     "vault_total_usd": 1774.377101,
+     "share": 5.263488973093433e-07
+    },
+    {
+     "address": "0x116e1A65717A534B73EcB7d4F6543c65DBCd0E46",
+     "name": "Clearstar Base RWA",
+     "kind": "v2",
+     "supplied_usd": 614.7781825969594,
+     "vault_total_usd": 196188.40779,
+     "share": 3.422801538884895e-07
+    },
+    {
+     "address": "0xb038cF3e233b78225F6D350AC8319bEC8457db4A",
+     "name": "Birch Hill Groma Ecosystem USDC",
+     "kind": "v2",
+     "supplied_usd": 68.24975656126655,
+     "vault_total_usd": 340952.657276,
+     "share": 3.7998318482874864e-08
+    },
+    {
+     "address": "0xBeEfF0be997Cca5B1c13A7433c2004637975739e",
+     "name": "Ethena x Steakhouse USDC",
+     "kind": "v2",
+     "supplied_usd": 2.4470899621582154,
+     "vault_total_usd": 100868021.087028,
+     "share": 1.3624268923928377e-09
+    },
+    {
+     "address": "0x618495ccC4e751178C4914b1E939C0fe0FB07b9b",
+     "name": "Re7 USDC",
+     "kind": "v2",
+     "supplied_usd": 0.10002561899641665,
+     "vault_total_usd": 1249714.502427,
+     "share": 5.5689653979360723e-11
+    },
+    {
+     "address": "0xe7D0DBE3493830e2Ab62619211A2BfF0Fc60dB42",
+     "name": "Yearn OG USDC V2",
+     "kind": "v2",
+     "supplied_usd": 0.0028210457596941985,
+     "vault_total_usd": 325239.436508,
+     "share": 1.5706282429798393e-12
+    },
+    {
+     "address": "0x0548A36028FFdc7D5aaA7A182f0d1FE0264F5A5C",
+     "name": "\u041a3 cbMaxxxing USDC",
+     "kind": "v2",
+     "supplied_usd": 2.0811026145255677e-05,
+     "vault_total_usd": 3708636.048731,
+     "share": 1.1586620074065592e-14
+    },
+    {
+     "address": null,
+     "name": "other suppliers",
+     "kind": "direct",
+     "supplied_usd": 130359853.12966633,
+     "vault_total_usd": null,
+     "share": 0.07257835728916084
+    }
+   ]
+  },
+  "WETH": {
+   "supply_usd": 105149847.56373398,
+   "vaults": [
+    {
+     "address": "0xbeef0786756810478b88982DE00F3CD7fdB8e7c7",
+     "name": "Grove x Steakhouse USDC",
+     "kind": "v2",
+     "supplied_usd": 48367801.85685856,
+     "vault_total_usd": 577320295.324577,
+     "share": 0.4599892722387601
+    },
+    {
+     "address": "0xeE8F4eC5672F09119b96Ab6fB59C27E1b7e44b61",
+     "name": "Gauntlet USDC Prime",
+     "kind": "v1",
+     "supplied_usd": 19768707.04193615,
+     "vault_total_usd": 402943393.4365908,
+     "share": 0.18800509463367351
+    },
+    {
+     "address": "0xbeef0e0834849aCC03f0089F01f4F1Eeb06873C9",
+     "name": "Steakhouse Prime USDC",
+     "kind": "v2",
+     "supplied_usd": 12301648.836464752,
+     "vault_total_usd": 141200361.589723,
+     "share": 0.11699159933644612
+    },
+    {
+     "address": "0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2",
+     "name": "Steakhouse Prime USDC",
+     "kind": "v1",
+     "supplied_usd": 9053466.092891337,
+     "vault_total_usd": 11810502.40860568,
+     "share": 0.08610061072512543
+    },
+    {
+     "address": "0xbeeF010f9cb27031ad51e3333f9aF9C6B1228183",
+     "name": "Steakhouse USDC",
+     "kind": "v1",
+     "supplied_usd": 3726895.0453483076,
+     "vault_total_usd": 106618731.88123336,
+     "share": 0.03544365618874856
+    },
+    {
+     "address": "0x050cE30b927Da55177A4914EC73480238BAD56f0",
+     "name": "Gauntlet USDC Prime",
+     "kind": "v2",
+     "supplied_usd": 2973377.680040926,
+     "vault_total_usd": 134746371.840538,
+     "share": 0.028277527252131174
+    },
+    {
+     "address": "0xc1256Ae5FF1cf2719D4937adb3bbCCab2E00A2Ca",
+     "name": "Moonwell Flagship USDC",
+     "kind": "v1",
+     "supplied_usd": 2303073.9514863165,
+     "vault_total_usd": 2413529.2354244334,
+     "share": 0.021902779745737292
+    },
+    {
+     "address": "0xbeeff7aE5E00Aae3Db302e4B0d8C883810a58100",
+     "name": "Steakhouse High Yield USDC",
+     "kind": "v2",
+     "supplied_usd": 736153.7882271016,
+     "vault_total_usd": 31343667.382782,
+     "share": 0.007000997198601739
+    },
+    {
+     "address": "0xBEEFA7B88064FeEF0cEe02AAeBBd95D30df3878F",
+     "name": "Steakhouse High Yield USDC v1.1",
+     "kind": "v1",
+     "supplied_usd": 501049.8756178722,
+     "vault_total_usd": 1107935.9541308705,
+     "share": 0.004765103204873152
+    },
+    {
+     "address": "0x39E18c066187c83e860801Befe45aE8ecd021575",
+     "name": "Bitso USDC Prime",
+     "kind": "v2",
+     "supplied_usd": 339987.84173300257,
+     "vault_total_usd": 2372535.547514,
+     "share": 0.0032333650462681588
+    },
+    {
+     "address": "0xAE4181CFB5aaA08bbE77d269c6B595672b9F9Edc",
+     "name": "RockawayX Midas USDC Prime",
+     "kind": "v2",
+     "supplied_usd": 192877.518009864,
+     "vault_total_usd": 612107.704343,
+     "share": 0.0018343109617249428
+    },
+    {
+     "address": "0xef417a2512C5a41f69AE4e021648b69a7CdE5D03",
+     "name": "Yearn OG USDC",
+     "kind": "v1",
+     "supplied_usd": 165638.4502190928,
+     "vault_total_usd": 2062403.53442947,
+     "share": 0.001575260963823035
+    },
+    {
+     "address": "0xc0c5689e6f4D256E861F65465b691aeEcC0dEb12",
+     "name": "Gauntlet USDC Core",
+     "kind": "v1",
+     "supplied_usd": 150593.52870031382,
+     "vault_total_usd": 1943784.5113048053,
+     "share": 0.0014321801903615246
+    },
+    {
+     "address": "0x1deEfABEe758AAbdC29a542B24ca3b75aFD56765",
+     "name": "Gauntlet USDC Frontier",
+     "kind": "v2",
+     "supplied_usd": 148420.14346920373,
+     "vault_total_usd": 5045494.296975,
+     "share": 0.0014115107811187508
+    },
+    {
+     "address": "0x5e03f8965e2957291B3c6990C6Cb9023c36d3d30",
+     "name": "Bitwise Liquid Prime USDC",
+     "kind": "v2",
+     "supplied_usd": 731.5430815989824,
+     "vault_total_usd": 1774.377101,
+     "share": 6.95714828455244e-06
+    },
+    {
+     "address": "0x116e1A65717A534B73EcB7d4F6543c65DBCd0E46",
+     "name": "Clearstar Base RWA",
+     "kind": "v2",
+     "supplied_usd": 728.0606610009406,
+     "vault_total_usd": 196188.40779,
+     "share": 6.924029638365806e-06
+    },
+    {
+     "address": "0x236919F11ff9eA9550A4287696C2FC9e18E6e890",
+     "name": "Gauntlet USDC Frontier",
+     "kind": "v1",
+     "supplied_usd": 639.591671077,
+     "vault_total_usd": 122898.4979914784,
+     "share": 6.082668552508622e-06
+    },
+    {
+     "address": "0x1e9e47583f15D45a10Df48c0b1846E0492c795D7",
+     "name": "Galaxy USDC Quality",
+     "kind": "v2",
+     "supplied_usd": 0.05977779463647565,
+     "vault_total_usd": 2036962.915456,
+     "share": 5.685010109048691e-10
+    },
+    {
+     "address": "0xBeEF00fc6e87dE086A0e29169A2f6e25cF5C11a9",
+     "name": "Farcaster x Steakhouse Prime",
+     "kind": "v2",
+     "supplied_usd": 0.001947250709733873,
+     "vault_total_usd": 161956.808396,
+     "share": 1.8518816287903746e-11
+    },
+    {
+     "address": "0xe7D0DBE3493830e2Ab62619211A2BfF0Fc60dB42",
+     "name": "Yearn OG USDC V2",
+     "kind": "v2",
+     "supplied_usd": 3.9751638518123926e-07,
+     "vault_total_usd": 325239.436508,
+     "share": 3.780475144676691e-15
+    },
+    {
+     "address": null,
+     "name": "other suppliers",
+     "kind": "direct",
+     "supplied_usd": 4418056.655592054,
+     "vault_total_usd": null,
+     "share": 0.04201676709910738
+    }
+   ]
+  },
+  "cbETH": {
+   "supply_usd": 17512901.39075766,
+   "vaults": [
+    {
+     "address": "0xeE8F4eC5672F09119b96Ab6fB59C27E1b7e44b61",
+     "name": "Gauntlet USDC Prime",
+     "kind": "v1",
+     "supplied_usd": 5907032.839673487,
+     "vault_total_usd": 402943393.4365908,
+     "share": 0.3372960715002307
+    },
+    {
+     "address": "0xbeeF010f9cb27031ad51e3333f9aF9C6B1228183",
+     "name": "Steakhouse USDC",
+     "kind": "v1",
+     "supplied_usd": 3117809.072776134,
+     "vault_total_usd": 106618731.88123336,
+     "share": 0.17802927129033805
+    },
+    {
+     "address": "0xbeef0e0834849aCC03f0089F01f4F1Eeb06873C9",
+     "name": "Steakhouse Prime USDC",
+     "kind": "v2",
+     "supplied_usd": 2287209.746353078,
+     "vault_total_usd": 141200361.589723,
+     "share": 0.13060141751041554
+    },
+    {
+     "address": "0xBEEFE94c8aD530842bfE7d8B397938fFc1cb83b2",
+     "name": "Steakhouse Prime USDC",
+     "kind": "v1",
+     "supplied_usd": 2208335.932426407,
+     "vault_total_usd": 11810502.40860568,
+     "share": 0.12609766269750391
+    },
+    {
+     "address": "0xbeeff2490FEffa212faC2f6553682C219E6a8845",
+     "name": "Steakhouse High Yield USDC Edition",
+     "kind": "v2",
+     "supplied_usd": 1676646.4106593686,
+     "vault_total_usd": 463299217.757472,
+     "share": 0.09573778628960988
+    },
+    {
+     "address": "0x050cE30b927Da55177A4914EC73480238BAD56f0",
+     "name": "Gauntlet USDC Prime",
+     "kind": "v2",
+     "supplied_usd": 1501072.6473131934,
+     "vault_total_usd": 134746371.840538,
+     "share": 0.08571239075812855
+    },
+    {
+     "address": "0x91C056B6d4311a743614FBc03ac32d4E6A2d3a3c",
+     "name": "Clearstar cbAssets Vault",
+     "kind": "v2",
+     "supplied_usd": 469423.91903568135,
+     "vault_total_usd": 32107961.046562,
+     "share": 0.026804463096184467
+    },
+    {
+     "address": "0x39E18c066187c83e860801Befe45aE8ecd021575",
+     "name": "Bitso USDC Prime",
+     "kind": "v2",
+     "supplied_usd": 163290.53489037053,
+     "vault_total_usd": 2372535.547514,
+     "share": 0.009324013836824675
+    },
+    {
+     "address": "0x1deEfABEe758AAbdC29a542B24ca3b75aFD56765",
+     "name": "Gauntlet USDC Frontier",
+     "kind": "v2",
+     "supplied_usd": 78715.5514952437,
+     "vault_total_usd": 5045494.296975,
+     "share": 0.004494717907609838
+    },
+    {
+     "address": "0xef417a2512C5a41f69AE4e021648b69a7CdE5D03",
+     "name": "Yearn OG USDC",
+     "kind": "v1",
+     "supplied_usd": 31240.065652017,
+     "vault_total_usd": 2062403.53442947,
+     "share": 0.001783831528252867
+    },
+    {
+     "address": "0xBEEFA7B88064FeEF0cEe02AAeBBd95D30df3878F",
+     "name": "Steakhouse High Yield USDC v1.1",
+     "kind": "v1",
+     "supplied_usd": 16783.873752760202,
+     "vault_total_usd": 1107935.9541308705,
+     "share": 0.0009583719669441981
+    },
+    {
+     "address": "0xBeEF00fc6e87dE086A0e29169A2f6e25cF5C11a9",
+     "name": "Farcaster x Steakhouse Prime",
+     "kind": "v2",
+     "supplied_usd": 10312.994917253855,
+     "vault_total_usd": 161956.808396,
+     "share": 0.0005888798598898342
+    },
+    {
+     "address": "0x0548A36028FFdc7D5aaA7A182f0d1FE0264F5A5C",
+     "name": "\u041a3 cbMaxxxing USDC",
+     "kind": "v2",
+     "supplied_usd": 1471.001850046729,
+     "vault_total_usd": 3708636.048731,
+     "share": 8.399532534472228e-05
+    },
+    {
+     "address": "0xc0c5689e6f4D256E861F65465b691aeEcC0dEb12",
+     "name": "Gauntlet USDC Core",
+     "kind": "v1",
+     "supplied_usd": 324.7723455374,
+     "vault_total_usd": 1943784.5113048053,
+     "share": 1.8544748142577726e-05
+    },
+    {
+     "address": "0x236919F11ff9eA9550A4287696C2FC9e18E6e890",
+     "name": "Gauntlet USDC Frontier",
+     "kind": "v1",
+     "supplied_usd": 25.8772695108,
+     "vault_total_usd": 122898.4979914784,
+     "share": 1.477611786500242e-06
+    },
+    {
+     "address": "0xBeEfF0be997Cca5B1c13A7433c2004637975739e",
+     "name": "Ethena x Steakhouse USDC",
+     "kind": "v2",
+     "supplied_usd": 8.448243059980994e-07,
+     "vault_total_usd": 100868021.087028,
+     "share": 4.824011094152285e-14
+    },
+    {
+     "address": "0xbeeff7aE5E00Aae3Db302e4B0d8C883810a58100",
+     "name": "Steakhouse High Yield USDC",
+     "kind": "v2",
+     "supplied_usd": 3.6279816488653343e-07,
+     "vault_total_usd": 31343667.382782,
+     "share": 2.0716051372161452e-14
+    },
+    {
+     "address": null,
+     "name": "other suppliers",
+     "kind": "direct",
+     "supplied_usd": 43206.150346364826,
+     "vault_total_usd": null,
+     "share": 0.0024671040727247307
+    }
+   ]
+  },
+  "cbXRP": {
+   "supply_usd": 64313153.07609005,
+   "vaults": [
+    {
+     "address": "0xbeeff7aE5E00Aae3Db302e4B0d8C883810a58100",
+     "name": "Steakhouse High Yield USDC",
+     "kind": "v2",
+     "supplied_usd": 25464033.532063395,
+     "vault_total_usd": 31343667.382782,
+     "share": 0.39593819170918954
+    },
+    {
+     "address": "0x91C056B6d4311a743614FBc03ac32d4E6A2d3a3c",
+     "name": "Clearstar cbAssets Vault",
+     "kind": "v2",
+     "supplied_usd": 12501692.660859672,
+     "vault_total_usd": 32107961.046562,
+     "share": 0.19438780502751427
+    },
+    {
+     "address": "0xbeeff2490FEffa212faC2f6553682C219E6a8845",
+     "name": "Steakhouse High Yield USDC Edition",
+     "kind": "v2",
+     "supplied_usd": 11059706.187742725,
+     "vault_total_usd": 463299217.757472,
+     "share": 0.17196647433313972
+    },
+    {
+     "address": "0x0548A36028FFdc7D5aaA7A182f0d1FE0264F5A5C",
+     "name": "\u041a3 cbMaxxxing USDC",
+     "kind": "v2",
+     "supplied_usd": 2909187.2434968236,
+     "vault_total_usd": 3708636.048731,
+     "share": 0.04523471645146852
+    },
+    {
+     "address": "0xef417a2512C5a41f69AE4e021648b69a7CdE5D03",
+     "name": "Yearn OG USDC",
+     "kind": "v1",
+     "supplied_usd": 1236660.9611794304,
+     "vault_total_usd": 2062403.53442947,
+     "share": 0.019228740965573782
+    },
+    {
+     "address": "0x1deEfABEe758AAbdC29a542B24ca3b75aFD56765",
+     "name": "Gauntlet USDC Frontier",
+     "kind": "v2",
+     "supplied_usd": 445812.4027136627,
+     "vault_total_usd": 5045494.296975,
+     "share": 0.006931900884819222
+    },
+    {
+     "address": "0xE74c499fA461AF1844fCa84204490877787cED56",
+     "name": "Yield Clearstar USDC",
+     "kind": "v1",
+     "supplied_usd": 428931.101289066,
+     "vault_total_usd": 779260.4821039246,
+     "share": 0.0066694148984048395
+    },
+    {
+     "address": "0xe7D0DBE3493830e2Ab62619211A2BfF0Fc60dB42",
+     "name": "Yearn OG USDC V2",
+     "kind": "v2",
+     "supplied_usd": 271490.6345616924,
+     "vault_total_usd": 325239.436508,
+     "share": 0.004221385853069386
+    },
+    {
+     "address": "0x236919F11ff9eA9550A4287696C2FC9e18E6e890",
+     "name": "Gauntlet USDC Frontier",
+     "kind": "v1",
+     "supplied_usd": 121850.02757150959,
+     "vault_total_usd": 122898.4979914784,
+     "share": 0.0018946361940511084
+    },
+    {
+     "address": "0xBEEFA7B88064FeEF0cEe02AAeBBd95D30df3878F",
+     "name": "Steakhouse High Yield USDC v1.1",
+     "kind": "v1",
+     "supplied_usd": 74218.42540258859,
+     "vault_total_usd": 1107935.9541308705,
+     "share": 0.0011540162758740724
+    },
+    {
+     "address": "0xBeEfF0be997Cca5B1c13A7433c2004637975739e",
+     "name": "Ethena x Steakhouse USDC",
+     "kind": "v2",
+     "supplied_usd": 5087.426546042602,
+     "vault_total_usd": 100868021.087028,
+     "share": 7.910398266469032e-05
+    },
+    {
+     "address": null,
+     "name": "other suppliers",
+     "kind": "direct",
+     "supplied_usd": 9794482.472663447,
+     "vault_total_usd": null,
+     "share": 0.15229361342423095
+    }
+   ]
+  },
+  "SOL": {
+   "supply_usd": 7737698.591188905,
+   "vaults": [
+    {
+     "address": "0x91C056B6d4311a743614FBc03ac32d4E6A2d3a3c",
+     "name": "Clearstar cbAssets Vault",
+     "kind": "v2",
+     "supplied_usd": 6631047.396101601,
+     "vault_total_usd": 32107961.046562,
+     "share": 0.8569792836919917
+    },
+    {
+     "address": "0xbeeff7aE5E00Aae3Db302e4B0d8C883810a58100",
+     "name": "Steakhouse High Yield USDC",
+     "kind": "v2",
+     "supplied_usd": 14582.652886513873,
+     "vault_total_usd": 31343667.382782,
+     "share": 0.0018846240538652507
+    },
+    {
+     "address": "0xBEEFA7B88064FeEF0cEe02AAeBBd95D30df3878F",
+     "name": "Steakhouse High Yield USDC v1.1",
+     "kind": "v1",
+     "supplied_usd": 10083.708499871002,
+     "vault_total_usd": 1107935.9541308705,
+     "share": 0.0013031922064467014
+    },
+    {
+     "address": "0x1deEfABEe758AAbdC29a542B24ca3b75aFD56765",
+     "name": "Gauntlet USDC Frontier",
+     "kind": "v2",
+     "supplied_usd": 342.995923621816,
+     "vault_total_usd": 5045494.296975,
+     "share": 4.432789925578044e-05
+    },
+    {
+     "address": "0x236919F11ff9eA9550A4287696C2FC9e18E6e890",
+     "name": "Gauntlet USDC Frontier",
+     "kind": "v1",
+     "supplied_usd": 39.4488356546,
+     "vault_total_usd": 122898.4979914784,
+     "share": 5.0982647087754615e-06
+    },
+    {
+     "address": null,
+     "name": "other suppliers",
+     "kind": "direct",
+     "supplied_usd": 1081602.388941642,
+     "vault_total_usd": null,
+     "share": 0.13978347388373172
+    }
+   ]
+  },
+  "cbDOGE": {
+   "supply_usd": 2791053.048590827,
+   "vaults": [
+    {
+     "address": "0x91C056B6d4311a743614FBc03ac32d4E6A2d3a3c",
+     "name": "Clearstar cbAssets Vault",
+     "kind": "v2",
+     "supplied_usd": 1102314.7803314738,
+     "vault_total_usd": 32107961.046562,
+     "share": 0.39494583626349233
+    },
+    {
+     "address": "0x1deEfABEe758AAbdC29a542B24ca3b75aFD56765",
+     "name": "Gauntlet USDC Frontier",
+     "kind": "v2",
+     "supplied_usd": 501077.9034943451,
+     "vault_total_usd": 5045494.296975,
+     "share": 0.17953005362880295
+    },
+    {
+     "address": "0xbeeff7aE5E00Aae3Db302e4B0d8C883810a58100",
+     "name": "Steakhouse High Yield USDC",
+     "kind": "v2",
+     "supplied_usd": 206080.8992933505,
+     "vault_total_usd": 31343667.382782,
+     "share": 0.07383625309357647
+    },
+    {
+     "address": "0xBEEFA7B88064FeEF0cEe02AAeBBd95D30df3878F",
+     "name": "Steakhouse High Yield USDC v1.1",
+     "kind": "v1",
+     "supplied_usd": 127589.37520436321,
+     "vault_total_usd": 1107935.9541308705,
+     "share": 0.04571370482147652
+    },
+    {
+     "address": "0xE74c499fA461AF1844fCa84204490877787cED56",
+     "name": "Yield Clearstar USDC",
+     "kind": "v1",
+     "supplied_usd": 111743.03584321581,
+     "vault_total_usd": 779260.4821039246,
+     "share": 0.040036156209798196
+    },
+    {
+     "address": "0xef417a2512C5a41f69AE4e021648b69a7CdE5D03",
+     "name": "Yearn OG USDC",
+     "kind": "v1",
+     "supplied_usd": 63616.1388080838,
+     "vault_total_usd": 2062403.53442947,
+     "share": 0.022792880572514707
+    },
+    {
+     "address": "0x0548A36028FFdc7D5aaA7A182f0d1FE0264F5A5C",
+     "name": "\u041a3 cbMaxxxing USDC",
+     "kind": "v2",
+     "supplied_usd": 47407.58076557973,
+     "vault_total_usd": 3708636.048731,
+     "share": 0.016985553459657573
+    },
+    {
+     "address": "0xe7D0DBE3493830e2Ab62619211A2BfF0Fc60dB42",
+     "name": "Yearn OG USDC V2",
+     "kind": "v2",
+     "supplied_usd": 15534.136255771089,
+     "vault_total_usd": 325239.436508,
+     "share": 0.005565690076587441
+    },
+    {
+     "address": null,
+     "name": "other suppliers",
+     "kind": "direct",
+     "supplied_usd": 615689.1985946437,
+     "vault_total_usd": null,
+     "share": 0.2205938718740938
+    }
+   ]
+  },
+  "cbADA": {
+   "supply_usd": 2529342.3367607156,
+   "vaults": [
+    {
+     "address": "0xbeeff7aE5E00Aae3Db302e4B0d8C883810a58100",
+     "name": "Steakhouse High Yield USDC",
+     "kind": "v2",
+     "supplied_usd": 811808.508300577,
+     "vault_total_usd": 31343667.382782,
+     "share": 0.32095635948601803
+    },
+    {
+     "address": "0x91C056B6d4311a743614FBc03ac32d4E6A2d3a3c",
+     "name": "Clearstar cbAssets Vault",
+     "kind": "v2",
+     "supplied_usd": 792293.5912663981,
+     "vault_total_usd": 32107961.046562,
+     "share": 0.3132409479537177
+    },
+    {
+     "address": "0x0548A36028FFdc7D5aaA7A182f0d1FE0264F5A5C",
+     "name": "\u041a3 cbMaxxxing USDC",
+     "kind": "v2",
+     "supplied_usd": 90284.45261796971,
+     "vault_total_usd": 3708636.048731,
+     "share": 0.035694833121559744
+    },
+    {
+     "address": "0xE74c499fA461AF1844fCa84204490877787cED56",
+     "name": "Yield Clearstar USDC",
+     "kind": "v1",
+     "supplied_usd": 28739.7684554882,
+     "vault_total_usd": 779260.4821039246,
+     "share": 0.011362545922626954
+    },
+    {
+     "address": "0xBEEFA7B88064FeEF0cEe02AAeBBd95D30df3878F",
+     "name": "Steakhouse High Yield USDC v1.1",
+     "kind": "v1",
+     "supplied_usd": 28395.5617446014,
+     "vault_total_usd": 1107935.9541308705,
+     "share": 0.011226460464409534
+    },
+    {
+     "address": "0x1deEfABEe758AAbdC29a542B24ca3b75aFD56765",
+     "name": "Gauntlet USDC Frontier",
+     "kind": "v2",
+     "supplied_usd": 1.328086223351262e-06,
+     "vault_total_usd": 5045494.296975,
+     "share": 5.250717564203344e-13
+    },
+    {
+     "address": null,
+     "name": "other suppliers",
+     "kind": "direct",
+     "supplied_usd": 777820.4543743529,
+     "vault_total_usd": null,
+     "share": 0.3075188530511429
+    }
+   ]
+  },
+  "cbLTC": {
+   "supply_usd": 911357.4614301232,
+   "vaults": [
+    {
+     "address": "0x91C056B6d4311a743614FBc03ac32d4E6A2d3a3c",
+     "name": "Clearstar cbAssets Vault",
+     "kind": "v2",
+     "supplied_usd": 299235.26880058524,
+     "vault_total_usd": 32107961.046562,
+     "share": 0.3283401754686008
+    },
+    {
+     "address": "0xE74c499fA461AF1844fCa84204490877787cED56",
+     "name": "Yield Clearstar USDC",
+     "kind": "v1",
+     "supplied_usd": 98820.4495784756,
+     "vault_total_usd": 779260.4821039246,
+     "share": 0.10843215067708369
+    },
+    {
+     "address": "0xef417a2512C5a41f69AE4e021648b69a7CdE5D03",
+     "name": "Yearn OG USDC",
+     "kind": "v1",
+     "supplied_usd": 85253.0908990144,
+     "vault_total_usd": 2062403.53442947,
+     "share": 0.09354517245651697
+    },
+    {
+     "address": "0xBEEFA7B88064FeEF0cEe02AAeBBd95D30df3878F",
+     "name": "Steakhouse High Yield USDC v1.1",
+     "kind": "v1",
+     "supplied_usd": 20951.633838999198,
+     "vault_total_usd": 1107935.9541308705,
+     "share": 0.022989479678063324
+    },
+    {
+     "address": "0x0548A36028FFdc7D5aaA7A182f0d1FE0264F5A5C",
+     "name": "\u041a3 cbMaxxxing USDC",
+     "kind": "v2",
+     "supplied_usd": 13981.246891749306,
+     "vault_total_usd": 3708636.048731,
+     "share": 0.015341122976937733
+    },
+    {
+     "address": "0xe7D0DBE3493830e2Ab62619211A2BfF0Fc60dB42",
+     "name": "Yearn OG USDC V2",
+     "kind": "v2",
+     "supplied_usd": 5778.145874851488,
+     "vault_total_usd": 325239.436508,
+     "share": 0.0063401531445019255
+    },
+    {
+     "address": "0xbeeff7aE5E00Aae3Db302e4B0d8C883810a58100",
+     "name": "Steakhouse High Yield USDC",
+     "kind": "v2",
+     "supplied_usd": 8.769395081812668,
+     "vault_total_usd": 31343667.382782,
+     "share": 9.622344088840322e-06
+    },
+    {
+     "address": "0x1deEfABEe758AAbdC29a542B24ca3b75aFD56765",
+     "name": "Gauntlet USDC Frontier",
+     "kind": "v2",
+     "supplied_usd": 2.0549298465653497e-06,
+     "vault_total_usd": 5045494.296975,
+     "share": 2.254801143933914e-12
+    },
+    {
+     "address": null,
+     "name": "other suppliers",
+     "kind": "direct",
+     "supplied_usd": 387328.85614931124,
+     "vault_total_usd": null,
+     "share": 0.4250021232519519
+    }
+   ]
+  },
+  "JitoSOL": {
+   "supply_usd": 4574412.668377215,
+   "vaults": [
+    {
+     "address": "0x91C056B6d4311a743614FBc03ac32d4E6A2d3a3c",
+     "name": "Clearstar cbAssets Vault",
+     "kind": "v2",
+     "supplied_usd": 3682495.7770684706,
+     "vault_total_usd": 32107961.046562,
+     "share": 0.8050204570578994
+    },
+    {
+     "address": "0xbeeff2490FEffa212faC2f6553682C219E6a8845",
+     "name": "Steakhouse High Yield USDC Edition",
+     "kind": "v2",
+     "supplied_usd": 268332.98146452196,
+     "vault_total_usd": 463299217.757472,
+     "share": 0.05865954843110248
+    },
+    {
+     "address": "0x236919F11ff9eA9550A4287696C2FC9e18E6e890",
+     "name": "Gauntlet USDC Frontier",
+     "kind": "v1",
+     "supplied_usd": 0.0282483492,
+     "vault_total_usd": 122898.4979914784,
+     "share": 6.1752953325090316e-09
+    },
+    {
+     "address": "0x1deEfABEe758AAbdC29a542B24ca3b75aFD56765",
+     "name": "Gauntlet USDC Frontier",
+     "kind": "v2",
+     "supplied_usd": 0.001412224698149567,
+     "vault_total_usd": 5045494.296975,
+     "share": 3.087226274778916e-10
+    },
+    {
+     "address": "0xbeeff7aE5E00Aae3Db302e4B0d8C883810a58100",
+     "name": "Steakhouse High Yield USDC",
+     "kind": "v2",
+     "supplied_usd": 6.956336389845165e-07,
+     "vault_total_usd": 31343667.382782,
+     "share": 1.5207059122440177e-13
+    },
+    {
+     "address": null,
+     "name": "other suppliers",
+     "kind": "direct",
+     "supplied_usd": 623583.8801829531,
+     "vault_total_usd": null,
+     "share": 0.13631998802682818
+    }
+   ]
+  }
+ }
+}
