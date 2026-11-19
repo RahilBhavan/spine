@@ -176,6 +176,7 @@ This is an anti-corruption layer between research data and UI needs. Tests in `t
 - `history.py` appends summary rows only when the last sample is roughly an hour old.
 - `caps.py` computes rolling seven-day drawdown percentiles, volatility, recommended origination caps, and the SmartLTV comparison.
 - `writeup_tables.py` treats generated JSON as the source of every numeric table. `find()` requires exactly one matching run, turning missing or duplicate experiment cells into loud failures.
+- `serve.py` is a read-only HTTP API over `data/summary.json` (`/v1/markets`, `/v1/markets/<market>/capacity`). It passes numbers through unchanged and stamps each response with `snapshot_time`, so `tests/test_serve.py` can hold it to the dashboard's numbers.
 - `render_writeup.py` implements only the Markdown subset this document uses and inserts Plotly figures. A full Markdown dependency would be easier but contrary to the no-dependency design.
 
 ### `site/`: a static state machine

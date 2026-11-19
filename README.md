@@ -76,6 +76,14 @@ Rebuild the dashboard data. The positions files are not committed, so run `fetch
 .venv/bin/python -m http.server 8000           # local copy of https://spine.rahilbhavan.com/site/ on port 8000
 ```
 
+Serve the saved data as a read-only JSON API. Each response carries `api_version`, `snapshot_time` and `source`, and the numbers are the ones in `data/summary.json`.
+
+```bash
+.venv/bin/python -m spine.serve --port 8001   # binds 127.0.0.1
+curl -s localhost:8001/v1/markets              # every market's state and the book totals
+curl -s localhost:8001/v1/markets/cbBTC/capacity   # name or Morpho market id; modeled liquidator capacity, its depth inputs, liquidatable borrow by price drop
+```
+
 Run the stress-test pipeline. It is slow. `fetch_oracle`, `calibrate`, `rebuild_book` and `backtest` take `--max-seconds N`, save progress to `data/cache/` and resume on the next run.
 
 ```bash
@@ -88,8 +96,8 @@ Run the stress-test pipeline. It is slow. `fetch_oracle`, `calibrate`, `rebuild_
 
 ## Repository layout
 
-- `spine/`: fetchers, summarizer, calibration, book rebuild, backtest, alert and writeup renderer.
-- `tests/`: pytest checks for the summarizer, backtest, alert and committed data.
+- `spine/`: fetchers, summarizer, calibration, book rebuild, backtest, alert, risk API and writeup renderer.
+- `tests/`: pytest checks for the summarizer, backtest, alert, risk API and committed data.
 - `data/`: one frozen snapshot of the generated data, so a fresh clone renders and tests pass. The `data` branch holds the latest.
 - `site/`: the static dashboard and `writeup.html`, rendered from `WRITEUP.md`.
 - `research/`: source sweeps, the self-liquidation check, outreach drafts and `crash_table.py`.

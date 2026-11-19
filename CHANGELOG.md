@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased (risk API)
+
+- `spine/serve.py`: a read-only stdlib HTTP API over `data/summary.json`. `GET /v1/markets` returns each market's state and the book totals; `GET /v1/markets/<market>/capacity` (name or Morpho market id) returns modeled AB capacity, its two depth inputs at the 4.38% bonus and the liquidatable-borrow curve. Every response carries `api_version`, `snapshot_time` and `source`, plus an ETag and `Cache-Control`. Contract tests in `tests/test_serve.py` check the responses against `summary.json`.
+
 ## Unreleased (refresh reliability)
 
 - `fetch_positions` pages by borrow shares instead of health factor. Health factor moves with the oracle, so a price move during the minute-long cbBTC walk let positions slip behind the cursor; 7 of the scheduled refreshes since 2026-10-02 failed on the count check (gaps of 1 to 560 positions). After three walks a gap of up to 2 positions (`CHURN`) is accepted as live churn.
