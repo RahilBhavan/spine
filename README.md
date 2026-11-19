@@ -81,7 +81,7 @@ Serve the saved data as a read-only JSON API. Each response carries `api_version
 ```bash
 .venv/bin/python -m spine.serve --port 8001   # binds 127.0.0.1
 curl -s localhost:8001/v1/markets              # every market's state and the book totals
-curl -s localhost:8001/v1/markets/cbBTC/capacity   # modeled liquidator capacity, its depth inputs, liquidatable borrow by price drop
+curl -s localhost:8001/v1/markets/cbBTC/capacity   # name or Morpho market id; modeled liquidator capacity, its depth inputs, liquidatable borrow by price drop
 ```
 
 Run the stress-test pipeline. It is slow. `fetch_oracle`, `calibrate`, `rebuild_book` and `backtest` take `--max-seconds N`, save progress to `data/cache/` and resume on the next run.

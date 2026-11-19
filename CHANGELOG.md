@@ -2,7 +2,7 @@
 
 ## Unreleased (risk API)
 
-- `spine/serve.py`: a read-only stdlib HTTP API over `data/summary.json`. `GET /v1/markets` returns each market's state and the book totals; `GET /v1/markets/<name>/capacity` returns modeled AB capacity, its two depth inputs at the 4.38% bonus and the liquidatable-borrow curve. Every response carries `api_version`, `snapshot_time` and `source`, plus an ETag and `Cache-Control`. Contract tests in `tests/test_serve.py` check the responses against `summary.json`.
+- `spine/serve.py`: a read-only stdlib HTTP API over `data/summary.json`. `GET /v1/markets` returns each market's state and the book totals; `GET /v1/markets/<market>/capacity` (name or Morpho market id) returns modeled AB capacity, its two depth inputs at the 4.38% bonus and the liquidatable-borrow curve. Every response carries `api_version`, `snapshot_time` and `source`, plus an ETag and `Cache-Control`. Contract tests in `tests/test_serve.py` check the responses against `summary.json`.
 
 ## Unreleased (refresh reliability)
 

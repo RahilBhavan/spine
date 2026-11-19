@@ -5,7 +5,7 @@ import json, threading, urllib.error, urllib.request
 import pytest
 
 from spine.api import MARKETS, load
-from spine.serve import API_VERSION, route, server
+from spine.serve import API_VERSION, CURVE_FIELDS, STATE_FIELDS, route, server
 
 
 @pytest.fixture(scope='module')
@@ -40,7 +40,8 @@ def test_markets_match_summary(summary):
     rows = {r['name']: r for r in body['data']['markets']}
     assert set(rows) == set(summary['markets'])
     for name, m in summary['markets'].items():
-        for k in ('borrow_usd', 'collateral_usd', 'lltv', 'n_positions', 'capacity_ab_usd', 'distance_to_capacity'):
+        assert set(STATE_FIELDS) == set(m['state']), name  # every state field summary.json has is served
+        for k in STATE_FIELDS:
             assert rows[name][k] == m['state'][k], (name, k)
         assert rows[name]['market_id'] == MARKETS[name]['id']
     assert body['data']['totals'] == summary['totals']
@@ -54,8 +55,10 @@ def test_capacity_matches_summary(summary):
         d = body['data']
         assert d['capacity_ab_usd'] == m['state']['capacity_ab_usd']
         assert d['distance_to_capacity'] == m['state']['distance_to_capacity']
-        assert [(c['drop'], c['borrow_usd'], c['count']) for c in d['liquidatable_curve']] == \
-               [(c['drop'], c['borrow_usd'], c['count']) for c in m['liquidatable_curve']]
+        assert d['liquidatable_curve'] == [{k: c[k] for k in CURVE_FIELDS} for c in m['liquidatable_curve']]
+        assert d['dex_capacity_usd'] == m['depth'].get('dex_capacity_usd', {}).get('4.38')
+        assert d['coinbase_bid_depth_usd'] == m['depth'].get('coinbase', {}).get('bid_depth_usd', {}).get('4.38')
+        assert route('/v1/markets/%s/capacity' % MARKETS[name]['id'], summary) == (status, body)  # by Morpho market id too
         # distance_to_capacity is the first drop where liquidatable borrow exceeds capacity (spine.summarize)
         if d['capacity_ab_usd'] and d['distance_to_capacity'] is not None:
             first = next(c['drop'] for c in d['liquidatable_curve'] if c['borrow_usd'] > d['capacity_ab_usd'])
